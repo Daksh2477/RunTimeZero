@@ -1,0 +1,29 @@
+node_modules/
+dist/
+build/
+.next/
+out/
+
+# rust / wasm
+target/
+packages/physics/pkg/
+
+# env — never commit real values
+.env
+.env.local
+.env.*.local
+
+# contracts
+artifacts/
+cache/
+typechain-types/
+
+# editor / os
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# logs
+*.log
+npm-debug.log*

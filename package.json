@@ -1,0 +1,14 @@
+{
+  "name": "runtimezero",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": ["packages/*", "apps/api", "apps/web"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/api & npm run dev --workspace=apps/web",
+    "db:setup": "psql \"$DATABASE_URL\" -f apps/api/src/db/schema.sql",
+    "db:seed": "node --experimental-strip-types scripts/seed.ts",
+    "typecheck": "tsc --build",
+    "physics:build": "cd packages/physics && wasm-pack build --target nodejs --out-dir pkg"
+  }
+}
