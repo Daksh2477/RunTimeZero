@@ -30,6 +30,7 @@ algacarbon/
 ├── packages/
 │   ├── types/        Shared TypeScript types. The contract between everything.
 │   ├── physics/      Rust → WASM. Solar geometry, growth kinetics, the ceiling.
+│   ├── models/       Four trained models. They assist; they never decide credit.
 │   └── chain/        Contract ABIs + ethers bindings.
 ├── apps/
 │   ├── api/          Express + Postgres. Ingestion, reconciliation, attestation.
