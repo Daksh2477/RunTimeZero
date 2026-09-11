@@ -8,7 +8,7 @@
  * See docs/DECISIONS.md, decision 6.
  */
 
-import type { Disposition } from './site';
+import type { Disposition } from './site.ts';
 
 export type Verdict =
   /** Claim and independent estimate agree within the band. Mint at the claim. */
@@ -66,6 +66,7 @@ export interface DivergenceCheck {
  */
 export function creditableAmount(input: {
   claimedCo2Kg: number;
+  independentCo2Kg: number;
   independentLowCo2Kg: number;
   ceilingCo2Kg: number;
   verdict: Verdict;
@@ -73,12 +74,24 @@ export function creditableAmount(input: {
   if (input.verdict === 'flagged' || input.verdict === 'insufficient_evidence') {
     return 0;
   }
-  // The lower of what was claimed and what the evidence supports at its floor,
-  // and never more than physics allows.
-  return Math.max(
-    0,
-    Math.min(input.claimedCo2Kg, input.independentLowCo2Kg, input.ceilingCo2Kg),
-  );
+
+  // Which independent figure we cap against depends on whether the claim and
+  // the evidence agree.
+  //
+  // An earlier version always used the band FLOOR. That punished honest
+  // operators severely: with satellite's ±2.4x band, a perfectly accurate claim
+  // was credited at 42% of its true value, and nobody would have adopted the
+  // platform. Being conservative about fraud is not a reason to be wrong about
+  // honesty.
+  //
+  // So: a claim that agrees with the evidence is capped at the central
+  // estimate. A claim that does not agree is pushed down to the floor. The
+  // penalty lands on disagreement, which is exactly where we want it — and
+  // overstating still cannot pay, because the cap only ever moves downward.
+  const cap =
+    input.verdict === 'ok' ? input.independentCo2Kg : input.independentLowCo2Kg;
+
+  return Math.max(0, Math.min(input.claimedCo2Kg, cap, input.ceilingCo2Kg));
 }
 
 /** A verified production batch — the unit that becomes a token. */

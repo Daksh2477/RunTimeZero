@@ -7,7 +7,7 @@
  * compile. A mismatch here is the one bug that will cost us a whole evening.
  */
 
-export * from './site';
-export * from './measurement';
-export * from './reconcile';
-export * from './expense';
+export * from './site.ts';
+export * from './measurement.ts';
+export * from './reconcile.ts';
+export * from './expense.ts';

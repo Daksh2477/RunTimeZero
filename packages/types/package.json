@@ -6,5 +6,6 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit"
-  }
+  },
+  "type": "module"
 }

@@ -113,9 +113,9 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 | `faults.rs` — crash, starvation, thermal, **fraud injection** | ✅ 7 tests |
 | WASM bindings — `WasmPond`, `physics_ceiling_co2_kg` | ✅ 2 tests |
 | ESP32 firmware + Wokwi circuit | ✅ |
-| MQTT ingestion → Postgres | ⬜ |
+| MQTT ingestion → Postgres | ✅ |
 | Copernicus ingestion → NDCI | ⬜ |
-| Reconciliation engine | ⬜ |
+| Reconciliation engine | ✅ 5 scenarios verified |
 | Contracts on Amoy | ⬜ |
 | Console · verifier · simulator | ⬜ |
 | 4 ONNX models | ⬜ |
