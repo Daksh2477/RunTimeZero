@@ -6,10 +6,21 @@
 import express from 'express';
 import { healthcheck } from './db/client.ts';
 import { startMqttIngest } from './ingest/mqtt.ts';
+import { fleetRouter } from './routes/fleet.ts';
 import { pondsRouter } from './routes/ponds.ts';
 
 const app = express();
 app.use(express.json());
+
+// The console runs on :3000 and the API on :4000, so the browser needs CORS.
+// Wide open is fine: everything is local and there is nothing to protect yet.
+app.use((_req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'content-type');
+  res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  next();
+});
+app.options(/.*/, (_req, res) => res.sendStatus(204));
 
 app.get('/health', async (_req, res) => {
   try {
@@ -23,12 +34,26 @@ app.get('/health', async (_req, res) => {
   }
 });
 
+app.use('/fleet', fleetRouter);
 app.use('/ponds', pondsRouter);
 
 const port = Number(process.env.API_PORT ?? 4000);
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`[api] listening on :${port}`);
   // Ingestion starts with the server: the API has no other source of pond data.
   startMqttIngest();
+});
+
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `\n[api] port ${port} is already in use.\n` +
+        `      Another API is probably still running. Kill it with:\n` +
+        `        lsof -ti:${port} | xargs -r kill -9\n` +
+        `      Or use a different port:  API_PORT=4001 npm run api\n`,
+    );
+    process.exit(1);
+  }
+  throw err;
 });

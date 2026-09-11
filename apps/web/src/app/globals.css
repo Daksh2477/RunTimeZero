@@ -1,0 +1,392 @@
+/*
+ * AlgaCarbon console.
+ *
+ * The visual system comes from the subject: a pond attenuates light through
+ * its depth, so the interface is built from bands of decreasing lightness.
+ * Colours are taken from what these sites actually look like — culture green,
+ * settled water, silt, industrial rust — not from a palette generator.
+ */
+
+:root {
+  --water-deep: #0d1f1c;
+  --water: #16342e;
+  --water-mid: #24504700;
+
+  --culture: #4faf80;
+  --culture-dim: #7ec5a3;
+  --culture-wash: #e4f2eb;
+
+  --surface: #f1f4f1;
+  --panel: #ffffff;
+  --ink: #12201d;
+  --silt: #77857f;
+  --hairline: #d9e0dc;
+
+  --rust: #b5502f;
+  --rust-wash: #f7e8e3;
+  --sun: #d9a02c;
+
+  --step: 4px;
+  --radius: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #0b1614;
+    --panel: #10201c;
+    --ink: #e6efe9;
+    --silt: #7d8d86;
+    --hairline: #1e332d;
+    --culture-wash: #132a23;
+    --rust-wash: #2a1610;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { padding-bottom: 64px; }
+
+a { color: inherit; text-decoration: none; }
+
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* ---------------------------------------------------------------- shell */
+
+.masthead {
+  background: var(--water-deep);
+  color: #dff0e7;
+  padding: 18px 20px 16px;
+}
+.masthead-inner {
+  max-width: 1120px;
+  margin: 0 auto;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.wordmark {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.wordmark span { color: var(--culture); }
+.masthead-note {
+  font-size: 13px;
+  color: #85a79a;
+}
+
+.wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.lede {
+  margin: 28px 0 26px;
+  max-width: 62ch;
+}
+.lede h1 {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin: 0 0 6px;
+}
+.lede p { margin: 0; color: var(--silt); font-size: 14.5px; }
+
+/* ------------------------------------------------------------ site group */
+
+.site {
+  margin-bottom: 30px;
+  border-top: 1px solid var(--hairline);
+}
+.site-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0 11px;
+  flex-wrap: wrap;
+}
+.site-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.site-meta { font-size: 12.5px; color: var(--silt); }
+
+.tier {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid var(--hairline);
+  border-radius: 20px;
+  font-size: 11.5px;
+  color: var(--silt);
+}
+
+/* -------------------------------------------------- the pond row = chart */
+
+.pond {
+  display: block;
+  padding: 11px 12px 12px;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+  transition: border-color 120ms ease;
+}
+.pond:hover, .pond:focus-visible {
+  border-color: var(--culture);
+  outline: none;
+}
+.pond:focus-visible { box-shadow: 0 0 0 2px var(--culture-wash); }
+
+.pond-top {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.pond-label {
+  font-weight: 600;
+  font-size: 14.5px;
+  min-width: 58px;
+}
+.pond-figures {
+  margin-left: auto;
+  font-size: 13px;
+  color: var(--silt);
+}
+.pond-figures strong { color: var(--ink); font-weight: 600; }
+
+/*
+ * The bar IS the row. Full width is the claim; the filled portion is what the
+ * evidence supports. An operator scanning the list sees the shortfall without
+ * reading a single number — which is the entire product, so it should be the
+ * thing the eye lands on first.
+ */
+.bar {
+  position: relative;
+  height: 9px;
+  background: var(--culture-wash);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--culture);
+  border-radius: 2px;
+}
+.bar.is-short .bar-fill { background: var(--rust); }
+.bar.is-short { background: var(--rust-wash); }
+
+.bar-caption {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--silt);
+}
+
+.verdict {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.verdict.ok { background: var(--culture-wash); color: #2c7a56; }
+.verdict.watch { background: #fdf0dd; color: #8a5c10; }
+.verdict.flagged { background: var(--rust-wash); color: var(--rust); }
+.verdict.none { background: transparent; color: var(--silt); border: 1px solid var(--hairline); }
+
+.flagmark {
+  font-size: 12px;
+  color: var(--rust);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------------- pond detail */
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+@media (max-width: 820px) {
+  .detail-grid { grid-template-columns: 1fr; }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 16px 16px 18px;
+  margin-bottom: 16px;
+}
+.panel h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 3px;
+  letter-spacing: -0.01em;
+}
+.panel .sub {
+  font-size: 12.5px;
+  color: var(--silt);
+  margin: 0 0 14px;
+}
+
+/*
+ * The depth chart — the one place this interface is allowed to be loud.
+ *
+ * Three stacked bands scaled to the physics ceiling: what was claimed, what
+ * the evidence supports (as a range, because a point estimate would be
+ * dishonest), and the ceiling itself. You can see at a glance whether the
+ * claim sits inside the evidence, and how much headroom the ceiling leaves.
+ */
+.depth { margin: 6px 0 4px; }
+.depth-row { margin-bottom: 13px; }
+.depth-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  margin-bottom: 5px;
+}
+.depth-label span:last-child { color: var(--silt); }
+.depth-track {
+  position: relative;
+  height: 22px;
+  background: var(--culture-wash);
+  border-radius: 2px;
+}
+.depth-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 2px;
+}
+.depth-bar.claimed { background: var(--water); }
+.depth-bar.evidence { background: var(--culture); opacity: 0.45; }
+.depth-bar.evidence-mid {
+  background: var(--culture);
+  width: 2px !important;
+  border-radius: 0;
+}
+.depth-ceiling {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  background: var(--sun);
+}
+
+.reason {
+  margin-top: 12px;
+  padding: 11px 13px;
+  background: var(--culture-wash);
+  border-left: 2px solid var(--culture);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.reason.is-flagged {
+  background: var(--rust-wash);
+  border-left-color: var(--rust);
+}
+
+/* --------------------------------------------------------- advisories */
+
+.advisory {
+  padding: 12px 0;
+  border-top: 1px solid var(--hairline);
+}
+.advisory:first-of-type { border-top: none; padding-top: 2px; }
+.advisory-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+.advisory-title { font-weight: 600; font-size: 13.5px; }
+.sev {
+  width: 7px; height: 7px; border-radius: 50%;
+  flex: none;
+  transform: translateY(-1px);
+}
+.sev.critical { background: var(--rust); }
+.sev.warning { background: var(--sun); }
+.sev.info { background: var(--culture); }
+
+.advisory-detail { font-size: 13px; color: var(--silt); margin: 0 0 7px; }
+.advisory-action {
+  font-size: 13px;
+  padding-left: 11px;
+  border-left: 2px solid var(--hairline);
+}
+.advisory-cost {
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--silt);
+}
+.advisory-cost b { color: var(--rust); font-weight: 600; }
+
+/* ------------------------------------------------------------- sparkline */
+
+.spark { display: block; width: 100%; height: 52px; }
+.spark-row { margin-bottom: 14px; }
+.spark-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12.5px;
+  margin-bottom: 2px;
+}
+.spark-head b { font-size: 14px; font-weight: 600; }
+
+/* ---------------------------------------------------------------- misc */
+
+.back {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--silt);
+  margin: 22px 0 4px;
+}
+.back:hover { color: var(--culture); }
+
+.empty {
+  padding: 34px 20px;
+  text-align: center;
+  color: var(--silt);
+  font-size: 14px;
+  border: 1px dashed var(--hairline);
+  border-radius: var(--radius);
+}
+.empty code {
+  background: var(--culture-wash);
+  padding: 2px 6px;
+  border-radius: 2px;
+  color: var(--ink);
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 14px;
+  font-size: 13px;
+}
+.kv dt { color: var(--silt); }
+.kv dd { margin: 0; text-align: right; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}

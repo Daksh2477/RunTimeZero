@@ -12,20 +12,52 @@
 --      add a column to telemetry that holds an independent figure, or vice
 --      versa, however convenient it looks at 3am.
 
+-- Idempotent: safe to run repeatedly against an existing database.
+-- An earlier version used bare CREATE TYPE, so a second run aborted the whole
+-- transaction on "type already exists" and left nothing applied.
+
 BEGIN;
 
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- Postgres has no CREATE TYPE IF NOT EXISTS, so each enum is guarded.
+DO $$ BEGIN
+  CREATE TYPE verification_tier AS ENUM ('smallholder', 'small', 'mid', 'facility');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE host_industry AS ENUM (
+    'textile_dyeing', 'pulp_paper', 'distillery',
+    'dairy_food', 'cetp', 'municipal_stp', 'none');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE telemetry_source AS ENUM ('sensor', 'manual', 'scada', 'simulated');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE observation_channel AS ENUM ('sentinel2', 'drone', 'weighbridge', 'field_sample');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE verdict AS ENUM ('ok', 'watch', 'flagged', 'insufficient_evidence');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE disposition AS ENUM (
+    'buried', 'biochar', 'bioplastic',
+    'sold_as_feed', 'sold_as_fertiliser', 'undisclosed');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+DO $$ BEGIN
+  CREATE TYPE expense_category AS ENUM (
+    'paddlewheel', 'pumping', 'harvesting', 'drying', 'nutrients',
+    'co2', 'make_up_water', 'labour', 'maintenance', 'platform');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
 -- ---------------------------------------------------------------- sites
 
-CREATE TYPE verification_tier AS ENUM ('smallholder', 'small', 'mid', 'facility');
-
-CREATE TYPE host_industry AS ENUM (
-  'textile_dyeing', 'pulp_paper', 'distillery',
-  'dairy_food', 'cetp', 'municipal_stp', 'none'
-);
-
-CREATE TABLE sites (
+CREATE TABLE IF NOT EXISTS sites (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name           TEXT NOT NULL,
   lat            DOUBLE PRECISION NOT NULL,
@@ -37,7 +69,7 @@ CREATE TABLE sites (
   created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE ponds (
+CREATE TABLE IF NOT EXISTS ponds (
   id        UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id   UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   label     TEXT NOT NULL,
@@ -51,15 +83,13 @@ CREATE TABLE ponds (
   active    BOOLEAN NOT NULL DEFAULT true
 );
 
-CREATE INDEX idx_ponds_site ON ponds(site_id) WHERE active;
+CREATE INDEX IF NOT EXISTS idx_ponds_site ON ponds(site_id) WHERE active;
 
 -- ------------------------------------------------- stream 1: the claim
 
-CREATE TYPE telemetry_source AS ENUM ('sensor', 'manual', 'scada', 'simulated');
-
 -- APPEND-ONLY. Operator-controlled. Every row here is an assertion, not a fact,
 -- regardless of how it was produced.
-CREATE TABLE telemetry (
+CREATE TABLE IF NOT EXISTS telemetry (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pond_id              UUID NOT NULL REFERENCES ponds(id) ON DELETE CASCADE,
   observed_at          TIMESTAMPTZ NOT NULL,
@@ -73,14 +103,12 @@ CREATE TABLE telemetry (
   ingested_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_telemetry_pond_time ON telemetry(pond_id, observed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_telemetry_pond_time ON telemetry(pond_id, observed_at DESC);
 
 -- ------------------------------------- stream 2: independent of operator
 
-CREATE TYPE observation_channel AS ENUM ('sentinel2', 'drone', 'weighbridge', 'field_sample');
-
 -- APPEND-ONLY. Evidence the operator does not produce.
-CREATE TABLE imagery_observations (
+CREATE TABLE IF NOT EXISTS imagery_observations (
   id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pond_id              UUID NOT NULL REFERENCES ponds(id) ON DELETE CASCADE,
   observed_at          TIMESTAMPTZ NOT NULL,
@@ -93,11 +121,11 @@ CREATE TABLE imagery_observations (
   ingested_at          TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_obs_pond_time ON imagery_observations(pond_id, observed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_obs_pond_time ON imagery_observations(pond_id, observed_at DESC);
 
 -- APPEND-ONLY. For the smallholder tier this IS the independent channel: a mass
 -- on a public scale is cruder in frequency than imagery but stronger in kind.
-CREATE TABLE harvest_records (
+CREATE TABLE IF NOT EXISTS harvest_records (
   id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pond_id         UUID NOT NULL REFERENCES ponds(id) ON DELETE CASCADE,
   harvested_at    TIMESTAMPTZ NOT NULL,
@@ -110,14 +138,14 @@ CREATE TABLE harvest_records (
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_harvest_pond_time ON harvest_records(pond_id, harvested_at DESC);
+CREATE INDEX IF NOT EXISTS idx_harvest_pond_time ON harvest_records(pond_id, harvested_at DESC);
 
 -- ------------------------------------------------------ derived figures
 
 -- Always carries a band. A point estimate without bounds is unusable for
 -- verification: validated NDCI runs to an error factor near 2.4, so we compare
 -- intervals, never bare numbers.
-CREATE TABLE estimates (
+CREATE TABLE IF NOT EXISTS estimates (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pond_id          UUID NOT NULL REFERENCES ponds(id) ON DELETE CASCADE,
   window_start     TIMESTAMPTZ NOT NULL,
@@ -131,10 +159,8 @@ CREATE TABLE estimates (
   CHECK (biomass_low_kg <= biomass_kg AND biomass_kg <= biomass_high_kg)
 );
 
-CREATE TYPE verdict AS ENUM ('ok', 'watch', 'flagged', 'insufficient_evidence');
-
 -- The only table where the two streams meet.
-CREATE TABLE divergence_checks (
+CREATE TABLE IF NOT EXISTS divergence_checks (
   id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   pond_id                     UUID NOT NULL REFERENCES ponds(id) ON DELETE CASCADE,
   window_start                TIMESTAMPTZ NOT NULL,
@@ -153,16 +179,11 @@ CREATE TABLE divergence_checks (
   computed_at                 TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX idx_div_pond_time ON divergence_checks(pond_id, window_end DESC);
+CREATE INDEX IF NOT EXISTS idx_div_pond_time ON divergence_checks(pond_id, window_end DESC);
 
 -- ------------------------------------------------------------- batches
 
-CREATE TYPE disposition AS ENUM (
-  'buried', 'biochar', 'bioplastic',
-  'sold_as_feed', 'sold_as_fertiliser', 'undisclosed'
-);
-
-CREATE TABLE batches (
+CREATE TABLE IF NOT EXISTS batches (
   id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id                  UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   period_start             TIMESTAMPTZ NOT NULL,
@@ -183,17 +204,12 @@ CREATE TABLE batches (
   created_at               TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX idx_batches_token ON batches(evidence_token_id)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_batches_token ON batches(evidence_token_id)
   WHERE evidence_token_id IS NOT NULL;
 
 -- ------------------------------------------------------------ expenses
 
-CREATE TYPE expense_category AS ENUM (
-  'paddlewheel', 'pumping', 'harvesting', 'drying', 'nutrients',
-  'co2', 'make_up_water', 'labour', 'maintenance', 'platform'
-);
-
-CREATE TABLE expenses (
+CREATE TABLE IF NOT EXISTS expenses (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   site_id      UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
   period_start TIMESTAMPTZ NOT NULL,
@@ -205,6 +221,6 @@ CREATE TABLE expenses (
   note         TEXT
 );
 
-CREATE INDEX idx_expenses_site_period ON expenses(site_id, period_start);
+CREATE INDEX IF NOT EXISTS idx_expenses_site_period ON expenses(site_id, period_start);
 
 COMMIT;
