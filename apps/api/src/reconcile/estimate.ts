@@ -66,6 +66,7 @@ function ndciToBiomassGPerL(ndci: number): number {
 export function estimateFromObservations(
   observations: ObservationRow[],
   pond: PondRow,
+  harvestedDryKg = 0,
 ): Estimate | null {
   const usable = observations.filter(isUsable);
   if (usable.length === 0) return null;
@@ -75,10 +76,19 @@ export function estimateFromObservations(
   const channel = strongestChannel(usable);
   const relevant = usable.filter((o) => o.channel === channel);
 
-  const biomassKg =
+  const standingGainKg =
     channel === 'weighbridge' || channel === 'field_sample'
       ? sumDirectMass(relevant)
       : inferFromImagery(relevant, pond);
+
+  // Production = growth still in the water + everything already taken out.
+  //
+  // Without the harvest term, a pond harvested weekly appears to have produced
+  // almost nothing: standing biomass ends roughly where it began, because the
+  // evidence was carted away. This is a real limitation of imagery, not a
+  // simulation artifact — and it is why weighbridge records are mandatory for
+  // any harvesting pond rather than being a smallholder fallback.
+  const biomassKg = standingGainKg + harvestedDryKg;
 
   if (!Number.isFinite(biomassKg) || biomassKg < 0) return null;
 

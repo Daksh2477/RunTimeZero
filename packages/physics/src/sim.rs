@@ -165,12 +165,29 @@ impl Pond {
         let n_consumed_mg_l = delta_g_per_l.max(0.0) * 1000.0 * 0.076;
         self.state.nitrogen_mg_l = (self.state.nitrogen_mg_l - n_consumed_mg_l).max(0.0);
 
-        // Photosynthesis consumes CO₂ and raises pH; respiration does the
-        // reverse. Both are bounded so a long run cannot drift to nonsense.
+        // Photosynthesis consumes CO₂ and raises pH; respiration lowers it.
+        //
+        // Modelled as mean reversion toward a carbonate setpoint, NOT as a
+        // random walk. A spirulina pond is strongly bicarbonate-buffered, so pH
+        // does not wander far. An earlier version walked freely and drifted to
+        // 7.5 over a long run — which then made every pond look permanently
+        // unhealthy to the advisory engine.
+        const PH_SETPOINT: f64 = 9.4;
+        const PH_REVERSION_PER_HOUR: f64 = 0.06;
         let growing = delta_g_per_l > 0.0;
-        self.state.ph = (self.state.ph + if growing { 0.02 } else { -0.015 }).clamp(7.5, 10.8);
-        self.state.dissolved_oxygen_mg_l =
-            (self.state.dissolved_oxygen_mg_l + if growing { 0.3 } else { -0.25 }).clamp(0.5, 18.0);
+        let ph_drive = if growing { 0.10 } else { -0.05 };
+        let reversion = (PH_SETPOINT - self.state.ph) * PH_REVERSION_PER_HOUR * dt_hours;
+        self.state.ph = (self.state.ph + ph_drive * dt_hours + reversion).clamp(6.5, 11.0);
+        // Dissolved oxygen, same treatment as pH and for the same reason.
+        // A sunlit algal pond is strongly supersaturated by day (photosynthesis
+        // evolves O2 faster than it can off-gas) and falls overnight as
+        // respiration takes over. Reverting toward a daylight-dependent
+        // setpoint reproduces that; a random walk just drifts.
+        let do_setpoint = if growing { 12.0 } else { 5.0 };
+        const DO_REVERSION_PER_HOUR: f64 = 0.25;
+        self.state.dissolved_oxygen_mg_l = (self.state.dissolved_oxygen_mg_l
+            + (do_setpoint - self.state.dissolved_oxygen_mg_l) * DO_REVERSION_PER_HOUR * dt_hours)
+            .clamp(0.5, 20.0);
 
         // g/L × litres = g, then to kg, then stoichiometry.
         let volume_l = PondState::volume_l(&self.cfg);

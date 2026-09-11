@@ -19,8 +19,21 @@ import { creditableAmount, type Verdict } from '@rtz/types';
 import type { ObservationRow, PondRow } from '../db/client.ts';
 import { estimateFromObservations } from './estimate.ts';
 
-/** Divergence beyond this is outside the band we treat as noise. */
-const WATCH_THRESHOLD = 0.15;
+/*
+ * There is deliberately NO fixed divergence threshold here.
+ *
+ * An earlier version flagged any claim more than 15% from the central estimate.
+ * That was incoherent: with a satellite band of +/-2.4x we are admitting we
+ * cannot measure better than about +/-140%, so objecting at 15% asserts a
+ * precision we do not have. It produced false positives on honest ponds, which
+ * is the one failure mode that would stop operators adopting the platform.
+ *
+ * The rule now is simply: do we have evidence that CONTRADICTS the claim?
+ * A claim inside the band is not contradicted, so it stands — and it is still
+ * capped at the central estimate, so overstating inside the band gains nothing.
+ * Better instrumentation narrows the band, which is exactly the incentive the
+ * tier system is built on.
+ */
 
 /** Same-direction runs at or above this length are systematic, not noise. */
 const SYSTEMATIC_RUN_LENGTH = 4;
@@ -39,6 +52,8 @@ export interface ReconcileInput {
   priorRun: number;
   /** Physics bound, kg CO₂. Computed by the caller from the WASM module. */
   ceilingCo2Kg: number;
+  /** Dry mass harvested during the window, kg. Part of production, not a loss. */
+  harvestedDryKg: number;
 }
 
 export interface ReconcileResult {
@@ -62,7 +77,11 @@ export interface ReconcileResult {
  * state and no I/O.
  */
 export function reconcile(input: ReconcileInput): ReconcileResult {
-  const estimate = estimateFromObservations(input.observations, input.pond);
+  const estimate = estimateFromObservations(
+    input.observations,
+    input.pond,
+    input.harvestedDryKg,
+  );
 
   const base = {
     claimedCo2Kg: input.claimedCo2Kg,
@@ -133,7 +152,7 @@ export function reconcile(input: ReconcileInput): ReconcileResult {
     input.claimedCo2Kg >= estimate.co2LowKg &&
     input.claimedCo2Kg <= estimate.co2HighKg;
 
-  if (insideBand && Math.abs(divergence) <= WATCH_THRESHOLD) {
+  if (insideBand) {
     return {
       ...base,
       verdict: 'ok',
@@ -147,8 +166,9 @@ export function reconcile(input: ReconcileInput): ReconcileResult {
       divergence,
       consecutiveSameDirection: run,
       reason:
-        `Claim agrees with independent evidence ` +
-        `(${fmt(estimate.co2LowKg)}–${fmt(estimate.co2HighKg)} kg).`,
+        `Claim of ${fmt(input.claimedCo2Kg)} kg is not contradicted by independent ` +
+        `evidence (${fmt(estimate.co2LowKg)}–${fmt(estimate.co2HighKg)} kg, ` +
+        `${estimate.channel}). Credited at the lower of claim and central estimate.`,
     };
   }
 

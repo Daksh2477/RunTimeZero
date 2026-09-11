@@ -72,6 +72,7 @@ first principles and assumes nothing.
 
 - [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — diagrams of every feature and data path
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — 11 decisions and why, including the ones we got wrong first
+- [`docs/RUNNING.md`](docs/RUNNING.md) — **run the whole thing locally**, step by step
 - [`docs/ONBOARDING.md`](docs/ONBOARDING.md) — setup for teammates new to the stack
 
 ---
@@ -115,7 +116,9 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 | ESP32 firmware + Wokwi circuit | ✅ |
 | MQTT ingestion → Postgres | ✅ |
 | Copernicus ingestion → NDCI | ⬜ |
-| Reconciliation engine | ✅ 5 scenarios verified |
+| Reconciliation engine | ✅ verified on 7 live ponds |
+| Farm advisory engine (7 advisory types) | ✅ |
+| Seed + 14-day replay + live sim driver | ✅ |
 | Contracts on Amoy | ⬜ |
 | Console · verifier · simulator | ⬜ |
 | 4 ONNX models | ⬜ |

@@ -154,6 +154,15 @@ impl WasmPond {
         self.pond.harvest(fraction)
     }
 
+    /// Standing dry biomass, kg.
+    ///
+    /// Legitimately observable: this is what a satellite infers and what a
+    /// weighbridge weighs. Unlike cumulative CO2, it is not a secret — the
+    /// independent channel is *supposed* to see it, just imprecisely.
+    pub fn standing_biomass_kg(&self) -> f64 {
+        self.pond.standing_biomass_kg()
+    }
+
     /// Ground truth. **Offline evaluation only — never call this from the API.**
     ///
     /// Needed to label training data for `divergence_classifier` and to score

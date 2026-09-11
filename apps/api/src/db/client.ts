@@ -189,6 +189,33 @@ export async function getObservations(
   }));
 }
 
+/**
+ * Dry mass harvested in a window.
+ *
+ * Essential, not optional. A harvest physically removes the biomass a
+ * satellite would otherwise have seen, so production over a window is
+ * (change in standing biomass) + (everything taken out). Ignore this and every
+ * harvesting pond looks like it produced almost nothing.
+ */
+export async function sumHarvestedDryKg(
+  pondId: string,
+  windowStart: string,
+  windowEnd: string,
+): Promise<{ totalDryKg: number; count: number }> {
+  const { rows } = await pool.query<{ total: string | null; n: string }>(
+    `SELECT COALESCE(SUM(dry_mass_kg), 0) AS total, COUNT(*) AS n
+       FROM harvest_records
+      WHERE pond_id = $1
+        AND harvested_at >= $2
+        AND harvested_at < $3`,
+    [pondId, windowStart, windowEnd],
+  );
+  return {
+    totalDryKg: Number(rows[0]?.total ?? 0),
+    count: Number(rows[0]?.n ?? 0),
+  };
+}
+
 export async function insertDivergenceCheck(c: {
   pondId: string;
   windowStart: string;
