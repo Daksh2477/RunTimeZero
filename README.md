@@ -93,7 +93,7 @@ npm run dev                                 # api :4000 · web :3000
 Physics engine (Rust → WASM):
 
 ```bash
-cargo test --manifest-path packages/physics/Cargo.toml   # 27 tests
+cargo test --manifest-path packages/physics/Cargo.toml   # 44 tests
 npm run physics:build
 ```
 
@@ -109,8 +109,10 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 | `solar.rs` — position, day length, clear-sky irradiance | ✅ 8 tests |
 | `growth.rs` — Monod kinetics + Beer–Lambert self-shading | ✅ 10 tests |
 | `ceiling.rs` — the physics bound | ✅ 9 tests |
+| `sim.rs` — the twin, seeded and replayable | ✅ 8 tests |
+| `faults.rs` — crash, starvation, thermal, **fraud injection** | ✅ 7 tests |
+| WASM bindings — `WasmPond`, `physics_ceiling_co2_kg` | ✅ 2 tests |
 | ESP32 firmware + Wokwi circuit | ✅ |
-| `sim.rs` / `faults.rs` — the twin | ⬜ |
 | MQTT ingestion → Postgres | ⬜ |
 | Copernicus ingestion → NDCI | ⬜ |
 | Reconciliation engine | ⬜ |
