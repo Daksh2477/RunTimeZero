@@ -151,3 +151,31 @@ look sophisticated.
 
 An ORM is a second thing to learn and it hides the query actually running. We write explicit column
 lists — never `SELECT *` in application code — so the cost of a query is visible at the call site.
+
+---
+
+## 11. The hardware is simulated, but the firmware is real
+
+**Context.** We have no ESP32 and no probes. The obvious move is to have the physics twin write
+telemetry straight into Postgres and call that "simulated sensors".
+
+**Why that would have been a mistake.** It puts the twin and the reconciliation engine in the same
+process, one import away from each other. Decision 6 then survives only as long as nobody takes a
+shortcut at 3am — and someone always does.
+
+**Decision.** Build an actual sensor node: real Arduino firmware, real analog reads, real two-point
+calibration, publishing real MQTT over Wokwi's simulated WiFi to a public broker. The API subscribes
+to that broker. It has no other source of pond data.
+
+**The property this buys.** The engine *physically cannot* see ground truth, because the only thing
+crossing the wire is a quantised, noisy sensor reading. Decision 6 stops being discipline and
+becomes architecture.
+
+On stage that is the difference between "we promise we didn't cheat" and "we couldn't have".
+
+**Secondary benefit.** The potentiometers on the Wokwi canvas mean an evaluator can turn a knob and
+watch the dashboard move. A judge who touches the system remembers it.
+
+**Two layers, deliberately.** The Wokwi node is one pond that a human can poke. The Rust twin drives
+many ponds for the fleet view and fault injection. Both publish to the same topics, so the API
+cannot tell them apart — and neither can the engine.

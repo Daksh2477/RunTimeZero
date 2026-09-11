@@ -34,6 +34,7 @@ algacarbon/
 ├── apps/
 │   ├── api/          Express + Postgres. Ingestion, reconciliation, attestation.
 │   ├── web/          Next.js. Operator console + public pages.
+│   ├── firmware/     Real ESP32 firmware on a simulated Wokwi board.
 │   └── contracts/    Hardhat. Three Solidity contracts.
 ├── scripts/          commit.sh, push.sh, seed.ts
 └── docs/             ARCHITECTURE.md, ONBOARDING.md, DECISIONS.md
@@ -71,7 +72,7 @@ Each person owns directories nobody else touches. If you need something from som
 | Person | Owns | Don't touch |
 |---|---|---|
 | **Mahit** | `packages/types`, `packages/physics`, `apps/api/src/reconcile` | — |
-| **Chetan** | `packages/physics/src/sim.rs`, fault injection, `scripts/seed.ts` | `reconcile/` |
+| **Chetan** | `packages/physics/src/sim.rs`, fault injection, `apps/firmware`, `scripts/seed.ts` | `reconcile/` |
 | **Henil** | `apps/web/src/app/(console)`, `components/` | `(verify)`, `(sim)` |
 | **Daksh** | `apps/api/src/ingest`, `apps/web/src/app/(verify)`, `(sim)` | `(console)` |
 
@@ -122,7 +123,7 @@ rather than half-finishing the next one.
 | Stage | Deliverable | Proves |
 |---|---|---|
 | 0 | Types, schema, stub API | Everyone can work in parallel |
-| 1 | Twin generates plausible telemetry; console renders it | The scenario is real |
+| 1 | Wokwi node publishes MQTT; API ingests it; console renders it | Data arrives over a wire, not from an import |
 | 2 | Copernicus ingestion; imagery → biomass → CO₂ | One genuinely external input exists |
 | 3 | Reconciliation + physics ceiling, ground truth withheld | **The core claim** |
 | 4 | Contracts on Polygon Amoy; capped mint, burn-to-retire | Issuance can't exceed verification |

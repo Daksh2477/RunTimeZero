@@ -49,6 +49,48 @@ This is written down so nobody has to make that call under pressure at 2am.
 
 ---
 
+## The hardware layer
+
+We have no ESP32 and no probes, so we built the node instead of pretending it exists.
+
+```
+ WOKWI (simulated ESP32)              MQTT broker            OUR API
+ ┌──────────────────────┐                                  ┌──────────────┐
+ │ pH / DO / OD pots    │──analog─┐                        │ mqtt         │
+ │ DS18B20 temp    1-Wire────────►│  real firmware:        │ subscriber   │
+ │ OLED + tx LED        │         │  read → calibrate ────►│      │       │
+ └──────────────────────┘         │  → publish JSON        │      ▼       │
+                                  └──simulated WiFi───►    │  telemetry   │
+                                     broker.hivemq.com     │  (append-only)│
+                                                           └──────────────┘
+```
+
+The firmware in `apps/firmware/src/main.cpp` is real: real analog reads, real two-point calibration,
+real MQTT. Nothing in it knows it is being simulated.
+
+**This is not cosmetic.** The API's *only* source of pond data is the MQTT subscription. There is no
+code path from the twin's internal state into the reconciliation engine, so decision 6 — the engine
+must never see ground truth — is enforced by the architecture rather than by discipline. What
+crosses the wire is a quantised, noisy sensor reading and nothing else.
+
+### Two layers of simulation
+
+| Layer | Scope | Purpose |
+|---|---|---|
+| **Wokwi node** | One pond, visible circuit, knobs a human can turn | The demo. A judge can drag a potentiometer and watch the dashboard move. |
+| **Rust twin** | Many ponds, Monod kinetics, real weather, injectable faults | The scale. Fleet view needs more than one pond; fault injection needs a model. |
+
+Both publish to the same topics. The API cannot tell them apart, and neither can the engine.
+
+### Later: the twin as a Wokwi custom chip
+
+Wokwi's Custom Chips API accepts anything that compiles to WebAssembly, including Rust. Our physics
+crate already builds to WASM, so the twin can become a virtual sensor board driving the node's inputs
+directly. Better story, not a more important one — do it only after the core loop works.
+
+
+---
+
 ## Packages
 
 ### `packages/types`
@@ -101,6 +143,10 @@ Route groups map to subdomains via `middleware.ts`:
 | `sim.algacarbon.*` | `/sim` | `(sim)` | Anyone, no account |
 
 Don't touch DNS until the day before the demo. Local paths work fine until then.
+
+### `apps/firmware` — Wokwi / PlatformIO
+
+Real ESP32 firmware on a simulated board. See `apps/firmware/README.md`.
 
 ### `apps/contracts` — Hardhat
 
