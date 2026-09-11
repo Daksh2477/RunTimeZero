@@ -7,10 +7,9 @@ set -euo pipefail
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 
-if [ "$BRANCH" = "main" ]; then
-  read -r -p "pushing to main. are you sure? [y/N] " reply
-  [ "$reply" = "y" ] || { echo "aborted."; exit 1; }
-fi
+# Single-branch flow: main is where we work. Pull before you push so you
+# rebase onto whatever a teammate landed while you were editing.
+git pull --rebase --autostash
 
 if git rev-parse --abbrev-ref --symbolic-full-name '@{u}' >/dev/null 2>&1; then
   git push

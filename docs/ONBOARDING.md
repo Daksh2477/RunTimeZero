@@ -35,7 +35,7 @@ cp .env.example .env
 Create the database:
 
 ```bash
-createdb runtimezero
+createdb algacarbon
 npm run db:setup
 ```
 
@@ -67,22 +67,23 @@ will not look like a bug when you write it.
 
 ## 4. Your first change, end to end
 
+We work on a **single branch: `main`**. Pull before you start, commit after every meaningful
+change, push often.
+
 ```bash
-git switch develop
-git pull
-git switch -c feat/console-fleet     # feat/<area>-<thing>
+git pull --rebase                    # ALWAYS do this first
 
 # ... edit files ...
 
 ./scripts/commit.sh "add fleet board row component"
-./scripts/push.sh
+./scripts/push.sh                    # pulls and rebases for you
 ```
 
-Then open a PR into `develop` on GitHub. Don't merge your own PR — get one other person to look at
-it, even briefly.
+With four people on one branch, the rule that matters is **pull before you edit and push as soon as
+something works**. A change you sit on for three hours is a merge conflict you resolve at 3am
+instead of building.
 
-**Merge into `develop` at least once a day.** A branch that sits for two days is a merge conflict
-you'll be resolving at 3am instead of building.
+If `git pull --rebase` reports a conflict, stop and ask. Do not force-push your way out of it.
 
 ---
 

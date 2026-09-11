@@ -12,11 +12,6 @@ if [ $# -eq 0 ]; then
 fi
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-if [ "$BRANCH" = "main" ] || [ "$BRANCH" = "develop" ]; then
-  echo "refusing to commit directly on '$BRANCH'." >&2
-  echo "branch first:  git switch -c feat/<area>-<thing>" >&2
-  exit 1
-fi
 
 MSG="$*"
 case "$MSG" in

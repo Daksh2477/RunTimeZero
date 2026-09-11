@@ -1,196 +1,301 @@
-# Architecture
+# AlgaCarbon — Architecture
 
-## The shape of the system
-
-Two streams describe the same pond. They are computed **separately** and compared only at the end.
-
-```
-OPERATOR-CONTROLLED                      INDEPENDENT OF OPERATOR
-─────────────────────                    ───────────────────────
-pond telemetry                           satellite / drone imagery
-  CO₂, pH, DO, temp                        or a weighbridge slip
-        │                                          │
-        ▼                                          ▼
-  reported uptake                          derived biomass
-   (the claim)                            → growth → × 1.83
-        │                                          │
-        └──────────────┬───────────────────────────┘
-                       ▼
-              RECONCILIATION ENGINE
-         credit = min(claim, independent)
-         reject if claim > physics ceiling
-                       │
-                       ▼
-              attestation → chain
-```
-
-**The engine never sees ground truth.** It has only the claim, the independent estimate, and what
-physics permits. That is what makes a detected discrepancy a real finding rather than a restatement
-of an answer we already had.
+Everything runs on one laptop. No servers, no cloud, no hosting. The only external calls are a free
+weather API, a free satellite data API, a public MQTT broker, and a testnet RPC.
 
 ---
 
-## Why the stack is what it is
+## 1. The whole system, end to end
+
+```mermaid
+flowchart TB
+    subgraph HW["🔌 Hardware layer — simulated, firmware is real"]
+        WOKWI["Wokwi ESP32<br/>pH · DO · optical density · temp<br/>real firmware, real calibration"]
+        TWIN["Rust twin → WASM<br/>Monod kinetics · many ponds<br/>injectable faults"]
+    end
+
+    BROKER(["MQTT broker<br/>broker.hivemq.com"])
+
+    subgraph API["⚙️ API — Express + Postgres"]
+        INGEST["ingest/<br/>mqtt subscriber"]
+        SAT["ingest/sentinel<br/>Copernicus → NDCI"]
+        DB[("Postgres<br/>9 tables")]
+        ENGINE["reconcile/engine<br/>THE CORE"]
+        CEIL["physics ceiling<br/>no fitted params"]
+        MODELS["models/<br/>4 ONNX models"]
+    end
+
+    subgraph CHAIN["⛓️ Polygon Amoy"]
+        EV["BatchEvidence<br/>ERC-721"]
+        CC["CarbonCredit<br/>ERC-1155"]
+        RC["RetirementCertificate<br/>ERC-721 soulbound"]
+    end
+
+    subgraph WEB["🖥️ Next.js"]
+        CONSOLE["/console<br/>operator"]
+        VERIFY["/verify<br/>public"]
+        SIM["/sim<br/>public"]
+    end
+
+    WOKWI -->|"WiFi + MQTT"| BROKER
+    TWIN -->|"MQTT"| BROKER
+    BROKER --> INGEST
+    INGEST --> DB
+    SAT --> DB
+    DB --> ENGINE
+    CEIL --> ENGINE
+    ENGINE -->|"verdict only"| MODELS
+    MODELS -.->|"never touches credit amount"| ENGINE
+    ENGINE -->|"attestation"| EV
+    EV --> CC
+    CC -->|"burn"| RC
+    DB --> CONSOLE
+    EV --> VERIFY
+    TWIN --> SIM
+
+    style ENGINE fill:#0f5d58,color:#fff
+    style CEIL fill:#a8442a,color:#fff
+    style BROKER fill:#2d4a7c,color:#fff
+```
+
+**The one thing to notice:** there is no arrow from the twin into the API. Pond data reaches the
+engine *only* by crossing an MQTT wire as a noisy, quantised sensor reading. That is what makes
+"the engine never sees ground truth" a property of the wiring rather than a promise.
+
+---
+
+## 2. The verification mechanism
+
+This is the product. Everything else is plumbing around it.
+
+```mermaid
+flowchart LR
+    subgraph OP["Operator-controlled"]
+        T["telemetry<br/>CO₂, pH, DO, temp"] --> CLAIM["claimed uptake"]
+    end
+
+    subgraph IND["Independent of operator"]
+        S["Sentinel-2 / drone<br/>/ weighbridge slip"] --> EST["derived biomass<br/>× 1.83 → CO₂<br/>with error band"]
+    end
+
+    PHYS["physics ceiling<br/>lat · area · light · temp<br/>ARITHMETIC ONLY"]
+
+    CLAIM --> R{{"reconcile"}}
+    EST --> R
+    PHYS --> R
+
+    R --> OUT["creditable =<br/>min(claim, est_low, ceiling)"]
+    OUT --> MINT["mint on chain"]
+
+    style R fill:#0f5d58,color:#fff
+    style PHYS fill:#a8442a,color:#fff
+    style OUT fill:#16211f,color:#fff
+```
+
+Three guards, in order of strength:
+
+| Guard | Catches | Can it be argued with? |
+|---|---|---|
+| **Physics ceiling** | Physically impossible claims | No. It's orbital mechanics and pond area. |
+| **min() rule** | Any overstatement above the evidence floor | No. It's arithmetic. |
+| **Divergence classifier** | *Clever* fraud that stays under the ceiling | Yes — so it only sets the verdict, never the amount. |
+
+The third one exists because a careful fraudster sits just under the ceiling and overstates by 8%
+forever. Each window looks fine. The pattern doesn't.
+
+---
+
+## 3. Every feature, and where it lives
+
+```mermaid
+mindmap
+  root((AlgaCarbon))
+    Operator console
+      Fleet board
+        yield vs forecast
+        divergence status
+        days to harvest
+        open alerts
+      Site detail
+        live telemetry charts
+        claimed vs independent vs ceiling
+        72h yield forecast
+      Crash early-warning
+        predicted collapse window
+        dominant cause
+        cost of acting vs not
+      Expense ledger
+        paddlewheel · pumping
+        harvesting · drying
+        cost per tonne CO₂
+        vs aeration baseline
+      Disposition helper
+        sell or bury this batch
+    Verification
+      Dual-stream ingestion
+      Independent estimator
+      Physics ceiling
+      Divergence scoring
+      MRV report → IPFS
+    Marketplace
+      Batch evidence NFT
+      Fractional credits
+      Retirement certificate
+      Public credit verifier
+    Public
+      Simulator
+        configure a pond
+        projected yield + economics
+      Verify page
+        paste token id
+        see the evidence
+```
+
+| Surface | Route | Who | Needs login |
+|---|---|---|---|
+| Operator console | `/console` | Pond operator | Yes |
+| Public verifier | `/verify` | Anyone | No |
+| Public simulator | `/sim` | Anyone | No |
+| API | `:4000` | — | — |
+
+---
+
+## 4. Data model
+
+```mermaid
+erDiagram
+    sites ||--o{ ponds : has
+    ponds ||--o{ telemetry : "claims (append-only)"
+    ponds ||--o{ imagery_observations : "evidence (append-only)"
+    ponds ||--o{ harvest_records : "evidence (append-only)"
+    ponds ||--o{ estimates : derives
+    ponds ||--o{ divergence_checks : reconciles
+    sites ||--o{ batches : produces
+    sites ||--o{ expenses : incurs
+    divergence_checks }o--|| batches : "rolls up into"
+
+    sites {
+        uuid id PK
+        text name
+        float lat
+        float lon
+        enum tier
+        enum host_industry
+    }
+    ponds {
+        uuid id PK
+        float area_m2
+        float depth_m
+        float width_m "< 40m = no satellite"
+    }
+    telemetry {
+        timestamptz observed_at
+        float co2_uptake_kg "THE CLAIM"
+        enum source
+    }
+    imagery_observations {
+        enum channel
+        float chlorophyll_index
+        float measured_dry_mass_kg
+        text source_ref "re-fetchable"
+    }
+    divergence_checks {
+        float claimed_co2_kg
+        float independent_low_co2_kg
+        float ceiling_co2_kg
+        enum verdict
+        float creditable_co2_kg "min() of the three"
+    }
+    batches {
+        enum disposition "must be durable"
+        text mrv_report_cid
+        text evidence_token_id
+    }
+```
+
+Evidence tables are **append-only**. Never `UPDATE`, never `DELETE`. A later reading supersedes an
+earlier one; the original stays. A verification system that can quietly rewrite its own inputs
+verifies nothing.
+
+---
+
+## 5. Credit lifecycle
+
+```mermaid
+sequenceDiagram
+    participant P as Pond
+    participant N as Sensor node
+    participant A as API
+    participant S as Satellite
+    participant E as Engine
+    participant C as Chain
+    participant B as SME buyer
+
+    P->>N: physical state
+    N->>A: MQTT telemetry (the claim)
+    S->>A: NDCI observation (independent)
+    A->>E: claim + estimate + ceiling
+    Note over E: creditable = min(all three)
+    E-->>A: verdict + amount
+    A->>A: record disposition (buried/biochar/bioplastic)
+    A->>C: mint BatchEvidence (ERC-721) + report CID
+    A->>C: mint CarbonCredit (ERC-1155), capped
+    B->>C: buy fraction of batch
+    B->>C: burn → RetirementCertificate
+    Note over C: irreversible, public, non-transferable
+```
+
+Step 7 — recording disposition — is the one most proposals skip. Without a durable outcome you've
+certified *utilisation*, not removal, and the credit is invalid no matter how faithfully the chain
+recorded it.
+
+---
+
+## 6. Repo map
+
+```
+runTimeZero/
+├── packages/
+│   ├── types/          shared TS types — the contract between everything
+│   ├── physics/        Rust → WASM: solar, growth, ceiling, sim, faults
+│   ├── models/         4 models: train in Python, run as ONNX in Node
+│   └── chain/          contract ABIs + ethers bindings
+├── apps/
+│   ├── api/            Express + Postgres
+│   │   └── src/{routes,services,ingest,reconcile,db}
+│   ├── web/            Next.js: (console) (verify) (sim)
+│   ├── firmware/       real ESP32 firmware, simulated board
+│   └── contracts/      3 Solidity contracts
+├── scripts/            commit.sh, push.sh, seed.ts
+└── docs/               this file, DECISIONS.md, HOW-IT-WORKS.md, ONBOARDING.md
+```
+
+---
+
+## 7. Why the stack is what it is
 
 | Choice | Reason |
 |---|---|
-| **TypeScript nearly everywhere** | One runtime to debug at 4am. Three of us are learning as we go. |
-| **Rust → WASM for `physics`** | Deterministic math with no I/O. Compiled to WASM it runs *identically* on the server and in the browser, so the public simulator and the verification engine share one implementation of the twin instead of two that drift apart. |
-| **Raw SQL, no ORM** | An ORM is a second thing to learn and hides the query that's actually running. |
-| **npm workspaces, not pnpm** | Works with a bare Node install. One less setup step for teammates. |
-| **Copernicus statistics API, not raster downloads** | Returns numbers, not GeoTIFFs. We skip image processing entirely. |
-| **Polygon Amoy testnet** | Free gas, mature EVM tooling, and tokenised carbon already lives on Polygon. |
+| **TypeScript nearly everywhere** | One runtime to debug at 4am, with three teammates learning as they go |
+| **Rust → WASM for physics** | Deterministic math; compiled to WASM it runs *identically* server-side and in the browser, so the public simulator and the verification engine can't drift apart |
+| **Raw SQL, no ORM** | An ORM is a second thing to learn and hides the query actually running |
+| **npm workspaces, not pnpm** | Works with a bare Node install — one less setup step |
+| **Copernicus statistics API** | Returns numbers, not GeoTIFFs. No raster processing at all |
+| **Public MQTT broker** | Wokwi reaches it for free; no Wokwi Club subscription needed |
+| **ONNX for models** | Train in Python offline, infer in Node. Python never enters the request path |
+| **Polygon Amoy** | Free gas, mature tooling, and tokenised carbon already lives on Polygon |
 
-### The Rust abort condition
+### Everything runs locally
 
-If `wasm-pack build` isn't producing a module `apps/api` can import **within 90 minutes**, stop and
-port the physics to TypeScript. It's ~200 lines of arithmetic. It is not worth losing a day over.
-This is written down so nobody has to make that call under pressure at 2am.
-
----
-
-## The hardware layer
-
-We have no ESP32 and no probes, so we built the node instead of pretending it exists.
-
-```
- WOKWI (simulated ESP32)              MQTT broker            OUR API
- ┌──────────────────────┐                                  ┌──────────────┐
- │ pH / DO / OD pots    │──analog─┐                        │ mqtt         │
- │ DS18B20 temp    1-Wire────────►│  real firmware:        │ subscriber   │
- │ OLED + tx LED        │         │  read → calibrate ────►│      │       │
- └──────────────────────┘         │  → publish JSON        │      ▼       │
-                                  └──simulated WiFi───►    │  telemetry   │
-                                     broker.hivemq.com     │  (append-only)│
-                                                           └──────────────┘
-```
-
-The firmware in `apps/firmware/src/main.cpp` is real: real analog reads, real two-point calibration,
-real MQTT. Nothing in it knows it is being simulated.
-
-**This is not cosmetic.** The API's *only* source of pond data is the MQTT subscription. There is no
-code path from the twin's internal state into the reconciliation engine, so decision 6 — the engine
-must never see ground truth — is enforced by the architecture rather than by discipline. What
-crosses the wire is a quantised, noisy sensor reading and nothing else.
-
-### Two layers of simulation
-
-| Layer | Scope | Purpose |
+| Component | Where | External dependency |
 |---|---|---|
-| **Wokwi node** | One pond, visible circuit, knobs a human can turn | The demo. A judge can drag a potentiometer and watch the dashboard move. |
-| **Rust twin** | Many ponds, Monod kinetics, real weather, injectable faults | The scale. Fleet view needs more than one pond; fault injection needs a model. |
+| API + Postgres | your laptop | — |
+| Next.js | your laptop | — |
+| Rust twin | your laptop | — |
+| Models | your laptop, ONNX runtime | — |
+| Wokwi node | browser | public MQTT broker |
+| Weather | — | Open-Meteo (free, no key) |
+| Satellite | — | Copernicus (free account) |
+| Chain | — | Amoy testnet RPC (free) |
 
-Both publish to the same topics. The API cannot tell them apart, and neither can the engine.
-
-### Later: the twin as a Wokwi custom chip
-
-Wokwi's Custom Chips API accepts anything that compiles to WebAssembly, including Rust. Our physics
-crate already builds to WASM, so the twin can become a virtual sensor board driving the node's inputs
-directly. Better story, not a more important one — do it only after the core loop works.
-
-
----
-
-## Packages
-
-### `packages/types`
-The contract between every other package. Written first, before any feature code, so all four of us
-can work in parallel without blocking on each other.
-
-If you need a new shared shape, add it here and tell the others. **Never** redeclare a shape locally
-that already exists here.
-
-### `packages/physics` (Rust → WASM)
-Pure functions, no I/O, fully deterministic. Same input always gives the same output — which is what
-makes it testable and what makes the ceiling defensible.
-
-- `solar.rs` — solar position, day length, clear-sky irradiance for a lat/lon/date
-- `growth.rs` — Monod kinetics under light, temperature and nutrient limitation
-- `ceiling.rs` — maximum biomass gain physically achievable for a pond in a window
-- `sim.rs` — the digital twin: steps a pond forward in time
-- `faults.rs` — injectable failure modes (contamination crash, pump failure, overstated uptake)
-
-### `packages/chain`
-ABIs and typed ethers bindings. Generated from `apps/contracts`, committed so the API and web don't
-need a Hardhat install.
-
----
-
-## Apps
-
-### `apps/api` — Express + Postgres
-
-```
-src/
-├── routes/       one file per resource, thin — parse, call a service, return
-├── services/     business logic, no HTTP knowledge
-├── ingest/       Copernicus fetch, NDCI computation, telemetry intake
-├── reconcile/    the engine, the divergence scoring, the MRV report
-└── db/           schema.sql, migrations, query helpers
-```
-
-Routes never touch the database directly. Services never know what HTTP is. This split is what lets
-us test the engine without spinning up a server.
-
-### `apps/web` — Next.js App Router
-
-Route groups map to subdomains via `middleware.ts`:
-
-| Host (prod) | Local path | Route group | Audience |
-|---|---|---|---|
-| `app.algacarbon.*` | `/console` | `(console)` | Operator |
-| `verify.algacarbon.*` | `/verify` | `(verify)` | Anyone, no account |
-| `sim.algacarbon.*` | `/sim` | `(sim)` | Anyone, no account |
-
-Don't touch DNS until the day before the demo. Local paths work fine until then.
-
-### `apps/firmware` — Wokwi / PlatformIO
-
-Real ESP32 firmware on a simulated board. See `apps/firmware/README.md`.
-
-### `apps/contracts` — Hardhat
-
-Three contracts, no novel token mechanics:
-
-| Contract | Standard | Role |
-|---|---|---|
-| `BatchEvidence` | ERC-721 | One immutable evidence object per verified batch. Holds the divergence score, imagery IDs, disposition proof, and the IPFS CID of the MRV report. Minted by the oracle, never by the operator. |
-| `CarbonCredit` | ERC-1155 | Token ID = batch ID. Fungible *within* a batch so it can be split; distinct *across* batches so every tonne traces to its evidence. Supply capped at mint. |
-| `RetirementCertificate` | ERC-721, non-transferable | Minted when a buyer burns credits. Beneficiary, tonnage, originating batch, timestamp. Permanent. |
-
----
-
-## Data model
-
-Nine tables. Append-only where the record is evidence.
-
-| Table | Notes |
-|---|---|
-| `sites` | One per facility. Location, tier, host industry. |
-| `ponds` | Many per site. Area, depth, geometry for the ceiling calculation. |
-| `telemetry` | **Append-only.** Operator-controlled readings. Never updated, never deleted. |
-| `imagery_observations` | **Append-only.** The independent channel, whatever the tier. |
-| `estimates` | Derived biomass and CO₂ per observation window. |
-| `divergence_checks` | Claim vs independent, with error bounds and a verdict. |
-| `batches` | A verified production batch; carries the on-chain token ID once minted. |
-| `harvest_records` | Weighbridge mass + moisture. For the lowest tier this *is* the independent channel. |
-| `expenses` | Electricity, labour, consumables — per site, per period. |
-
-Full DDL in [`apps/api/src/db/schema.sql`](../apps/api/src/db/schema.sql).
-
----
-
-## Verification tiers
-
-Our independent channel is imagery, and imagery can't see a small pond. Rather than excluding small
-operators, the **channel itself scales**:
-
-| Tier | Size | Independent channel | On-site sensors |
-|---|---|---|---|
-| Smallholder | < 0.5 ha | Geotagged harvest photos + public weighbridge slip | None — phone only |
-| Small | 0.5–2 ha | Drone or pole-mounted imagery, weekly | pH, DO, temp, optical density, energy meter |
-| Mid | 2–10 ha | Drone + partial Sentinel-2 | + flow meters, PAR, pond level, LoRa gateway |
-| Facility | 10 ha+ | Sentinel-2 — ponds are several clean pixels across | + SCADA, CO₂ mass-flow meter |
-
-Sensor quality sets **how tight the divergence band is**, not whether verification happens. A
-smallholder with no instrumentation still gets credits, at a wider band, priced accordingly.
+CI runs `cargo test` and `tsc` on push. That's all it does. **It deploys nothing.**
