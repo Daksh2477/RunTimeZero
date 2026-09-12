@@ -45,6 +45,7 @@ HEADER = [
     "do_amplitude", "ph_amplitude", "od_volatility", "temp_amplitude",
     "depth_m", "log_area", "season_sin", "season_cos", "hours_since_harvest",
     "energy_kwh_mean", "mixing_uptime",
+    "do_min", "temp_max", "ph_max", "od_rel_trend",
     "pond_group", "label",
 ]
 
@@ -259,6 +260,13 @@ def make_rows(combined):
                 UNAVAILABLE["hours_since_harvest"],
                 UNAVAILABLE["energy_kwh_mean"],
                 UNAVAILABLE["mixing_uptime"],
+                # ATP3 is daily, so extremes are over the 3-day history rather
+                # than the hourly window the twin uses. Coarser, same meaning.
+                round(min([x["do"] for x in history if x["do"] is not None], default=0.0), 4),
+                round(max([x["temp"] for x in history if x["temp"] is not None], default=0.0), 4),
+                round(max(x["ph"] for x in history), 4),
+                round(trend(now["od"], prev["od"] if prev else None)
+                      / max(0.05, mean([x["od"] for x in history]) or 0.0), 6),
                 group,
                 label,
             ])
