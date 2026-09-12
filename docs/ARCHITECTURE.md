@@ -25,7 +25,7 @@ flowchart TB
         MODELS["models/<br/>4 ONNX models"]
     end
 
-    subgraph CHAIN["⛓️ Polygon Amoy"]
+    subgraph CHAIN["⛓️ Ethereum Sepolia"]
         EV["BatchEvidence<br/>ERC-721"]
         CC["CarbonCredit<br/>ERC-1155"]
         RC["RetirementCertificate<br/>ERC-721 soulbound"]
@@ -283,7 +283,7 @@ runTimeZero/
 | **Copernicus statistics API** | Returns numbers, not GeoTIFFs. No raster processing at all |
 | **Public MQTT broker** | Wokwi reaches it for free; no Wokwi Club subscription needed |
 | **ONNX for models** | Train in Python offline, infer in Node. Python never enters the request path |
-| **Polygon Amoy** | Free gas, mature tooling, and tokenised carbon already lives on Polygon |
+| **Ethereum Sepolia** | Every wallet and explorer supports it without adding a custom network, so a judge can click a transaction link and see it. Polygon Amoy is the better chain on merit — near-free gas, and tokenised carbon already lives on Polygon — and `hardhat.config.cjs` keeps it configured, but its faucet requires a mainnet ETH balance we are not going to fund for a testnet |
 
 ### Everything runs locally
 
@@ -296,6 +296,6 @@ runTimeZero/
 | Wokwi node | browser | public MQTT broker |
 | Weather | — | Open-Meteo (free, no key) |
 | Satellite | — | Copernicus (free account) |
-| Chain | — | Amoy testnet RPC (free) |
+| Chain | — | Sepolia public RPC (free) |
 
 CI runs `cargo test` and `tsc` on push. That's all it does. **It deploys nothing.**

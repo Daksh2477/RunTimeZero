@@ -80,7 +80,7 @@ flowchart LR
     T --> R{{"reconcile<br/>min() rule"}}
     S --> R
     PHYS --> R
-    R --> CHAIN["mint on Polygon<br/>capped at verified amount"]
+    R --> CHAIN["mint on Sepolia<br/>capped at verified amount"]
     R --> UI["operator console<br/>+ public verifier"]
 
     style R fill:#0f5d58,color:#fff
@@ -153,7 +153,7 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 **TypeScript** for the API, web and contracts tooling — one runtime to debug at 4am.
 **Rust → WASM** for physics only: deterministic math that runs identically on the server and in the
 browser, so the public simulator and the verification engine can't drift apart.
-**Postgres** with raw SQL, no ORM. **Polygon Amoy** for credits. **ONNX** for models, so Python stays
+**Postgres** with raw SQL, no ORM. **Ethereum Sepolia** for credits (Amoy configured too). **ONNX** for models, so Python stays
 a training-time dependency and never enters the request path.
 
 ### The hardware is simulated; the firmware is real

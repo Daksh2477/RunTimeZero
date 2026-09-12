@@ -122,8 +122,8 @@ make that call under pressure.
 **Context.** Immutability does not create trust. A chain records a lie exactly as faithfully as a
 truth — see decision 1.
 
-**Decision.** Put credits on Polygon anyway, for three things a private database cannot give a
-stranger:
+**Decision.** Put credits on a public chain anyway, for three things a private database cannot
+give a stranger:
 
 - a credit that cannot be sold twice (burn-to-retire, non-transferable certificate)
 - provenance anyone can inspect without our permission
@@ -131,6 +131,15 @@ stranger:
 
 **How we say it:** *we are not fixing the ledger; ledgers were never the problem. We are fixing what
 gets written into one.*
+
+**Which chain, and why it is not Polygon.** Deployed on Ethereum Sepolia:
+`RetirementCertificate` `0x47cF3Ff2d6eFf2117D35B9C0793be5D475C71258`, `BatchEvidence`
+`0x3deD7C4961C723EdCd5edAb36DEab7436b2E3F51`, `CarbonCredit`
+`0xb9Dc0CDb2483628ee7347Eb03e40CEd1eCC13549`. Amoy remains configured in
+`hardhat.config.cjs` and is the better chain on merit, but its faucet gates on holding mainnet ETH,
+and testnet gas is not worth real money. Sepolia also needs no custom network added to a wallet,
+which matters when the person checking is a judge with two minutes. Nothing in the contracts or the
+API is chain-specific — moving is a redeploy and three addresses in `.env`.
 
 ---
 
