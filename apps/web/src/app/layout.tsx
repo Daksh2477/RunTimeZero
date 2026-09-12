@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { DM_Sans, IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
 import { Masthead } from '@/components/masthead';
 import './globals.css';
+import './reading-comfort.css';
 
 /*
  * The three faces from Chetan's design. Loaded through next/font rather than

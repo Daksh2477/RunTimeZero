@@ -106,7 +106,7 @@ export default function AdminConsole() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <section className="rounded-xl border border-border bg-card p-5 shadow-sm">
-          <h2 className="font-display text-sm font-semibold">Issue a batch</h2>
+          <h2 className="font-display text-sm font-semibold">Issue and publish a batch</h2>
           <p className="text-xs text-muted-foreground">
             Preview first. The blockers are the product rules, in plain words.
           </p>
@@ -167,7 +167,7 @@ export default function AdminConsole() {
             <button type="button" onClick={doIssue}
               disabled={!preview || preview.blockers.length > 0}
               className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-40">
-              Issue
+              Issue and publish batch
             </button>
           </div>
 

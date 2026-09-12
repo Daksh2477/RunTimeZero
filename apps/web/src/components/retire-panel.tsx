@@ -13,6 +13,7 @@
  * paid. A broker retiring for a mill must name the mill.
  */
 
+import Link from 'next/link';
 import { useState } from 'react';
 import type { Listing } from '@/lib/market-api';
 
@@ -72,6 +73,7 @@ export function RetirePanel({ listing, onRetired, onRetire }: Props) {
             {done.id}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">{done.note}</p>
+          <Link className="button mt-3" href={`/verify/certificate/${done.id}`}>Open retirement certificate →</Link>
           <button
             type="button"
             onClick={() => setDone(null)}
@@ -125,7 +127,7 @@ export function RetirePanel({ listing, onRetired, onRetire }: Props) {
 
           <button
             type="button"
-            disabled={busy || !beneficiary.trim() || kg < 1}
+            disabled={busy || !beneficiary.trim() || !Number.isFinite(kg) || kg < 1 || kg > listing.availableKg}
             onClick={submit}
             className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-40"
           >

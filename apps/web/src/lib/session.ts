@@ -72,8 +72,8 @@ export const ROLE_META: Record<Role, {
  * browsing it is not their job.
  */
 export const ACCESS: Record<Role, string[]> = {
-  farmer: ['/farm', '/sim', '/verify', '/console/investor'],
-  investor: ['/console/investor', '/verify'],
+  farmer: ['/farm', '/sim', '/verify', '/console/investor', '/console/market'],
+  investor: ['/console/investor', '/console/market', '/verify'],
   researcher: ['/console/researcher', '/sim', '/verify'],
   admin: ['/farm', '/sim', '/verify', '/console'],
 };
@@ -101,7 +101,8 @@ export function useRole() {
   useEffect(() => {
     const read = () => {
       try {
-        setRoleState((localStorage.getItem(KEY) as Role | null) ?? null);
+        const saved = localStorage.getItem(KEY);
+        setRoleState(saved && Object.hasOwn(ROLE_META, saved) ? saved as Role : null);
       } catch {
         setRoleState(null);
       }
@@ -120,6 +121,6 @@ export function useRole() {
 }
 
 export function canAccess(role: Role | null, path: string): boolean {
-  if (!role) return false;
-  return ACCESS[role].some((p) => path.startsWith(p));
+  if (!role || !ACCESS[role]) return false;
+  return ACCESS[role].some((p) => path === p || path.startsWith(p + '/'));
 }

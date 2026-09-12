@@ -14,6 +14,12 @@
  * from one palette; neither wins.
  */
 @theme inline {
+  --text-xs: 1rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 1.0625rem;
+  --text-sm--line-height: 1.55;
+  --text-base: 1.125rem;
+  --text-base--line-height: 1.6;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

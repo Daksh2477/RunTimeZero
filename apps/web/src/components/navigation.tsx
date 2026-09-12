@@ -13,6 +13,7 @@
  */
 
 import Link from 'next/link';
+import { useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Chart, Coins, Cog, Flask, Leaf, Map, Shield, Users } from '@/components/icons';
 import { ROLE_META, canAccess, clearRole, useRole } from '@/lib/session';
@@ -25,9 +26,9 @@ import { ROLE_META, canAccess, clearRole, useRole } from '@/lib/session';
 const NAV = [
   { href: '/farm', label: 'My ponds', icon: Leaf },
   { href: '/farm/land', label: 'My land', icon: Map },
-  { href: '/console/market', label: 'Market', icon: Coins },
-  { href: '/console/researcher', label: 'Data', icon: Flask },
-  { href: '/verify', label: 'Verify', icon: Shield },
+  { href: '/console/market', label: 'Marketplace', icon: Coins },
+  { href: '/console/researcher', label: 'Research data', icon: Flask },
+  { href: '/verify', label: 'Carbon reports', icon: Shield },
   { href: '/sim', label: 'Simulator', icon: Chart },
   { href: '/console', label: 'All ponds', icon: Users },
   { href: '/console/admin', label: 'Admin', icon: Cog },
@@ -35,21 +36,25 @@ const NAV = [
 
 export function Navigation() {
   const path = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
   const { role, ready } = useRole();
 
   // Before the role is read, show nothing rather than flashing the full set.
   if (!ready) return <nav className="main-nav" aria-label="Main navigation" />;
 
   const visible = role ? NAV.filter((n) => canAccess(role, n.href)) : [];
+  const active = visible.filter(n => path === n.href || path.startsWith(n.href + '/')).sort((a,b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <div className="nav-cluster">
-      <nav className="main-nav" aria-label="Main navigation">
+      {role && <button type="button" className="mobile-nav-toggle" aria-expanded={menuOpen} aria-controls="app-navigation" onClick={() => setMenuOpen(open => !open)}>{visible.find(n=>n.href===active)?.label ?? 'Menu'} <span aria-hidden="true">{menuOpen ? '−' : '☰'}</span></button>}
+      <nav id="app-navigation" className="main-nav" data-open={menuOpen} aria-label="Main navigation">
       {visible.map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
           href={href}
-          aria-current={path.startsWith(href) ? 'page' : undefined}
+          onClick={() => setMenuOpen(false)}
+          aria-current={active === href ? 'page' : undefined}
         >
           <Icon />
           {/* Wrapped so CSS can drop the label on a phone and leave the
@@ -61,10 +66,10 @@ export function Navigation() {
       </nav>
       {role ? (
         <Link href="/enter" className="role-pill" onClick={() => clearRole()}>
-          {ROLE_META[role].label}
+          <span className="role-name">{ROLE_META[role].label} · </span>Switch view
         </Link>
       ) : (
-        <Link href="/enter" className="role-pill">Sign in</Link>
+        <Link href="/enter" className="role-pill">Choose your view</Link>
       )}
     </div>
   );

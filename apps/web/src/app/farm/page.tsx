@@ -54,6 +54,11 @@ export default async function FarmPage() {
         <p>{!ponds.length ? 'Explore a sample pond while your site is being configured.' : 'Readings can be old or incomplete. Check the time shown on each pond before acting.'}</p>
       </section>
 
+      <nav className="farm-shortcuts" aria-label="Farm tasks">
+        <Link href="/farm/land"><strong>Manage my land <span aria-hidden="true">↗</span></strong><span>Add a pond or review your site layout</span></Link>
+        <Link href="/verify"><strong>Check carbon records <span aria-hidden="true">↗</span></strong><span>See what the evidence supports</span></Link>
+        <Link href="/console/market"><strong>Open the marketplace <span aria-hidden="true">↗</span></strong><span>Browse carbon batches and algae produce</span></Link>
+      </nav>
       <section className="farm-list">
         {ponds.map(({ pond, site }) => (
           <PondCard key={pond.id} pond={pond} siteName={site} />

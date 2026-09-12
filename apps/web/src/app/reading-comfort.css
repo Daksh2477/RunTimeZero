@@ -1,0 +1,91 @@
+/* Shared reading scale for both the Lovable utility pages and legacy panels. */
+body { font-size: 18px; line-height: 1.6; }
+body input:not([type='range']):not([type='checkbox']):not([type='radio']), body select, body textarea { font-size: 1rem; min-height: 48px; }
+body button, body .button { min-height: 46px; }
+body button { touch-action: manipulation; }
+body main h2 { line-height: 1.3; }
+body .helper, body .sub, body .land-meta, body .land-reason, body .pond-where, body .pond-note, body .pond-card-foot, body .site-meta, body .page-note { font-size: 1rem; line-height: 1.65; }
+body .eyebrow, body .workspace-step { font-size: .875rem; letter-spacing: .075em; }
+body .button { font-size: 1rem; padding: 12px 20px; }
+body .big-reading-label { font-size: .95rem; letter-spacing: .02em; }
+body .big-reading-hint { font-size: 1rem; line-height: 1.55; }
+body .big-reading-value { font-size: clamp(2rem,3vw,2.7rem); line-height: 1.2; }
+body .big-reading-unit { font-size: 1rem; }
+body .big-reading { padding: 20px; }
+body .farm .pond-card { padding: 24px; }
+body .farm .pond-card h2 { font-size: 1.5rem; }
+body .farm .pond-line { font-size: 1.125rem; }
+body .farm .state-pill { font-size: 1rem; white-space: normal; }
+body .reading-grid { grid-template-columns: repeat(auto-fit,minmax(min(190px,100%),1fr)); gap: 14px; }
+body .land-add h2, body .land-list h2, body .verify-block h2 { font-size: 1.35rem; }
+body .land-add label, body .land-field label, body .land-stats dt, body .certificate-details dt { font-size: 1rem; text-transform: none; letter-spacing: normal; }
+body .land-meta { color: #465a4c; }
+body .land-reason { color: #87500b; }
+body .sky-facts { grid-template-columns: repeat(auto-fit,minmax(105px,1fr)); gap: 16px; }
+body .sky-facts dt { font-size: .95rem; letter-spacing: .02em; }
+body .sky-facts dd { font-size: 1.2rem; white-space: normal; line-height: 1.4; margin-top: 4px; }
+body .sky-note { font-size: 1rem; opacity: 1; line-height: 1.5; }
+body .sky-strip { padding: 18px 22px; }
+body .sensor-reading > span, body .sensor-note, body .sensor-explanation p, body .setup-heading > span, body .setup-fields .sim-field .helper, body .scene-caption, body .scene-weather div span, body .panel-fold-meta { font-size: .95rem; line-height: 1.5; }
+body .sensor-reading > strong { font-size: 1.75rem; }
+body .setup-fields .sim-field label, body .setup-fields .sim-field label strong, body .setup-switch button, body .scenario-options button, body .sensor-panel-heading > span, body .scene-dimensions, body .mixing-indicator { font-size: 1rem; }
+body .sensor-reading small { font-size: .9rem; }
+body .simulation-totals .sim-figures span, body .sim-figures span { font-size: 1rem; }
+body .panel-fold-title { font-size: 1.125rem; }
+body .verify-table { font-size: 1rem; }
+body .verify-table th { font-size: .9rem; }
+body .reference, body .certificate-hash { overflow-wrap: anywhere; }
+body main [class*='text-[0.'], body main [class*='text-[10px]'], body main [class*='text-[11px]'], body main [class*='text-[12px]'] { font-size: .95rem; line-height: 1.6; }
+body main .text-status-optimal { color: #256039; }
+body main .text-status-warning { color: #89520c; }
+body .masthead-inner { gap: 12px 20px; flex-wrap: wrap; }
+body .nav-cluster { min-width: 0; flex-wrap: wrap; }
+body .main-nav { flex-wrap: wrap; overflow: visible; }
+body .main-nav a { font-size: 1rem; min-height: 46px; padding: 10px 13px; }
+body .main-nav .nav-label { display: inline; }
+body .role-pill { font-size: .95rem; min-height: 44px; }
+body .main-nav a[aria-current='page'] { background: #d8efc6; color: #1e402c; }
+body .main-nav a[aria-current='page']::after { display: none; }
+.farm-shortcuts { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 14px; margin-block: 22px; }
+.farm-shortcuts a { display: flex; flex-direction: column; gap: 8px; padding: 20px; background: #fff; border: 1px solid #ceddca; border-radius: 14px; transition: border-color .18s,box-shadow .18s; }
+.farm-shortcuts strong { display: flex; justify-content: space-between; gap: 12px; font-size: 1.1rem; }
+.farm-shortcuts a > span { color: #506451; font-size: 1rem; line-height: 1.5; }
+.farm-shortcuts a:hover { border-color: #51854d; box-shadow: 0 5px 14px #28442d12; }
+body :where(a,button,input,select,textarea,summary):focus-visible { outline: 3px solid #386dca; outline-offset: 3px; }
+@media(max-width:1100px) { body .masthead { position: static; } body .masthead.is-floating { position: static; transform: none; width: 100%; border-radius: 0; } body .nav-cluster { flex: 1 1 100%; } body .main-nav { flex: 1; } }
+@media(max-width:700px) {
+  body .masthead-inner { padding: 12px 16px; }
+  body .main-nav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); width: 100%; }
+  body .main-nav a { white-space: normal; justify-content: flex-start; font-size: .95rem; }
+  body .nav-cluster { display: flex; align-items: stretch; gap: 10px; }
+  body .role-pill { align-self: flex-start; }
+  body .wordmark { font-size: 1.25rem; }
+  body .farm-shortcuts { grid-template-columns: 1fr; }
+  body .farm .pond-card { padding: 18px; }
+  body .reading-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body .big-reading { padding: 14px; }
+  body .big-reading-value { font-size: 1.9rem; }
+  body .big-reading-label { font-size: .875rem; }
+  body .page-heading { gap: 20px; }
+  body .sky-facts { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  body .sky-strip { padding: 18px; }
+}
+@media(max-width:359px) { body .reading-grid { grid-template-columns: 1fr; } }
+@media(prefers-reduced-motion:reduce) { .farm-shortcuts a { transition: none; } }
+/* Keep the header in flow when it becomes a capsule: no jump or covered text. */
+body .masthead.is-lifted { position: sticky; top: 8px; left: auto; right: auto; max-width: calc(100% - 24px); border-radius: 22px; }
+body .masthead.is-lifted .masthead-inner { padding: 10px clamp(14px,2.2vw,36px); }
+@media(max-width:1100px) { body .masthead, body .masthead.is-lifted { position: static; max-width: 100%; border-radius: 0; } }
+body main h2.text-sm, body main h3.text-sm { font-size: 1.25rem; }
+body main .text-xs.uppercase { text-transform: none; letter-spacing: .02em; }
+.mobile-nav-toggle { display: none; }
+@media(max-width:700px) {
+  body .wordmark-text { display: inline; }
+  body .nav-cluster { width: 100%; flex-basis: 100%; }
+  body .mobile-nav-toggle { display: flex; flex: 1; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border: 1px solid #6b8072; border-radius: 10px; background: #ffffff0e; color: #eef6ec; font-size: 1rem; }
+  body .nav-cluster .main-nav { display: none; order: 3; flex: 1 1 100%; width: 100%; }
+  body .nav-cluster .main-nav[data-open='true'] { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; }
+  body .main-nav a { min-width: 0; border-radius: 10px; padding: 12px; }
+  body .nav-cluster .role-pill { order: 2; flex: none; margin: 0; padding: 10px 12px; }
+  body .role-name { display: none; }
+}
