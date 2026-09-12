@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const BASE = '/api/backend';
 
 interface Pond {
   id: string; label: string; areaM2: number; depthM: number;
@@ -30,6 +30,11 @@ interface Pond {
 }
 interface Site { id: string; name: string; tier: string }
 
+/** What can be changed about an existing pond. Area is never edited directly. */
+interface Draft {
+  label: string; lengthM: number; widthM: number; depthM: number; strain: string;
+}
+
 export default function LandPage() {
   const [sites, setSites] = useState<Site[]>([]);
   const [siteId, setSiteId] = useState('');
@@ -37,6 +42,10 @@ export default function LandPage() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ label: '', lengthM: 100, widthM: 20, depthM: 0.25 });
   const [busy, setBusy] = useState(false);
+  /* Editing one pond at a time, in place. A modal would hide the list you are
+   * comparing against, and the numbers only make sense next to the others. */
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<Draft | null>(null);
 
   const loadPonds = useCallback((id: string) => {
     if (!id) return;
@@ -93,6 +102,45 @@ export default function LandPage() {
     }
   };
 
+  const startEdit = (pond: Pond) => {
+    setError(null);
+    setEditingId(pond.id);
+    setDraft({
+      label: pond.label,
+      lengthM: pond.lengthM,
+      widthM: pond.widthM,
+      depthM: pond.depthM,
+      strain: pond.strain,
+    });
+  };
+
+  const saveEdit = async (pond: Pond) => {
+    if (!draft) return;
+    setBusy(true); setError(null);
+    try {
+      // Only what actually changed. The API treats an absent key as "leave it
+      // alone", so sending the whole object would rewrite fields the farmer
+      // never touched — and would overwrite a change someone else just made.
+      const changed: Partial<Draft> = {};
+      if (draft.label.trim() !== pond.label) changed.label = draft.label.trim();
+      if (draft.lengthM !== pond.lengthM) changed.lengthM = draft.lengthM;
+      if (draft.widthM !== pond.widthM) changed.widthM = draft.widthM;
+      if (draft.depthM !== pond.depthM) changed.depthM = draft.depthM;
+      if (draft.strain.trim() !== pond.strain) changed.strain = draft.strain.trim();
+
+      if (Object.keys(changed).length === 0) {
+        setEditingId(null); setDraft(null); return;
+      }
+      await call(`/land/ponds/${pond.id}`, {
+        method: 'PATCH', body: JSON.stringify(changed),
+      });
+      setEditingId(null); setDraft(null);
+      loadPonds(siteId);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save the pond');
+    } finally { setBusy(false); }
+  };
+
   const area = form.lengthM * form.widthM;
 
   return (
@@ -102,9 +150,9 @@ export default function LandPage() {
           <p className="eyebrow">YOUR LAND</p>
           <h1>Ponds and sites</h1>
           <p>
-            Add a pond, or take one out of use. Nothing is ever deleted — a
-            pond that earned credits has to stay on the record for anyone
-            auditing them later.
+            Add a pond, edit one, or take it out of use. Nothing is ever
+            deleted — a pond that earned credits has to stay on the record for
+            anyone auditing them later.
           </p>
         </div>
       </div>
@@ -179,10 +227,64 @@ export default function LandPage() {
                   </span>
                 )}
               </div>
-              <button type="button" className="button secondary"
-                onClick={() => setActive(p, !p.active)}>
-                {p.active ? 'Take out of use' : 'Put back in use'}
-              </button>
+              <div className="land-row-actions">
+                <button type="button" className="button small"
+                  onClick={() => (editingId === p.id ? setEditingId(null) : startEdit(p))}>
+                  {editingId === p.id ? 'Cancel' : 'Edit'}
+                </button>
+                <button type="button" className="button secondary small"
+                  onClick={() => setActive(p, !p.active)}>
+                  {p.active ? 'Take out of use' : 'Put back in use'}
+                </button>
+              </div>
+
+              {editingId === p.id && draft && (
+                <form className="land-edit" onSubmit={(e) => { e.preventDefault(); void saveEdit(p); }}>
+                  <label><span>Name</span>
+                    <input value={draft.label}
+                      onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
+                  </label>
+                  <label><span>Length (m)</span>
+                    <input type="number" min={1} value={draft.lengthM}
+                      onChange={(e) => setDraft({ ...draft, lengthM: Number(e.target.value) })} />
+                  </label>
+                  <label><span>Width (m)</span>
+                    <input type="number" min={1} value={draft.widthM}
+                      onChange={(e) => setDraft({ ...draft, widthM: Number(e.target.value) })} />
+                  </label>
+                  <label><span>Depth (cm)</span>
+                    <input type="number" min={10} max={80} value={Math.round(draft.depthM * 100)}
+                      onChange={(e) => setDraft({ ...draft, depthM: Number(e.target.value) / 100 })} />
+                  </label>
+                  <label><span>Strain</span>
+                    <input value={draft.strain}
+                      onChange={(e) => setDraft({ ...draft, strain: e.target.value })} />
+                  </label>
+
+                  <p className="helper land-edit-note">
+                    Area becomes{' '}
+                    <strong>
+                      {Math.round(draft.lengthM * draft.widthM).toLocaleString('en-IN')} m²
+                    </strong>
+                    {' — '}
+                    {draft.lengthM * draft.widthM > 12_000
+                      ? 'too large for one paddlewheel to mix evenly. Split it into two ponds.'
+                      : draft.widthM >= 40
+                        ? 'wide enough for satellite verification.'
+                        : `at ${draft.widthM} m wide, verification falls back to drone or weighbridge.`}
+                  </p>
+
+                  <div className="land-edit-actions">
+                    <button type="submit" className="button small" disabled={busy}>
+                      {busy ? 'Saving…' : 'Save changes'}
+                    </button>
+                    <button type="button" className="button secondary small"
+                      onClick={() => { setEditingId(null); setDraft(null); }}>
+                      Discard
+                    </button>
+                  </div>
+                </form>
+              )}
             </article>
           ))}
           {ponds.length === 0 && <p className="helper">No ponds here yet.</p>}

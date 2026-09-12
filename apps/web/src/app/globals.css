@@ -1302,3 +1302,24 @@ button, a, input, select {
   transition: border-color .15s, background .15s;
 }
 .farm-jump a:hover { border-color: var(--culture-dim); background: var(--culture-wash); }
+
+/* Inline pond editor on /farm/land. Opens under the row it belongs to. */
+.land-row-actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: flex-start; }
+.land-row-actions .button.small,
+.land-edit-actions .button.small { min-height: 34px; padding: 6px 12px; font-size: 0.8rem; }
+.land-edit {
+  grid-column: 1 / -1; margin-top: 12px; padding-top: 12px;
+  border-top: 1px dashed var(--hairline);
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+.land-edit label { display: grid; gap: 4px; font-size: 0.78rem; }
+.land-edit label span { color: var(--silt); }
+.land-edit input {
+  padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px;
+  font: inherit; font-size: 0.9rem; background: var(--panel); color: var(--ink);
+  min-height: 38px;
+}
+.land-edit input:focus-visible { outline: 2px solid var(--culture); outline-offset: 1px; }
+.land-edit-note { grid-column: 1 / -1; margin: 0; }
+.land-edit-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
