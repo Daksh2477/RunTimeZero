@@ -1,0 +1,16 @@
+{
+  "kind": "linear_regression",
+  "features": [
+    "ndci",
+    "depth_m",
+    "temp_c"
+  ],
+  "coef": [
+    0.525035857022492,
+    -0.013004145130339888,
+    0.0031767200517016456
+  ],
+  "intercept": 0.31125331303323406,
+  "interval_low_ratio": 0.7234623708802499,
+  "interval_high_ratio": 1.2645200823839777
+}

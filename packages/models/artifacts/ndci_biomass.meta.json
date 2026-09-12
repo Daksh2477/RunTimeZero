@@ -1,0 +1,7 @@
+{
+  "rows": 8400,
+  "test_r2": 0.18117072466821726,
+  "residual_std": 0.10560063463223449,
+  "implied_error_factor": 1.3220713436063216,
+  "note": "The interval matters more than the fit. A wide interval simply means we credit less, which is the correct incentive."
+}
