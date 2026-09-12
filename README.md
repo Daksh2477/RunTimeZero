@@ -115,7 +115,7 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 | WASM bindings — `WasmPond`, `physics_ceiling_co2_kg` | ✅ 2 tests |
 | ESP32 firmware + Wokwi circuit | ✅ |
 | MQTT ingestion → Postgres | ✅ |
-| Copernicus ingestion → NDCI | ⬜ |
+| Copernicus ingestion → NDCI | ✅ code complete, needs API credentials |
 | Reconciliation engine | ✅ verified on 7 live ponds |
 | Farm advisory engine (7 advisory types) | ✅ |
 | Seed + 14-day replay + live sim driver | ✅ |
