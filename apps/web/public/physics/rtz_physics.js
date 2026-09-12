@@ -39,6 +39,19 @@ export class Reading {
         return ret;
     }
     /**
+     * Paddlewheel draw this hour, kWh.
+     *
+     * Not a biological quantity, which is why it is trustworthy: it comes off
+     * a meter on the supply, not off a probe in the water. A stopped mixer
+     * reads ~0 and that is unambiguous, where "dissolved oxygen is low" has
+     * half a dozen explanations.
+     * @returns {number}
+     */
+    get energy_kwh() {
+        const ret = wasm.__wbg_get_reading_energy_kwh(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * @returns {number}
      */
     get hour() {
@@ -84,6 +97,18 @@ export class Reading {
      */
     set dissolved_oxygen_mg_l(arg0) {
         wasm.__wbg_set_reading_dissolved_oxygen_mg_l(this.__wbg_ptr, arg0);
+    }
+    /**
+     * Paddlewheel draw this hour, kWh.
+     *
+     * Not a biological quantity, which is why it is trustworthy: it comes off
+     * a meter on the supply, not off a probe in the water. A stopped mixer
+     * reads ~0 and that is unambiguous, where "dissolved oxygen is low" has
+     * half a dozen explanations.
+     * @param {number} arg0
+     */
+    set energy_kwh(arg0) {
+        wasm.__wbg_set_reading_energy_kwh(this.__wbg_ptr, arg0);
     }
     /**
      * @param {number} arg0
@@ -183,6 +208,18 @@ export class WasmPond {
      */
     inject_overstatement(factor, start_hour, duration_hours) {
         wasm.wasmpond_inject_overstatement(this.__wbg_ptr, factor, start_hour, duration_hours);
+    }
+    /**
+     * Schedule a paddlewheel failure — the pond stratifies and self-shades.
+     *
+     * Exposed separately from `inject_crash` because it is the failure an
+     * operator can actually fix in an afternoon, and because it is the one
+     * the energy meter catches outright.
+     * @param {number} start_hour
+     * @param {number} duration_hours
+     */
+    inject_pump_failure(start_hour, duration_hours) {
+        wasm.wasmpond_inject_pump_failure(this.__wbg_ptr, start_hour, duration_hours);
     }
     /**
      * @param {number} lat_deg

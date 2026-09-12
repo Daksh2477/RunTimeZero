@@ -3,45 +3,214 @@
   "author": "RunTimeZero",
   "editor": "wokwi",
   "parts": [
-    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": 0, "left": 0, "attrs": {} },
-    { "type": "wokwi-potentiometer", "id": "pot_ph", "top": -120, "left": 200,
-      "attrs": { "value": "512" } },
-    { "type": "wokwi-potentiometer", "id": "pot_do", "top": -20, "left": 200,
-      "attrs": { "value": "400" } },
-    { "type": "wokwi-potentiometer", "id": "pot_od", "top": 80, "left": 200,
-      "attrs": { "value": "300" } },
-    { "type": "wokwi-ds18b20", "id": "temp", "top": 180, "left": 200, "attrs": {} },
-    { "type": "wokwi-ssd1306", "id": "oled", "top": -140, "left": -180, "attrs": {} },
-    { "type": "wokwi-led", "id": "led_tx", "top": 200, "left": -100,
-      "attrs": { "color": "green" } },
-    { "type": "wokwi-resistor", "id": "r1", "top": 240, "left": -100,
-      "attrs": { "value": "220" } }
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_ph",
+      "top": -120,
+      "left": 200,
+      "attrs": {
+        "value": "512"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_do",
+      "top": -20,
+      "left": 200,
+      "attrs": {
+        "value": "400"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "pot_od",
+      "top": 80,
+      "left": 200,
+      "attrs": {
+        "value": "300"
+      }
+    },
+    {
+      "type": "wokwi-ds18b20",
+      "id": "temp",
+      "top": 180,
+      "left": 200,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-ssd1306",
+      "id": "oled",
+      "top": -140,
+      "left": -180,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led_tx",
+      "top": 200,
+      "left": -100,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 240,
+      "left": -100,
+      "attrs": {
+        "value": "220"
+      }
+    },
+    {
+      "type": "wokwi-slide-switch",
+      "id": "mixer",
+      "top": -80,
+      "left": 180,
+      "rotate": 0,
+      "attrs": {}
+    }
   ],
   "connections": [
-    [ "pot_ph:VCC", "esp:3V3", "red", [] ],
-    [ "pot_ph:GND", "esp:GND.1", "black", [] ],
-    [ "pot_ph:SIG", "esp:34", "green", [] ],
-
-    [ "pot_do:VCC", "esp:3V3", "red", [] ],
-    [ "pot_do:GND", "esp:GND.1", "black", [] ],
-    [ "pot_do:SIG", "esp:35", "green", [] ],
-
-    [ "pot_od:VCC", "esp:3V3", "red", [] ],
-    [ "pot_od:GND", "esp:GND.1", "black", [] ],
-    [ "pot_od:SIG", "esp:32", "green", [] ],
-
-    [ "temp:VCC", "esp:3V3", "red", [] ],
-    [ "temp:GND", "esp:GND.2", "black", [] ],
-    [ "temp:DQ", "esp:4", "yellow", [] ],
-
-    [ "oled:VCC", "esp:3V3", "red", [] ],
-    [ "oled:GND", "esp:GND.2", "black", [] ],
-    [ "oled:SCL", "esp:22", "blue", [] ],
-    [ "oled:SDA", "esp:21", "blue", [] ],
-
-    [ "esp:13", "r1:1", "green", [] ],
-    [ "r1:2", "led_tx:A", "green", [] ],
-    [ "led_tx:C", "esp:GND.3", "black", [] ]
+    [
+      "pot_ph:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pot_ph:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "pot_ph:SIG",
+      "esp:34",
+      "green",
+      []
+    ],
+    [
+      "pot_do:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pot_do:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "pot_do:SIG",
+      "esp:35",
+      "green",
+      []
+    ],
+    [
+      "pot_od:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "pot_od:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "pot_od:SIG",
+      "esp:32",
+      "green",
+      []
+    ],
+    [
+      "temp:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "temp:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "temp:DQ",
+      "esp:4",
+      "yellow",
+      []
+    ],
+    [
+      "oled:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "oled:GND",
+      "esp:GND.2",
+      "black",
+      []
+    ],
+    [
+      "oled:SCL",
+      "esp:22",
+      "blue",
+      []
+    ],
+    [
+      "oled:SDA",
+      "esp:21",
+      "blue",
+      []
+    ],
+    [
+      "esp:13",
+      "r1:1",
+      "green",
+      []
+    ],
+    [
+      "r1:2",
+      "led_tx:A",
+      "green",
+      []
+    ],
+    [
+      "led_tx:C",
+      "esp:GND.3",
+      "black",
+      []
+    ],
+    [
+      "mixer:2",
+      "esp:27",
+      "green",
+      []
+    ],
+    [
+      "mixer:3",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "mixer:1",
+      "esp:GND.1",
+      "black",
+      []
+    ]
   ],
   "dependencies": {}
 }

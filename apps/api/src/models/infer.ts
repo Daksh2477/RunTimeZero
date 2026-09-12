@@ -74,6 +74,8 @@ const FEATURE_LABELS: Record<string, string> = {
   season_sin: 'time of year',
   season_cos: 'time of year',
   hours_since_harvest: 'time since last harvest',
+  energy_kwh_mean: 'paddlewheel power draw',
+  mixing_uptime: 'paddlewheel stopped',
 };
 
 /**

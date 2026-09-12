@@ -13,6 +13,7 @@ learn from instead of our simulator.
 """
 
 import csv
+import math
 import pathlib
 import sys
 from datetime import datetime
@@ -42,15 +43,40 @@ COLUMN_MAP = {
 # printed it, e.g. "instrumentation/arizona_2014.csv".
 SOURCE_FILE = None
 
+# The ponds' physical size. ATP3 used 1000 L raceways at most sites; if the
+# documentation with the download says otherwise, correct these. They are not
+# critical — they are two columns out of nineteen — but a wrong number here is
+# a wrong number in the model, so do not invent one you have no basis for.
+POND_DEPTH_M = 0.20
+POND_AREA_M2 = 5.0
+
 # ---------------------------------------------------------------------------
 # Nothing below here needs editing.
 # ---------------------------------------------------------------------------
 
+# Must match make_dataset.ts exactly — train_all.py reads both files with the
+# same loader, and a column in a different position is a silently wrong model
+# rather than an error.
 HEADER = [
     "ph", "do_mgl", "temp_c", "od",
     "ph_trend", "do_trend", "od_trend", "temp_trend",
-    "ph_mean", "od_mean", "label",
+    "ph_mean", "od_mean",
+    "do_amplitude", "ph_amplitude", "od_volatility", "temp_amplitude",
+    "depth_m", "log_area", "season_sin", "season_cos", "hours_since_harvest",
+    "energy_kwh_mean", "mixing_uptime",
+    "label",
 ]
+
+# ATP3 publishes no harvest log, so hours_since_harvest cannot be recovered
+# from it. It is written as a constant and train_all.py drops constant columns
+# and prints that it did. That is the honest handling: the column keeps its
+# place in the contract, and the model does not pretend to use it.
+HOURS_SINCE_HARVEST_UNKNOWN = 0.0
+
+# ATP3 has no energy metering either. Same handling: written constant, dropped
+# by train_all.py, reported out loud.
+ENERGY_UNKNOWN = 0.0
+MIXING_UPTIME_UNKNOWN = 1.0
 
 WINDOW_HOURS = 48
 COLLAPSE_FRACTION = 0.67  # lost a third of its density
@@ -166,6 +192,19 @@ def main() -> None:
                 vals = [p[key] for p in window if p[key] is not None]
                 return sum(vals) / len(vals) if vals else 0.0
 
+            def amplitude(key: str) -> float:
+                vals = [p[key] for p in window if p[key] is not None]
+                return max(vals) - min(vals) if vals else 0.0
+
+            def stdev(key: str) -> float:
+                vals = [p[key] for p in window if p[key] is not None]
+                if not vals:
+                    return 0.0
+                m = sum(vals) / len(vals)
+                return (sum((v - m) ** 2 for v in vals) / len(vals)) ** 0.5
+
+            doy = last["t"].timetuple().tm_yday
+
             od_now = last["od"] or 0.0
             od_later = min((p["od"] for p in future if p["od"] is not None), default=od_now)
             label = 1 if od_now > 0.05 and od_later < od_now * COLLAPSE_FRACTION else 0
@@ -176,7 +215,15 @@ def main() -> None:
                 f'{last["temp"] or 0:.4f}', f"{od_now:.4f}",
                 f'{d("ph"):.6f}', f'{d("do"):.6f}',
                 f'{d("od"):.6f}', f'{d("temp"):.6f}',
-                f'{mean("ph"):.4f}', f'{mean("od"):.4f}', label,
+                f'{mean("ph"):.4f}', f'{mean("od"):.4f}',
+                f'{amplitude("do"):.4f}', f'{amplitude("ph"):.4f}',
+                f'{stdev("od"):.6f}', f'{amplitude("temp"):.4f}',
+                f"{POND_DEPTH_M:.4f}", f"{math.log10(max(1.0, POND_AREA_M2)):.4f}",
+                f"{math.sin(2 * math.pi * doy / 365):.6f}",
+                f"{math.cos(2 * math.pi * doy / 365):.6f}",
+                f"{HOURS_SINCE_HARVEST_UNKNOWN:.1f}",
+                f"{ENERGY_UNKNOWN:.4f}", f"{MIXING_UPTIME_UNKNOWN:.4f}",
+                label,
             ])
 
     if not out_rows:
@@ -193,6 +240,9 @@ def main() -> None:
 
     pct = positives / len(out_rows) * 100
     print(f"wrote {OUT}")
+    print("  note: hours_since_harvest, energy_kwh_mean and mixing_uptime are")
+    print("        not in ATP3 and are written as constants; train_all.py")
+    print("        drops constant columns and says which.")
     print(f"  {len(out_rows):,} windows, {positives:,} crashes ({pct:.1f}%)")
     if positives < 20:
         print("\n  WARNING: very few crashes found. The model needs perhaps 50+")

@@ -141,6 +141,11 @@ export function crashFeatures(
     season_sin: Math.sin((2 * Math.PI * doy) / 365),
     season_cos: Math.cos((2 * Math.PI * doy) / 365),
     hours_since_harvest: ctx.hoursSinceHarvest ?? 84,
+    // The meter, not a probe. A stopped paddlewheel reads zero outright,
+    // where "oxygen is low" has half a dozen explanations.
+    energy_kwh_mean: meanOf(recent, (t) => t.energyKwh),
+    mixing_uptime:
+      recent.filter((t) => (t.energyKwh ?? 0) > 0).length / recent.length,
   };
 }
 

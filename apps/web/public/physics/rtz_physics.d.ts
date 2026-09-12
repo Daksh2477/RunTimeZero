@@ -14,6 +14,15 @@ export class Reading {
     [Symbol.dispose](): void;
     day_of_year: number;
     dissolved_oxygen_mg_l: number;
+    /**
+     * Paddlewheel draw this hour, kWh.
+     *
+     * Not a biological quantity, which is why it is trustworthy: it comes off
+     * a meter on the supply, not off a probe in the water. A stopped mixer
+     * reads ~0 and that is unambiguous, where "dissolved oxygen is low" has
+     * half a dozen explanations.
+     */
+    energy_kwh: number;
     hour: number;
     optical_density: number;
     ph: number;
@@ -54,6 +63,14 @@ export class WasmPond {
      * was actually fixed, for a window of hours.
      */
     inject_overstatement(factor: number, start_hour: number, duration_hours: number): void;
+    /**
+     * Schedule a paddlewheel failure — the pond stratifies and self-shades.
+     *
+     * Exposed separately from `inject_crash` because it is the failure an
+     * operator can actually fix in an afternoon, and because it is the one
+     * the energy meter catches outright.
+     */
+    inject_pump_failure(start_hour: number, duration_hours: number): void;
     constructor(lat_deg: number, area_m2: number, depth_m: number, seed: bigint, day_of_year: number);
     /**
      * Standing dry biomass, kg.
@@ -97,6 +114,7 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_get_reading_day_of_year: (a: number) => number;
     readonly __wbg_get_reading_dissolved_oxygen_mg_l: (a: number) => number;
+    readonly __wbg_get_reading_energy_kwh: (a: number) => number;
     readonly __wbg_get_reading_hour: (a: number) => number;
     readonly __wbg_get_reading_optical_density: (a: number) => number;
     readonly __wbg_get_reading_ph: (a: number) => number;
@@ -105,6 +123,7 @@ export interface InitOutput {
     readonly __wbg_reading_free: (a: number, b: number) => void;
     readonly __wbg_set_reading_day_of_year: (a: number, b: number) => void;
     readonly __wbg_set_reading_dissolved_oxygen_mg_l: (a: number, b: number) => void;
+    readonly __wbg_set_reading_energy_kwh: (a: number, b: number) => void;
     readonly __wbg_set_reading_hour: (a: number, b: number) => void;
     readonly __wbg_set_reading_optical_density: (a: number, b: number) => void;
     readonly __wbg_set_reading_ph: (a: number, b: number) => void;
@@ -118,6 +137,7 @@ export interface InitOutput {
     readonly wasmpond_harvest: (a: number, b: number) => number;
     readonly wasmpond_inject_crash: (a: number, b: number, c: number, d: number) => void;
     readonly wasmpond_inject_overstatement: (a: number, b: number, c: number, d: number) => void;
+    readonly wasmpond_inject_pump_failure: (a: number, b: number, c: number) => void;
     readonly wasmpond_new: (a: number, b: number, c: number, d: bigint, e: number) => number;
     readonly wasmpond_standing_biomass_kg: (a: number) => number;
     readonly wasmpond_step: (a: number) => number;

@@ -20,6 +20,8 @@ export interface Reading {
   temperature_c: number;
   optical_density: number;
   reported_co2_kg: number;
+  /** Paddlewheel draw this hour, kWh. Zero while the mixer is stopped. */
+  energy_kwh: number;
   hour: number;
   day_of_year: number;
 }

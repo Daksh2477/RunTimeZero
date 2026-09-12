@@ -35,6 +35,8 @@ interface Reading {
   temperature_c: number;
   optical_density: number;
   reported_co2_kg: number;
+  /** Paddlewheel draw this hour, kWh. Zero while the mixer is stopped. */
+  energy_kwh: number;
 }
 
 function csv(rows: (number | string)[][], header: string[]): string {
@@ -100,6 +102,11 @@ function windowFeatures(
     Math.sin((2 * Math.PI * ctx.dayOfYear) / 365),
     Math.cos((2 * Math.PI * ctx.dayOfYear) / 365),
     ctx.hoursSinceHarvest,
+    // The energy meter. Not a probe in the water — a meter on the supply —
+    // which is why it is the least ambiguous input the model gets: a stopped
+    // paddlewheel reads zero, where "oxygen is low" has six explanations.
+    mean((r) => r.energy_kwh ?? 0),
+    w.filter((r) => (r.energy_kwh ?? 0) > 0).length / hours,
   ];
 }
 
@@ -110,6 +117,7 @@ const CRASH_HEADER = [
   // Added after noticing the four-sensor set threw away its best signal.
   'do_amplitude', 'ph_amplitude', 'od_volatility', 'temp_amplitude',
   'depth_m', 'log_area', 'season_sin', 'season_cos', 'hours_since_harvest',
+  'energy_kwh_mean', 'mixing_uptime',
   'label',
 ];
 
@@ -135,10 +143,21 @@ function buildCrashDataset(): void {
     const crashHour = 120 + (i % 180);
     if (willCrash) pond.inject_crash(0.6 + (i % 4) * 0.1, crashHour, 72);
 
+    // A stopped paddlewheel on roughly a third of ponds. Without this the
+    // model never sees a mixing failure and the energy meter is dead weight —
+    // and mixing failure is the crash cause an operator can actually fix.
+    if (i % 3 === 0) {
+      pond.inject_pump_failure(90 + (i % 200), 36 + (i % 5) * 12);
+    }
+
     const history: Reading[] = [];
     const harvestHours: number[] = [];
+    // True standing biomass per hour, for labelling only. Never a feature —
+    // the model must work from what a probe can see. See docs/DECISIONS.md #6.
+    const truth: number[] = [];
     for (let h = 0; h < 480; h += 1) {
       history.push(pond.step() as Reading);
+      truth.push(pond.standing_biomass_kg());
       if ((h + 1) % 168 === 0) {
         pond.harvest(0.45);
         harvestHours.push(h);
@@ -149,9 +168,24 @@ function buildCrashDataset(): void {
     // duplicate rows and would inflate any accuracy figure we quoted.
     for (let t = 48; t + 48 < history.length; t += 24) {
       const window = history.slice(t - 48, t);
-      const odNow = history[t]!.optical_density;
-      const odLater = history[t + 47]!.optical_density;
-      const collapsed = odNow > 0.05 && odLater < odNow * 0.67 ? 1 : 0;
+      /*
+       * LABEL FROM TRUE BIOMASS, NOT FROM THE PROBE.
+       *
+       * An earlier version labelled on observed optical density, which was
+       * wrong twice over. A scheduled harvest removes 45% of the biomass, so
+       * every harvest was labelled a crash and the model learned to predict
+       * the farm calendar. And a stopped paddlewheel scales observed OD by
+       * 0.7 with the culture perfectly healthy, so it invented crashes that
+       * never happened.
+       *
+       * Using truth for the LABEL is legitimate — that is what a simulator is
+       * for. Using it as a FEATURE would not be, and it is not.
+       */
+      const bioNow = truth[t]!;
+      const bioLater = truth[t + 47]!;
+      const harvestedInWindow = harvestHours.some((h) => h >= t && h <= t + 47);
+      const collapsed =
+        !harvestedInWindow && bioNow > 1 && bioLater < bioNow * 0.67 ? 1 : 0;
       if (collapsed) positives += 1;
 
       const lastHarvest = harvestHours.filter((h) => h <= t).pop() ?? 0;

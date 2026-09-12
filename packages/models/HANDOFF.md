@@ -118,21 +118,25 @@ python3 packages/models/train/load_atp3.py
 It will either write a file and tell you how many crashes it found, or tell you
 what is still wrong. If it complains, send the message back — do not guess.
 
+It will also say that three columns were written as constants. That is
+expected: ATP3 has no harvest log and no energy metering, so those inputs
+cannot be recovered from it. `train_all.py` drops constant columns and prints
+which ones. Nothing is broken.
+
 ---
 
 ## Step 4 — retrain
 
-Open `packages/models/train/train_all.py` and find this line inside
-`train_crash()`:
+Open `packages/models/train/train_all.py`. Near the top, change this one line:
 
 ```python
-cols, m = load("crash.csv")
+CRASH_SOURCE = "crash.csv"
 ```
 
-Change it to:
+to:
 
 ```python
-cols, m = load("crash_real.csv")
+CRASH_SOURCE = "crash_real.csv"
 ```
 
 Then:
@@ -147,7 +151,7 @@ Write down the new AUC number.
 
 ## Step 5 — report the number honestly
 
-The current crash model scores **AUC 0.843** on our simulator's data.
+The current crash model scores **AUC 0.959** on our simulator's data.
 
 Real data will probably score **worse**. That is expected and it is fine.
 A model at 0.68 on real ponds is worth more to us than 0.79 on our own
@@ -169,12 +173,14 @@ Then:
 node --experimental-strip-types --input-type=module -e "
 import { crashRisk, modelsLoaded } from './apps/api/src/models/infer.ts';
 console.log(modelsLoaded());
-console.log(crashRisk({ph:7.9,do_mgl:2.1,temp_c:32,od:0.25,ph_trend:-0.03,do_trend:-0.05,od_trend:-0.006,temp_trend:0,ph_mean:8.4,od_mean:0.4,do_amplitude:0.8,ph_amplitude:0.2,od_volatility:0.05,temp_amplitude:6,depth_m:0.25,log_area:3.08,season_sin:0.5,season_cos:0.86,hours_since_harvest:90}));
+console.log(crashRisk({ph:8.5623,do_mgl:3.3846,temp_c:32.315,od:0.2597,ph_trend:-0.0128,do_trend:-0.0351,od_trend:-0.0049,temp_trend:-0.0148,ph_mean:9.3999,od_mean:0.518,do_amplitude:8.3487,ph_amplitude:1.7044,od_volatility:0.1446,temp_amplitude:8.5421,depth_m:0.2,log_area:2.6021,season_sin:-0.6153,season_cos:-0.7883,hours_since_harvest:97,energy_kwh_mean:0.2,mixing_uptime:1}));
 "
 ```
 
-All three models must say `true`, and that dying pond should come back with a
-high probability. If not, something changed shape — tell Mahit.
+All three models must say `true`, and that pond — a real crashing window
+lifted straight out of the training data — should come back at roughly
+**0.99**. If it comes back near zero, the feature list has moved out from
+under the model. Run `npm run check:features` and send the output.
 
 ---
 
@@ -197,7 +203,10 @@ else's unfinished work.
 3. **Do not rename anything in the `artifacts/*.json` files.** The app reads
    those field names. A renamed field does not throw an error — it silently
    gives a wrong answer, which is much worse.
-4. **When stuck, paste the exact error.** Do not work around it by editing
+4. **Run `npm run check:features` before you commit.** It checks that the
+   four places the feature list is written still agree. It has caught this
+   twice already.
+5. **When stuck, paste the exact error.** Do not work around it by editing
    something outside your folder.
 
 ---

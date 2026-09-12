@@ -39,6 +39,10 @@ ARTIFACTS.mkdir(exist_ok=True)
 
 SEED = 42
 
+# Which file train_crash() learns from. Change this one line to "crash_real.csv"
+# after load_atp3.py has produced it — see packages/models/HANDOFF.md step 4.
+CRASH_SOURCE = "crash.csv"
+
 
 def load(name: str):
     """Read a CSV written by make_dataset.ts."""
@@ -59,8 +63,20 @@ def train_crash() -> None:
     drops" is an explanation they can act on. A forest would score slightly
     better and explain nothing.
     """
-    cols, m = load("crash.csv")
+    cols, m = load(CRASH_SOURCE)
     X, y = m[:, :-1], m[:, -1].astype(int)
+    names = cols[:-1]
+
+    # Real data will not carry every column the twin can produce — ATP3 has no
+    # harvest log, for instance, so hours_since_harvest arrives as a constant.
+    # A constant column teaches the model nothing and gives StandardScaler a
+    # zero scale, so drop it and say so rather than training on a dead input.
+    varying = X.std(axis=0) > 1e-9
+    if not varying.all():
+        dropped = [n for n, keep in zip(names, varying) if not keep]
+        print(f"    dropped {len(dropped)} constant column(s): {', '.join(dropped)}")
+        X = X[:, varying]
+        names = [n for n, keep in zip(names, varying) if keep]
 
     X_tr, X_te, y_tr, y_te = train_test_split(
         X, y, test_size=0.25, random_state=SEED, stratify=y
@@ -82,7 +98,7 @@ def train_crash() -> None:
         "crash_classifier",
         {
             "kind": "logistic_regression",
-            "features": cols[:-1],
+            "features": names,
             "mean": scaler.mean_.tolist(),
             "scale": scaler.scale_.tolist(),
             "coef": clf.coef_[0].tolist(),
@@ -95,9 +111,12 @@ def train_crash() -> None:
             "test_auc": float(auc),
             "confusion_matrix": cm,
             "report": classification_report(y_te, pred, output_dict=True, zero_division=0),
+            "source": CRASH_SOURCE,
             "note": (
                 "Trained on twin-generated crashes. Transfers as far as the physics "
                 "does, no further. Never used for crediting."
+                if CRASH_SOURCE == "crash.csv"
+                else f"Trained on real field data ({CRASH_SOURCE}). Never used for crediting."
             ),
         },
     )

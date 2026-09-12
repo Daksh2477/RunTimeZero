@@ -56,6 +56,12 @@ pub fn physics_ceiling_co2_kg(
     ceiling::max_biomass_gain(&input, &growth::StrainParams::default()).max_co2_kg
 }
 
+/// Paddlewheel draw per square metre of pond, W.
+///
+/// 0.5 W/m² is the figure used throughout the planning model; keeping one
+/// constant means the simulated meter and the cost projection cannot disagree.
+const PADDLEWHEEL_W_PER_M2: f64 = 0.5;
+
 /// One step of simulated telemetry, as the sensor node would report it.
 ///
 /// Note what is NOT here: true biomass, true CO2, nutrient state. This struct
@@ -69,6 +75,13 @@ pub struct Reading {
     pub temperature_c: f64,
     pub optical_density: f64,
     pub reported_co2_kg: f64,
+    /// Paddlewheel draw this hour, kWh.
+    ///
+    /// Not a biological quantity, which is why it is trustworthy: it comes off
+    /// a meter on the supply, not off a probe in the water. A stopped mixer
+    /// reads ~0 and that is unambiguous, where "dissolved oxygen is low" has
+    /// half a dozen explanations.
+    pub energy_kwh: f64,
     pub hour: f64,
     pub day_of_year: u32,
 }
@@ -155,8 +168,36 @@ impl WasmPond {
         });
     }
 
+    /// Schedule a paddlewheel failure — the pond stratifies and self-shades.
+    ///
+    /// Exposed separately from `inject_crash` because it is the failure an
+    /// operator can actually fix in an afternoon, and because it is the one
+    /// the energy meter catches outright.
+    pub fn inject_pump_failure(&mut self, start_hour: u32, duration_hours: u32) {
+        self.faults.push(faults::ScheduledFault {
+            fault: faults::Fault::PumpFailure,
+            start_hour,
+            duration_hours,
+        });
+    }
+
+    /// Whether the paddlewheel is running at the current simulated hour.
+    fn mixing_running(&self) -> bool {
+        !self
+            .faults
+            .iter()
+            .any(|f| f.fault == faults::Fault::PumpFailure && f.active_at(self.elapsed_hour))
+    }
+
     /// Advance one hour and return what the sensor would report.
     pub fn step(&mut self) -> Reading {
+        // Read before elapsed_hour advances, so the meter and the probes
+        // describe the same hour.
+        let energy = if self.mixing_running() {
+            PADDLEWHEEL_W_PER_M2 * self.pond.cfg.area_m2 / 1000.0
+        } else {
+            0.0
+        };
         faults::apply_physical_effect(&mut self.pond, &self.faults, self.elapsed_hour);
         let co2 = self.pond.step(1.0);
         let obs = faults::observe(
@@ -174,6 +215,7 @@ impl WasmPond {
             temperature_c: obs.temperature_c,
             optical_density: obs.optical_density,
             reported_co2_kg: obs.reported_co2_kg,
+            energy_kwh: energy,
             hour: self.pond.state.hour,
             day_of_year: self.pond.state.day_of_year,
         }
@@ -238,5 +280,28 @@ mod tests {
             (0..24 * 7).map(|_| p.step().reported_co2_kg).sum()
         };
         assert!(inflated > honest * 1.25, "{inflated} vs {honest}");
+    }
+
+    #[test]
+    fn energy_meter_reads_zero_while_the_paddlewheel_is_stopped() {
+        let mut p = WasmPond::new(23.0, 10_000.0, 0.3, 7, 150);
+        p.inject_pump_failure(10, 5);
+
+        let running = p.step().energy_kwh;
+        assert!(running > 0.0, "a mixing pond must draw power");
+
+        for _ in 1..10 {
+            p.step();
+        }
+        // Hours 10..15 are the failure window.
+        assert_eq!(p.step().energy_kwh, 0.0);
+
+        for _ in 11..15 {
+            p.step();
+        }
+        assert!(
+            p.step().energy_kwh > 0.0,
+            "draw must resume once the fault window closes"
+        );
     }
 }
