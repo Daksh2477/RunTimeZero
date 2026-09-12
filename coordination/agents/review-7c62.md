@@ -21,3 +21,5 @@ See coordination/messages/20260912T-codex-frontend-ready.md.
 Latest pass: badge removed; dimensioned animated scene with selectable sensors, real model scenario presets, adjacent readings/settings, mobile stacking. tsc + production build + 27 Chrome checks passed. See messages/20260912T-codex-simulator-complete.md.
 
 Readability pass complete: current front1.0 port retained, typography enlarged, mobile nav/menu fixed, farm→market/report shortcuts, issuance wording and certificate link added. tsc/build and browser validation pass. See messages/20260912T-codex-comfort-complete.md. Frontend ownership remains Codex.
+
+Homepage space/motion pass complete: full-width sections and proof strip, scroll reveals, optional desktop algae trail, reduced-motion handling. Build/typecheck and 21 browser assertions pass. See messages/20260912T-codex-home-motion-complete.md.
