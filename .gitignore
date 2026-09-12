@@ -32,3 +32,6 @@ npm-debug.log*
 apps/contracts/addresses.json
 
 *.pdf
+
+# generated training data — regenerate with `npm run models:data`
+packages/models/data/

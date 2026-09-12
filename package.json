@@ -20,6 +20,8 @@
     "sim": "node --experimental-strip-types scripts/sim-driver.ts",
     "api": "npm run dev --workspace=apps/api",
     "replay": "node --experimental-strip-types scripts/replay.ts",
-    "ingest:sentinel": "node --experimental-strip-types scripts/ingest-sentinel.ts"
+    "ingest:sentinel": "node --experimental-strip-types scripts/ingest-sentinel.ts",
+    "models:data": "node --experimental-strip-types packages/models/train/make_dataset.ts",
+    "models:train": "python3 packages/models/train/train_all.py"
   }
 }

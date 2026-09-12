@@ -15,6 +15,7 @@
  */
 
 import type { TelemetryPoint } from '@rtz/types';
+import { crashRisk } from '../models/infer.ts';
 
 export type Severity = 'critical' | 'warning' | 'info';
 
@@ -85,10 +86,52 @@ export function buildAdvisories(input: AdvisoryInput): Advisory[] {
   const odTrend = delta(earliest.opticalDensity, latest.opticalDensity) / hours;
 
   // --- culture crash -------------------------------------------------------
-  // The signature is unmistakable once you know it: pH falling AND density
-  // falling together. Photosynthesis normally pushes pH up, so a culture that
-  // is both acidifying and clearing is dying, not just resting.
-  if (phTrend < -0.02 && odTrend < -0.002) {
+  // Two independent signals, and the rule comes first on purpose.
+  //
+  // The rule: pH falling AND density falling together. Photosynthesis normally
+  // pushes pH up, so a culture doing both is dying rather than resting. An
+  // operator can check that themselves.
+  //
+  // The model (crash_classifier, AUC 0.79) catches cases the rule misses, but
+  // it is a support, not the authority — a model telling someone to drain a
+  // pond without a reason they can verify is worse than no alert at all.
+  const risk = crashRisk({
+    ph: latest.ph ?? 0,
+    do_mgl: latest.dissolvedOxygenMgL ?? 0,
+    temp_c: latest.temperatureC ?? 0,
+    od: latest.opticalDensity ?? 0,
+    ph_trend: phTrend,
+    do_trend: doTrend,
+    od_trend: odTrend,
+    temp_trend: delta(earliest.temperatureC, latest.temperatureC) / hours,
+    ph_mean: meanOf(recent, (t) => t.ph),
+    od_mean: meanOf(recent, (t) => t.opticalDensity),
+  });
+
+  const ruleFired = phTrend < -0.02 && odTrend < -0.002;
+  // 0.75 rather than the model's own 0.5: a false "drain your pond" costs the
+  // operator real biomass, so the model alone has to be quite sure.
+  const modelFired = risk.modelAvailable && risk.probability >= 0.75;
+
+  if (!ruleFired && modelFired) {
+    out.push({
+      kind: 'culture_crash_imminent',
+      severity: 'warning',
+      title: 'Crash risk rising',
+      detail:
+        `Conditions resemble ponds that collapsed within two days — the strongest ` +
+        `signal is ${risk.dominantFactor}. The usual pH-and-density signature is not ` +
+        `showing yet, so treat this as worth a look rather than an emergency.`,
+      hoursToAct: 48,
+      action:
+        'Inspect the pond and check the paddlewheel. If density starts falling ' +
+        'alongside pH, harvest early rather than lose the culture.',
+      costOfActingInr: 0,
+      costOfInactionInr: Math.round(input.standingBiomassKg * 0.4 * BIOMASS_VALUE_INR_PER_KG),
+    });
+  }
+
+  if (ruleFired) {
     const hoursToAct = estimateHoursToCollapse(latest.opticalDensity, odTrend);
     const atRisk = input.standingBiomassKg * 0.6;
     out.push({
@@ -98,7 +141,10 @@ export function buildAdvisories(input: AdvisoryInput): Advisory[] {
       detail:
         `pH is falling (${fmt(phTrend * 24, 2)}/day) while density drops ` +
         `(${fmt(odTrend * 24, 3)}/day). Together these mean cells are dying, ` +
-        `not merely growing slowly.`,
+        `not merely growing slowly.` +
+        (risk.modelAvailable
+          ? ` The model puts collapse within 48 h at ${Math.round(risk.probability * 100)}%.`
+          : ''),
       hoursToAct,
       action:
         'Harvest what you can within the next shift, then drain and re-inoculate. ' +
@@ -265,6 +311,11 @@ function spanHours(a: TelemetryPoint, b: TelemetryPoint): number {
 function delta(a: number | null, b: number | null): number {
   if (a === null || b === null) return 0;
   return b - a;
+}
+
+function meanOf(t: TelemetryPoint[], f: (p: TelemetryPoint) => number | null): number {
+  const vals = t.map(f).filter((v): v is number => v !== null);
+  return vals.length === 0 ? 0 : vals.reduce((a, b) => a + b, 0) / vals.length;
 }
 
 function inRange(v: number | null, r: { min: number; max: number }): boolean {

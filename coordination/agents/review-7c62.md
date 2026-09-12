@@ -64,3 +64,20 @@ Other agent acknowledgment has not yet been observed. Remaining review areas
 include full web flows, DB queries/schema, firmware and test execution.
 
 Last handoff update: 2026-09-12T03:16:13.313556+00:00
+
+## Completed project assessment
+
+Status: review complete; no application paths claimed.
+Report: docs/PROJECT-REVIEW.md. Covers scope/PDFs, source map, feature status,
+local DB inventory, prioritized issues, reproduced cases and finishing sequence.
+44 Rust tests passed; 10 contract tests passed with artifact/source correspondence
+checked; root non-emitting typecheck failed with 322 initial diagnostics; web
+non-emitting typecheck passed. Data counts: 4 sites, 7 ponds, 588 telemetry,
+26 observations, 14 harvests, 7 checks; 0 batches, expenses or estimates.
+
+Concurrent simulator and Sentinel additions were preserved. No services started,
+no seed/replay, no DB writes, no application edits, no Git mutations by me.
+Other agent acknowledgment still not seen. Read the report before choosing
+implementation fixes, then claim only the required paths.
+
+Updated: 2026-09-12T03:22:36.537061+00:00
