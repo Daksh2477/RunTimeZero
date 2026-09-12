@@ -1,153 +1,218 @@
-# Model training — self-contained brief
+# Model training — start here
 
-**You own `packages/models/` and nothing else.** Everything you produce is JSON
-files in `artifacts/`. If you never open `apps/`, you cannot break the app.
+You do not need to know this codebase, Rust, React, or how the app works. You
+need to be able to run commands in a terminal and copy text back.
 
-You do not need to understand the rest of the codebase to do this well.
+Everything you do lives in `packages/models/`. **If you never open the `apps/`
+folder, you cannot break anything.** The worst thing that can happen is a model
+that scores badly, and we would rather find that out.
 
----
-
-## The one rule
-
-The app reads your artifacts through `apps/api/src/models/infer.ts`. **The JSON
-shape is a contract.** Change the numbers freely; change the field names and
-inference silently breaks — a missing field reads as `undefined`, which is not
-an error, just a wrong answer.
-
-Every model must keep the shape it has now. Open an existing
-`artifacts/*.json` and match it exactly.
-
-Also: **no model may ever decide how much carbon gets credited.** That is
-arithmetic elsewhere in the codebase and it stays that way. Your models set
-warnings and confidence, never amounts. If a change of yours would move a
-credited figure, it is out of scope — say so rather than doing it.
+Total time: an afternoon.
 
 ---
 
-## What exists now
-
-Three models, all trained on data our own simulator generated:
-
-| Model | What it predicts | Current score |
-|---|---|---|
-| `crash_classifier` | Culture collapse within 48 h | AUC 0.790 |
-| `divergence_classifier` | noise vs drift vs systematic overstatement | 92.2% (3 classes) |
-| `ndci_biomass` | Chlorophyll index → biomass, **with an interval** | R² 0.181 |
+## Setup (once)
 
 ```bash
-npm run models:data     # regenerate synthetic datasets from the twin
-npm run models:train    # retrain all three, write artifacts/
+git clone https://github.com/Daksh2477/RunTimeZero.git
+cd RunTimeZero
+npm install
+pip install scikit-learn numpy --break-system-packages
 ```
 
-Training needs `scikit-learn` (`pip install scikit-learn --break-system-packages`).
-Everything runs offline. Python never runs in the live app — we train here and
-ship JSON.
-
----
-
-## Your job: replace synthetic data with real data
-
-Two of these should not be learning from our own simulator. A model trained on
-a simulator learns the simulator.
-
-### Task 1 — ATP3 (the big one)
-
-**ATP3 Unified Field Study**, NREL, CC-BY 4.0, DOI `10.7799/1400389`.
-Download from `data.nrel.gov/submissions/76`.
-
-19 months, five US sites, 1,000 L raceway ponds. It contains almost exactly
-what we simulate:
-
-- pH, temperature, dissolved oxygen, conductivity, PAR at **15-minute intervals**
-- Manual samples: depth, salinity, nitrogen, phosphorus, **optical density**,
-  algae concentration (dry weight and ash-free)
-- Harvest records including **contamination indicators**
-- Hourly weather
-
-Those contamination indicators are real crash labels. That is what makes this
-worth doing.
-
-**Steps**
-
-1. Put the extracted files in `packages/models/data/atp3/`.
-2. Write `train/load_atp3.py` that emits `data/crash_real.csv` with **exactly
-   the same columns** as the synthetic `data/crash.csv`:
-   `ph, do_mgl, temp_c, od, ph_trend, do_trend, od_trend, temp_trend, ph_mean, od_mean, label`
-   — a 48-hour window of features, labelled 1 if the culture lost a third of
-   its density over the following 48 h (or if a contamination event is recorded).
-3. Point `train_crash()` at the real file and retrain.
-4. Write down the new AUC. **Report it honestly even if it is worse.** A model
-   at 0.68 on real ponds is more use to us than 0.79 on our own fiction, and
-   saying so is the difference between a defensible claim and a hollow one.
-
-### Task 2 — GLORIA
-
-7,572 hyperspectral reflectance measurements with matched chlorophyll-a from
-450 water bodies. Published with the Nature Scientific Data paper "GLORIA — a
-globally representative hyperspectral in situ dataset".
-
-Compute NDCI from the reflectance at 665 nm and 705 nm:
-
-```
-NDCI = (R705 − R665) / (R705 + R665)
-```
-
-Fit chlorophyll-a against it, emit `data/ndci_real.csv` with the same columns
-as `data/ndci.csv`, and retrain.
-
-**The interval matters more than the fit.** Report the 10th and 90th percentile
-ratios, not just R². A wide interval is not a failure — it is the truth about
-how well satellites can see a pond, and the app uses it to credit
-conservatively.
-
-### Task 3 — leave `divergence_classifier` synthetic
-
-Nobody publishes labelled carbon fraud. Synthetic is the only option here and
-that is genuinely defensible. Do not spend time hunting for a dataset that does
-not exist.
-
----
-
-## Rules
-
-1. **Seed every run.** `SEED = 42` is already in the trainer. An
-   unreproducible model is not evidence of anything.
-2. **Ship metrics with every model.** `artifacts/<name>.meta.json` already does
-   this. Keep it accurate — if a judge asks how good the model is, the answer
-   should be a file, not a shrug.
-3. **Report honest numbers.** 0.78 described as 0.78 beats 0.95 claimed. People
-   ask follow-up questions.
-4. **Never overwrite an artifact without rerunning its metrics.** A model whose
-   stated score no longer matches its weights is worse than no score.
-5. **Commit the artifacts, not the data.** `data/` is gitignored — it is large
-   and regenerable. `artifacts/*.json` are small and are what the app loads.
-
----
-
-## How to know you are done
+Check it works:
 
 ```bash
-npm run models:train          # writes artifacts + meta
-npm run typecheck             # must stay clean
+npm run models:train
 ```
 
-Then confirm the app can still load what you produced:
+You should see three models train and print their scores. If that works, you
+are set up.
+
+---
+
+## What you are actually doing, in one paragraph
+
+The app has three small models. Right now they learned from a **simulator we
+wrote** — which means they learned our assumptions, not real ponds. There is
+real published data from actual algae farms. Your job is to retrain two of the
+models on that real data and tell us honestly whether they got better or worse.
+
+---
+
+## Step 1 — download the data
+
+Go to **`data.nrel.gov/submissions/76`**
+
+This is the ATP3 Unified Field Study: 19 months of real algae pond data from
+five American sites. It is free and openly licensed.
+
+Download it, unzip it, and put the files here:
+
+```
+packages/models/data/atp3/
+```
+
+(Create the folder if it does not exist.)
+
+---
+
+## Step 2 — look at what is inside
+
+```bash
+python3 packages/models/train/inspect_atp3.py
+```
+
+This prints the column names of every file. **Copy the whole output and send
+it to Mahit.** You do not need to understand it.
+
+---
+
+## Step 3 — fill in the name matching
+
+Open `packages/models/train/load_atp3.py`. Near the top there is a block that
+looks like this:
+
+```python
+COLUMN_MAP = {
+    "timestamp": None,
+    "pond_id": None,
+    "ph": None,
+    "temperature_c": None,
+    "dissolved_oxygen": None,
+    "optical_density": None,
+}
+
+SOURCE_FILE = None
+```
+
+From the output of Step 2, find the real column names and put them in. For
+example, if the file calls pH `"pH_Value"` and time `"Date_Time"`:
+
+```python
+COLUMN_MAP = {
+    "timestamp": "Date_Time",
+    "pond_id": "Site",
+    "ph": "pH_Value",
+    ...
+}
+
+SOURCE_FILE = "instrumentation/arizona_2014.csv"
+```
+
+Copy the names **exactly**, including capital letters and spaces. If something
+genuinely is not in the data, leave it as `None`.
+
+**This is the only code you write.** Everything else is done.
+
+Then run:
+
+```bash
+python3 packages/models/train/load_atp3.py
+```
+
+It will either write a file and tell you how many crashes it found, or tell you
+what is still wrong. If it complains, send the message back — do not guess.
+
+---
+
+## Step 4 — retrain
+
+Open `packages/models/train/train_all.py` and find this line inside
+`train_crash()`:
+
+```python
+cols, m = load("crash.csv")
+```
+
+Change it to:
+
+```python
+cols, m = load("crash_real.csv")
+```
+
+Then:
+
+```bash
+npm run models:train
+```
+
+Write down the new AUC number.
+
+---
+
+## Step 5 — report the number honestly
+
+The current crash model scores **AUC 0.790** on our simulator's data.
+
+Real data will probably score **worse**. That is expected and it is fine.
+A model at 0.68 on real ponds is worth more to us than 0.79 on our own
+fiction, because the first one is a real claim and the second is not.
+
+Report whatever you get. Do not tune it until it looks good.
+
+---
+
+## Step 6 — check you did not break the app
+
+```bash
+npm run typecheck
+```
+
+Then:
 
 ```bash
 node --experimental-strip-types --input-type=module -e "
-import { crashRisk, divergencePattern, biomassFromNdci, modelsLoaded } from './apps/api/src/models/infer.ts';
+import { crashRisk, modelsLoaded } from './apps/api/src/models/infer.ts';
 console.log(modelsLoaded());
 console.log(crashRisk({ph:7.9,do_mgl:2.1,temp_c:32,od:0.25,ph_trend:-0.03,do_trend:-0.05,od_trend:-0.006,temp_trend:0,ph_mean:8.4,od_mean:0.4}));
 "
 ```
 
-All three must report `true`, and a dying pond must return a high probability.
-If either fails, the artifact shape drifted — compare against git history.
+All three models must say `true`, and that dying pond should come back with a
+high probability. If not, something changed shape — tell Mahit.
 
 ---
 
-## If you get stuck
+## Step 7 — commit
 
-Write it in `.agents/INBOX.md` with what you tried and the exact error. Do not
-edit anything under `apps/` to work around a problem; that is someone else's
-area and the fix probably belongs on their side.
+```bash
+./scripts/commit.sh "retrain crash model on real ATP3 data" packages/models/
+./scripts/push.sh
+```
+
+Paths are required on purpose: it stops you accidentally committing someone
+else's unfinished work.
+
+---
+
+## The rules, short version
+
+1. **Only touch `packages/models/`.**
+2. **Report real numbers.** Worse is fine. Made up is not.
+3. **Do not rename anything in the `artifacts/*.json` files.** The app reads
+   those field names. A renamed field does not throw an error — it silently
+   gives a wrong answer, which is much worse.
+4. **When stuck, paste the exact error.** Do not work around it by editing
+   something outside your folder.
+
+---
+
+## Later, if there is time
+
+**GLORIA** — 7,572 real measurements of water colour matched to chlorophyll,
+from 450 lakes. Published with the Nature Scientific Data paper "GLORIA — a
+globally representative hyperspectral in situ dataset". This would let us
+retrain `ndci_biomass` on real optics.
+
+The index we need is computed from two wavelengths:
+
+```
+NDCI = (R705 − R665) / (R705 + R665)
+```
+
+Ask before starting this one — Step 1–7 matters more.
+
+**Leave `divergence_classifier` alone.** It detects carbon fraud, and nobody
+publishes labelled fraud data. Synthetic is the only option there, and that is
+a real reason rather than an excuse.
