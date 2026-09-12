@@ -5,21 +5,112 @@ on:
     branches: [main, develop]
   pull_request:
 
+# A new push to the same branch makes the previous run irrelevant. Without
+# this, a busy branch queues runs that are already stale on arrival.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  # The WASM has to be built before anything typechecks, because
+  # packages/physics/pkg/ is generated and deliberately not committed.
+  # Building once and sharing it is much faster than three jobs each
+  # compiling Rust.
+  wasm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/physics
+      - uses: jetli/wasm-pack-action@v0.4.0
+      - run: npm run physics:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasm-pkg
+          path: |
+            packages/physics/pkg
+            packages/physics/pkg-web
+            apps/web/public/physics
+          retention-days: 1
+
   typecheck:
     runs-on: ubuntu-latest
+    needs: wasm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
+      - uses: actions/download-artifact@v4
+        with:
+          name: wasm-pkg
       - run: npm ci
+      # Also runs scripts/check-feature-contract.mjs, which fails if the
+      # crash model's feature list has drifted between its four definitions.
       - run: npm run typecheck
+
+  # Typecheck does not catch a broken build: a bad import path, a server
+  # component using a client hook, a missing env var at prerender time.
+  build:
+    runs-on: ubuntu-latest
+    needs: wasm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/download-artifact@v4
+        with:
+          name: wasm-pkg
+      - run: npm ci
+      - run: npm run build --workspace=apps/web
+
+  # The MRV hash is the integrity claim. If it stops being deterministic,
+  # every published credit becomes unverifiable, so this is not optional.
+  api:
+    runs-on: ubuntu-latest
+    needs: wasm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/download-artifact@v4
+        with:
+          name: wasm-pkg
+      - run: npm ci
+      - run: npm run test:api
 
   rust:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/physics
       - run: cargo test --manifest-path packages/physics/Cargo.toml
+      - run: cargo fmt --manifest-path packages/physics/Cargo.toml -- --check
+      - run: cargo clippy --manifest-path packages/physics/Cargo.toml -- -D warnings
+
+  # The contracts hold the issuance and retirement rules. They were never
+  # run in CI despite having 17 tests covering exactly the fraud cases the
+  # product claims to prevent.
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+        working-directory: apps/contracts
+      - run: npx hardhat test
+        working-directory: apps/contracts

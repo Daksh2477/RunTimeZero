@@ -7,6 +7,17 @@
 Verification platform for algae-based carbon sequestration.
 Team **RunTimeZero** — HackOut'26, Circular Carbon Ecosystem.
 
+### ▶ [algacarbon.itzzsuperrr.me](https://algacarbon.itzzsuperrr.me)
+
+[![live](https://img.shields.io/badge/demo-live-2ea043?style=for-the-badge)](https://algacarbon.itzzsuperrr.me)
+[![ci](https://github.com/Daksh2477/RunTimeZero/actions/workflows/ci.yml/badge.svg)](https://github.com/Daksh2477/RunTimeZero/actions/workflows/ci.yml)
+
+Running on a live deployment, not a recording. Three ways in:
+**[/farm](https://algacarbon.itzzsuperrr.me/farm)** for an operator ·
+**[/sim](https://algacarbon.itzzsuperrr.me/sim)** to run the physics yourself ·
+**[/verify](https://algacarbon.itzzsuperrr.me/verify)** to audit a credit
+without an account.
+
 </div>
 
 ---

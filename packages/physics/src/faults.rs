@@ -226,7 +226,10 @@ mod tests {
 
         let fraud_total: f64 = fraud_obs.iter().map(|o| o.reported_co2_kg).sum();
         let honest_total: f64 = honest_obs.iter().map(|o| o.reported_co2_kg).sum();
-        assert!(fraud_total > honest_total * 1.4, "report should be inflated");
+        assert!(
+            fraud_total > honest_total * 1.4,
+            "report should be inflated"
+        );
     }
 
     #[test]
