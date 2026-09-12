@@ -18,6 +18,15 @@ export interface FleetPond {
   lastReadingAt: string | null;
   advisoryCount: number;
   worstSeverity: string | null;
+  /** Most recent reading, for the farm view's cards. Null before any arrive. */
+  latest: {
+    ph: number | null;
+    temperatureC: number | null;
+    dissolvedOxygenMgL: number | null;
+    opticalDensity: number | null;
+    /** True running, false stopped, null when the pond has no energy meter. */
+    mixing: boolean | null;
+  } | null;
 }
 
 export interface FleetSite {

@@ -66,9 +66,13 @@ export async function getFleet(): Promise<FleetSite[]> {
   // rather than in SQL. Seven ponds makes this cheap; if the fleet grows past
   // a few dozen this becomes a batched query.
   const advisoryByPond = new Map<string, Advisory[]>();
+  // The same window also carries the latest reading, so the farm view gets
+  // its numbers without a second query.
+  const latestByPond = new Map<string, TelemetryPoint>();
   for (const p of pondRows) {
     const recent = await recentTelemetry(p.id, 48);
     if (recent.length < 2) continue;
+    latestByPond.set(p.id, recent[recent.length - 1]!);
     advisoryByPond.set(
       p.id,
       buildAdvisories({
@@ -92,6 +96,7 @@ export async function getFleet(): Promise<FleetSite[]> {
       .filter((p) => p.site_id === s.id)
       .map((p) => {
         const advisories = advisoryByPond.get(p.id) ?? [];
+        const latest = latestByPond.get(p.id);
         return {
           id: p.id,
           label: p.label,
@@ -106,6 +111,18 @@ export async function getFleet(): Promise<FleetSite[]> {
           lastReadingAt: p.last_reading ? p.last_reading.toISOString() : null,
           advisoryCount: advisories.length,
           worstSeverity: advisories[0]?.severity ?? null,
+          latest: latest
+            ? {
+                ph: latest.ph,
+                temperatureC: latest.temperatureC,
+                dissolvedOxygenMgL: latest.dissolvedOxygenMgL,
+                opticalDensity: latest.opticalDensity,
+                // null means no energy meter on this pond, which is NOT the
+                // same as a stopped paddlewheel. Collapsing the two would put
+                // a red alarm on every site that never bought the meter.
+                mixing: latest.energyKwh === null ? null : latest.energyKwh > 0,
+              }
+            : null,
         };
       }),
   }));

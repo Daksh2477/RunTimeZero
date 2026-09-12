@@ -1,13 +1,52 @@
 :root {
   color-scheme: light;
-  --surface: #f5f7f4; --panel: #fff; --ink: #18352b; --silt: #52665c;
-  --water-deep: #153d2d; --water: #315d4a; --culture: #227346;
-  --culture-wash: #eaf3eb; --culture-dim: #b9d9bf; --hairline: #d9e2d8;
-  --rust: #a33c27; --rust-wash: #fff0ea; --sun: #976016; --radius: 16px;
+
+  /*
+   * Design tokens ported from Chetan's frontend branch (Lovable/shadcn).
+   * Kept in oklch as he wrote them — perceptually uniform lightness means the
+   * status colours stay equally readable against the card background, which
+   * matters when the same three colours carry meaning on every screen.
+   *
+   * The older --culture/--silt names below are aliases onto these so the
+   * existing stylesheet keeps working; new work should use the semantic names.
+   */
+  --radius: 0.5rem;
+  --background: oklch(0.968 0.005 247.9);
+  --foreground: oklch(0.21 0.03 258);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.21 0.03 258);
+  --primary: oklch(0.28 0.032 258);
+  --primary-foreground: oklch(0.985 0.002 247.9);
+  --secondary: oklch(0.955 0.008 247.9);
+  --muted: oklch(0.955 0.008 247.9);
+  --muted-foreground: oklch(0.52 0.026 257);
+  --accent: oklch(0.72 0.19 145);
+  --accent-foreground: oklch(0.19 0.03 258);
+  --status-optimal: oklch(0.7 0.19 148);
+  --status-warning: oklch(0.79 0.16 75);
+  --status-critical: oklch(0.58 0.23 27);
+  /* The dark navy the masthead sits on. */
+  --panel-dark: oklch(0.28 0.03 258);
+  --panel-dark-foreground: oklch(0.96 0.005 247.9);
+  --border: oklch(0.929 0.013 255.508);
+
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Aliases kept so the existing stylesheet does not have to be rewritten. */
+  --surface: var(--background); --panel: var(--card); --ink: var(--foreground);
+  --silt: var(--muted-foreground); --hairline: var(--border);
+  --water-deep: #153d2d; --water: #315d4a;
+  --culture: var(--status-optimal); --culture-wash: oklch(0.7 0.19 148 / 0.1);
+  --culture-dim: oklch(0.7 0.19 148 / 0.35);
+  --rust: var(--status-critical); --rust-wash: oklch(0.58 0.23 27 / 0.09);
+  --sun: var(--status-warning);
 }
 * { box-sizing: border-box; }
 html { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; background: var(--surface); color: var(--ink); }
-body { margin: 0; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: var(--font-sans); margin: 0; line-height: 1.6; -webkit-font-smoothing: antialiased; }
 a { color: inherit; text-decoration: none; }
 button, input, select { font: inherit; }
 button, summary, input, a { -webkit-tap-highlight-color: transparent; }
@@ -631,3 +670,118 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
   .pond-card header { flex-direction: column; }
   .pond-card footer .button { width: 100%; justify-content: center; }
 }
+
+/* =========================================================== ported design
+ * The masthead, the reading cards and the status bands from Chetan's
+ * frontend branch, rebuilt in plain CSS against the real API. Same visual
+ * language, none of the 53 dependencies.
+ */
+
+h1, h2, h3, .big-reading-value, .wordmark { font-family: var(--font-display); }
+.num, code, pre { font-family: var(--font-mono); }
+
+/* --- dark masthead ------------------------------------------------------ */
+.masthead {
+  position: sticky; top: 0; z-index: 20;
+  background: var(--panel-dark);
+  color: var(--panel-dark-foreground);
+  border-bottom: 1px solid var(--border);
+}
+.masthead-inner {
+  max-width: 80rem; margin: 0 auto;
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 12px 24px; padding: 12px 16px;
+}
+.wordmark {
+  display: flex; align-items: center; gap: 8px;
+  font-weight: 600; letter-spacing: -0.01em;
+  color: var(--panel-dark-foreground); text-decoration: none;
+}
+.brand-icon {
+  display: grid; place-items: center;
+  width: 32px; height: 32px; border-radius: 6px;
+  background: var(--accent); color: var(--accent-foreground);
+  font-weight: 700;
+}
+.main-nav { display: flex; flex: 1; flex-wrap: wrap; gap: 4px; margin-left: 0; }
+.main-nav a {
+  display: flex; align-items: center; gap: 6px;
+  padding: 9px 12px; min-height: 44px; border-radius: 6px;
+  font-size: 0.875rem; font-weight: 500;
+  color: color-mix(in oklch, var(--panel-dark-foreground) 60%, transparent);
+  text-decoration: none; transition: color .15s, background-color .15s;
+}
+.main-nav a:hover { color: var(--panel-dark-foreground); background: transparent; }
+.main-nav a[aria-current='page'] {
+  background: color-mix(in oklch, var(--panel-dark-foreground) 12%, transparent);
+  color: var(--panel-dark-foreground);
+}
+.prototype-label {
+  border-radius: 999px; padding: 4px 12px;
+  background: color-mix(in oklch, var(--panel-dark-foreground) 10%, transparent);
+  font-size: 0.75rem; font-weight: 600;
+}
+
+/* --- big reading cards -------------------------------------------------- */
+.reading-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+}
+.big-reading {
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  padding: 16px;
+  box-shadow: 0 1px 2px oklch(0 0 0 / 0.05);
+}
+.big-reading-head { display: flex; align-items: center; justify-content: space-between; }
+.big-reading-label {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em;
+  text-transform: uppercase; color: var(--muted-foreground);
+}
+.big-reading-dot { width: 10px; height: 10px; border-radius: 999px; }
+.big-reading-value {
+  margin: 12px 0 0; font-size: 2.25rem; font-weight: 600; line-height: 1.05;
+}
+.big-reading-unit {
+  margin-left: 4px; font-size: 1rem; font-weight: 400;
+  color: var(--muted-foreground); font-family: var(--font-sans);
+}
+.big-reading-hint { margin: 4px 0 0; font-size: 0.78rem; color: var(--muted-foreground); }
+
+.band-optimal  { border-color: color-mix(in oklch, var(--status-optimal) 40%, transparent); }
+.band-warning  { border-color: color-mix(in oklch, var(--status-warning) 50%, transparent); }
+.band-critical { border-color: color-mix(in oklch, var(--status-critical) 50%, transparent); }
+.band-optimal  .big-reading-value, .band-optimal  .big-reading-label svg { color: var(--status-optimal); }
+.band-warning  .big-reading-value, .band-warning  .big-reading-label svg { color: var(--status-warning); }
+.band-critical .big-reading-value, .band-critical .big-reading-label svg { color: var(--status-critical); }
+.band-optimal  .big-reading-dot { background: var(--status-optimal); }
+.band-warning  .big-reading-dot { background: var(--status-warning); }
+.band-critical .big-reading-dot { background: var(--status-critical); }
+
+/* Motion only on the states that need attention — spending it on "fine"
+ * would waste the one signal that reliably pulls the eye. */
+.band-warning .big-reading-dot,
+.band-critical .big-reading-dot { animation: pulse-dot 1.8s ease-in-out infinite; }
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.45; transform: scale(0.86); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .big-reading-dot { animation: none !important; }
+}
+
+@media (max-width: 560px) {
+  .masthead-inner { gap: 8px 12px; padding: 10px 14px; }
+  .prototype-label { display: none; }
+  .big-reading-value { font-size: 1.9rem; }
+}
+
+/* "We have no instrument here" — grey, and deliberately not alarming. */
+.band-unknown { border-color: var(--border); }
+.band-unknown .big-reading-value,
+.band-unknown .big-reading-label svg { color: var(--muted-foreground); }
+.band-unknown .big-reading-dot { background: var(--muted-foreground); opacity: 0.45; }
