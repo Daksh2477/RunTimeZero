@@ -15,8 +15,8 @@
 //! So the operator has a genuine decision with no free answer:
 //!
 //!   - Feed nitrogen hard  -> more total mass, high protein, low lipid.
-//!   - Starve the pond     -> less mass, but each kg is worth more per kg
-//!                            as lipid, and carbon fixation per day drops.
+//!   - Starve the pond     -> less mass, but each kg is worth more per kg as
+//!     lipid, and carbon fixation per day drops.
 //!
 //! Getting this wrong in either direction costs real money, which is why it
 //! belongs in the model rather than in a spreadsheet.
