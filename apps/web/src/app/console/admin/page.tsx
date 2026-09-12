@@ -15,7 +15,7 @@
 import { useEffect, useState } from 'react';
 import { getSummary, type Summary } from '@/lib/market-api';
 
-const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API = '/api/backend';
 
 interface Site { id: string; name: string; tier: string }
 interface Preview {

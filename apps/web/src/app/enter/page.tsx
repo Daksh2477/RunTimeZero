@@ -1,83 +1,20 @@
 'use client';
-
-/**
- * Choosing who you are.
- *
- * This answers a real complaint: every screen was reachable by everybody, so
- * a farmer could land in an investor's trade panel with no idea what they
- * were looking at. Picking a role here decides which console you get and
- * what the navigation offers.
- *
- * It is deliberately honest that this is not authentication — the note at
- * the bottom says so, and each role carries the sign-in method it would
- * really need. Pretending a role picker is a login would be the same kind of
- * overstatement this product exists to refuse.
- */
-
+import Link from 'next/link';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ROLE_META, setRole, type Role } from '@/lib/session';
+import { clientJson } from '@/lib/client-api';
+import { ROLE_META, canAccess, sessionHome, type Role } from '@/lib/auth-contract';
+import { refreshSession, signOut, useRole } from '@/lib/session';
+import './auth.css';
 
-const ORDER: Role[] = ['farmer', 'investor', 'researcher', 'admin'];
-
-const BLURB: Record<Role, string> = {
-  farmer: 'See your ponds, what needs doing today, and sell what you earn.',
-  investor: 'Buy verified credits, and find farms raising money.',
-  researcher: 'License pond data and run the physics model yourself.',
-  admin: 'Issue batches, manage consent, and see every site.',
-};
-
-export default function Enter() {
-  const router = useRouter();
-
-  const pick = (role: Role) => {
-    setRole(role);
-    router.push(ROLE_META[role].home);
-  };
-
-  return (
-    <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6">
-      <h1 className="font-display text-2xl font-semibold tracking-tight">
-        Who are you here as?
-      </h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Each one gets a different console. You can switch at any time.
-      </p>
-
-      <div className="mt-6 grid gap-3 sm:grid-cols-2">
-        {ORDER.map((role) => {
-          const m = ROLE_META[role];
-          return (
-            <button
-              key={role}
-              type="button"
-              onClick={() => pick(role)}
-              className="rounded-xl border border-border bg-card p-5 text-left shadow-sm transition-colors hover:border-accent"
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-display text-lg font-semibold">{m.label}</span>
-                {!m.selfServe && (
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-[0.68rem] font-semibold text-muted-foreground">
-                    invite only
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{m.tagline}</p>
-              <p className="mt-3 text-sm">{BLURB[role]}</p>
-              <p className="mt-3 border-t border-border pt-3 text-xs text-muted-foreground">
-                Real sign-in would be: {m.authMode}
-              </p>
-            </button>
-          );
-        })}
-      </div>
-
-      <p className="mt-8 rounded-lg border border-border bg-secondary/60 p-4 text-xs text-muted-foreground">
-        <strong className="text-foreground">This is not a login.</strong>{' '}
-        It stores your choice in this browser so the app shows one audience&rsquo;s
-        screens instead of all of them at once. Nothing here is protected by it —
-        anything that genuinely must be would have to be enforced by the API.
-        We would rather say that than draw a padlock.
-      </p>
-    </main>
-  );
+export default function Enter(){
+ const router=useRouter();const {session,ready}=useRole();
+ const [mode,setMode]=useState<'login'|'register'>('login');const [username,setUsername]=useState('');const [password,setPassword]=useState('');const [role,setRole]=useState<Role>('operator');const [show,setShow]=useState(false);const [busy,setBusy]=useState(false);const [error,setError]=useState('');
+ async function submit(e:React.FormEvent){e.preventDefault();if(busy)return;setBusy(true);setError('');try{
+  await clientJson(`/auth/${mode}`,{method:'POST',body:JSON.stringify({username:username.trim(),password,...(mode==='register'?{role}:{})})});
+  const current=await refreshSession();if(!current)throw Error('Signed in, but your account could not be loaded. Try refreshing this page.');
+  setPassword('');const next=new URLSearchParams(location.search).get('next');router.replace(next?.startsWith('/')&&!next.startsWith('//')&&canAccess(current.account.role,next)?next:sessionHome(current));router.refresh();
+ }catch(e){setError(e instanceof Error?e.message:'Could not sign in.');}finally{setBusy(false);}}
+ return <main className="auth-page"><section className="auth-intro"><p className="eyebrow">YOUR ALGACARBON WORKSPACE</p><h1>{session?'Welcome back.':'Your ponds. Your evidence. Your next step.'}</h1><p>Sign in to manage your work. Your account opens the right view for your role.</p><ol><li><strong>Operators</strong><span>Monitor ponds and respond to alerts.</span></li><li><strong>Buyers</strong><span>Review batches and record retirements.</span></li><li><strong>Researchers</strong><span>Explore datasets and test growing conditions.</span></li></ol><div className="auth-public"><p>Just exploring? These stay open to everyone.</p><Link href="/verify">Carbon reports →</Link><Link href="/console/market">Marketplace →</Link><Link href="/sim">Try the simulator →</Link></div></section>
+ <section className="auth-card">{ready&&session?<><h2>{session.account.username}</h2><p>{ROLE_META[session.account.role].label}</p><Link className="button" href={sessionHome(session)}>Open my workspace →</Link><button className="button secondary" disabled={busy} onClick={async()=>{setBusy(true);try{await signOut();router.refresh();}catch{setError('Could not sign out. Please try again.');}finally{setBusy(false);}}}>Sign out</button></>:<><div className="auth-modes" role="group" aria-label="Account action"><button aria-pressed={mode==='login'} disabled={busy} onClick={()=>{setMode('login');setError('');}}>Sign in</button><button aria-pressed={mode==='register'} disabled={busy} onClick={()=>{setMode('register');setError('');}}>Create account</button></div><h2>{mode==='login'?'Good to see you.':'Create your workspace.'}</h2><p>{mode==='login'?'Enter your username and password.':'Choose your role. An administrator connects operator accounts to their site.'}</p><form className="auth-form" onSubmit={submit}><fieldset disabled={busy}><label htmlFor="username">Username</label><input id="username" name="username" required autoComplete="username" autoCapitalize="none" spellCheck={false} minLength={mode==='register'?3:undefined} maxLength={32} value={username} onChange={e=>setUsername(e.target.value)}/><label htmlFor="password">Password</label><div className="password-control"><input id="password" name="password" type={show?'text':'password'} required minLength={mode==='register'?8:undefined} autoComplete={mode==='login'?'current-password':'new-password'} value={password} onChange={e=>setPassword(e.target.value)}/><button type="button" aria-pressed={show} aria-label={show?'Hide password':'Show password'} onClick={()=>setShow(s=>!s)}>{show?'Hide':'Show'}</button></div>{mode==='register'&&<><p className="helper">At least 8 characters. Use a password you don’t use elsewhere.</p><label htmlFor="account-role">I’m here as a</label><select id="account-role" value={role} onChange={e=>setRole(e.target.value as Role)}>{(['operator','buyer','researcher'] as Role[]).map(r=><option key={r} value={r}>{ROLE_META[r].label}</option>)}</select></>}<button className="button" type="submit">{busy?'Opening your workspace…':mode==='login'?'Sign in →':'Create account →'}</button></fieldset></form></>}{error&&<p className="err" role="alert">{error}</p>}</section></main>;
 }

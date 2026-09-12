@@ -31,7 +31,7 @@ interface Pond {
   areaM2: number; depthM: number;
 }
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const BASE = '/api/backend';
 
 /** Stable per pond, so the same pond always simulates identically. */
 const seedFrom = (id: string) =>

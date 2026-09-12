@@ -14,7 +14,7 @@ export function CheckPeriod({ pondId }: { pondId: string }) {
     if (Date.parse(to) - Date.parse(from) > 120 * 86400000) { setError('Choose a period of 120 days or less.'); return; }
     setBusy(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000'}/ponds/${encodeURIComponent(pondId)}/reconcile`, {
+      const response = await fetch(`/api/backend/ponds/${encodeURIComponent(pondId)}/reconcile`, {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ windowStart: `${from}T00:00:00Z`, windowEnd: `${to}T00:00:00Z` }), signal: AbortSignal.timeout(20000),
       });

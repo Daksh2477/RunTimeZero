@@ -3,7 +3,8 @@
  * lives in one place. Components never fetch directly.
  */
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+import { serverApiFetch, serverSession } from './server-api';
+import { siteAllowed } from './auth-contract';
 
 export interface FleetPond {
   id: string;
@@ -73,7 +74,7 @@ export interface PondDetail {
 /** `no-store` because the whole point is showing what the pond is doing now. */
 async function get<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(`${BASE}${path}`, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+    const res = await serverApiFetch(path, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
@@ -83,7 +84,7 @@ async function get<T>(path: string): Promise<T | null> {
   }
 }
 
-export const getFleet = () => get<FleetSite[]>('/fleet');
+export const getFleet = async () => { const [rows,session]=await Promise.all([get<FleetSite[]>('/fleet'),serverSession()]); return rows && session?.account.role==='operator' ? rows.filter(s=>siteAllowed(session,s.id)) : rows; };
 export const getPond = (id: string) => get<PondDetail>(`/fleet/pond/${id}`);
 
 

@@ -2,7 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { DM_Sans, IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
 import { Masthead } from '@/components/masthead';
+import { AccountGate } from '@/components/account-gate';
 import './globals.css';
+import './enter/auth.css';
 import './reading-comfort.css';
 
 /*
@@ -45,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}><body>
     <a className="skip-link" href="#main-content">Skip to page content</a>
     <Masthead />
-    <div id="main-content" tabIndex={-1}>{children}</div>
+    <div id="main-content" tabIndex={-1}><AccountGate>{children}</AccountGate></div>
     <footer className="footer"><span>AlgaCarbon · RunTimeZero</span><span>Prototype results may use simulated data. Carbon credits require a separate review.</span></footer>
   </body></html>;
 }

@@ -1,0 +1,13 @@
+.auth-page { max-width: 1380px; margin: auto; padding: 48px 28px 70px; display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(28px,6vw,90px); align-items: start; }
+.auth-intro h1 { font-size: clamp(2rem,4vw,3.3rem); line-height: 1.12; max-width: 17ch; }
+.auth-intro > p { max-width: 52ch; color: #526654; }
+.auth-intro ol { list-style: none; padding: 0; margin-block: 32px; display: grid; gap: 20px; counter-reset: steps; }
+.auth-intro li { display: grid; grid-template-columns: 38px 1fr; gap: 3px 14px; counter-increment: steps; }
+.auth-intro li::before { content: counter(steps); grid-row: span 2; display: grid; place-items: center; align-self: start; width: 36px; height: 36px; border-radius: 50%; background: #e8f3df; color: #365f39; }
+.auth-intro li span { color: #5c6f5d; font-size: 1rem; }
+.auth-public { border-top: 1px solid #d9e4d4; padding-top: 16px; }.auth-public a { display: inline-flex; min-height: 44px; align-items: center; margin-right: 20px; font-size: 1rem; color: #315f37; text-decoration: underline; text-underline-offset: 4px; }
+.auth-card { padding: clamp(22px,3vw,40px); border: 1px solid #d4e2ca; background: #fff; border-radius: 18px; box-shadow: 0 10px 40px #274c2910; }.auth-card h2 { font-size: 1.65rem; margin-block: 28px 12px; }.auth-card p { color: #53664f; }.auth-card > .button { margin: 12px 10px 0 0; }
+.auth-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #eef4e9; border-radius: 12px; padding: 6px; }.auth-modes button { border: 0; border-radius: 8px; background: transparent; color: #3f5b3b; padding: 10px; }.auth-modes button[aria-pressed='true'] { background: #315e3c; color: white; }
+.auth-form fieldset { border: 0; padding: 0; display: grid; gap: 12px; min-width: 0; }.auth-form label { margin-top: 10px; font-weight: 600; }.auth-form input,.auth-form select { width: 100%; border: 1px solid #aebfa9; border-radius: 9px; padding: 12px; min-width: 0; }.password-control { display: flex; gap: 8px; }.password-control button { flex-shrink: 0; border: 1px solid #aebfa9; border-radius: 8px; background: #f0f6ec; padding: 8px 12px; }.auth-form .button { margin-top: 14px; }.auth-form fieldset:disabled { opacity: .7; }
+.account-gate { max-width: 680px; padding: 48px 24px; margin: auto; }.account-gate h1 { font-size: 2rem; }.account-gate .button { margin: 12px 12px 0 0; }
+@media(max-width:760px) { .auth-page { grid-template-columns: 1fr; padding: 26px 18px 48px; }.auth-card { order: -1; }.auth-intro h1 { max-width: none; }.auth-intro ol { gap: 16px; } }
