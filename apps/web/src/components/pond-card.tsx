@@ -1,77 +1,27 @@
-/**
- * One pond, as a farmer needs it.
- *
- * The ordering is the whole design: state, then what to do, then what it costs
- * to do nothing. No sparkline, no readings, no divergence figure — those are
- * true and useful and they belong on /console, where the audience reads them.
- *
- * Colour is load-bearing here and is never the only signal: every state also
- * carries a word, because a green dot means nothing to someone seeing this
- * screen for the first time, and about one man in twelve cannot tell it from
- * the red one.
- */
+/** Large pond readings with alert status and a link to the source records. */
 
 import Link from 'next/link';
 import type { FleetPond } from '@/lib/api';
 import { BigReading, type Band } from '@/components/big-reading';
+import { mass, readingTime } from '@/lib/display';
 import { Droplet, Sun, Thermometer, Waves } from '@/components/icons';
+import { pondState } from '@/lib/pond-state';
 
-const inr = (v: number) =>
-  v >= 100_000 ? `₹${(v / 100_000).toFixed(1)} lakh` : `₹${Math.round(v).toLocaleString('en-IN')}`;
-
-/** Plain-language state, in the farmer's terms rather than the system's. */
-function state(pond: FleetPond): { tone: 'bad' | 'watch' | 'ok'; word: string; line: string } {
-  if (pond.worstSeverity === 'critical') {
-    return {
-      tone: 'bad',
-      word: 'Needs you now',
-      line: 'Something is going wrong in this pond today.',
-    };
-  }
-  if (pond.worstSeverity === 'warning') {
-    return {
-      tone: 'watch',
-      word: 'Keep an eye on it',
-      line: 'Not urgent, but worth checking before the week is out.',
-    };
-  }
-  if (!pond.lastReadingAt) {
-    return {
-      tone: 'watch',
-      word: 'Not reporting',
-      line: 'No readings have come in. The sensor or its power may be off.',
-    };
-  }
-  return { tone: 'ok', word: 'Growing well', line: 'Nothing needs doing here today.' };
-}
-
-/** "3 hours ago" reads faster than a timestamp when you are standing outside. */
-function ago(iso: string | null): string {
-  if (!iso) return 'never';
-  const mins = Math.round((Date.now() - Date.parse(iso)) / 60_000);
-  if (mins < 2) return 'just now';
-  if (mins < 60) return `${mins} minutes ago`;
-  const h = Math.round(mins / 60);
-  if (h < 24) return h === 1 ? 'an hour ago' : `${h} hours ago`;
-  const d = Math.round(h / 24);
-  return d === 1 ? 'yesterday' : `${d} days ago`;
-}
-
-const fmt = (v: number | null, dp: number) => (v === null ? '—' : v.toFixed(dp));
+const fmt = (v: number | null, dp: number) => (v == null || !Number.isFinite(v) ? '—' : v.toFixed(dp));
 
 /* Cardinal temperatures for Chlorella-like strains: growth stops below ~20 °C
  * and the culture is damaged above ~38 °C. See packages/physics/src/growth.rs. */
 function tempBand(t: number | null): Band {
-  if (t === null) return 'warning';
+  if (t == null || !Number.isFinite(t)) return 'unknown';
   if (t < 18 || t > 36) return 'critical';
   if (t < 22 || t > 33) return 'warning';
   return 'optimal';
 }
 function tempHint(t: number | null): string {
-  if (t === null) return 'No reading';
-  if (t > 36) return 'Too hot — the culture is being damaged';
+  if (t == null || !Number.isFinite(t)) return 'No reading';
+  if (t > 36) return 'High temperature — review the pond';
   if (t > 33) return 'Rising — watch for heat stress';
-  if (t < 18) return 'Too cold — growth has essentially stopped';
+  if (t < 18) return 'Low temperature — review the pond';
   if (t < 22) return 'Cool — growth is slower than it could be';
   return 'Comfortable for growth';
 }
@@ -79,22 +29,23 @@ function tempHint(t: number | null): string {
 /* Photosynthesis drives pH up through the day; a falling pH is the classic
  * early sign of a culture in trouble. */
 function phBand(v: number | null): Band {
-  if (v === null) return 'warning';
+  if (v == null || !Number.isFinite(v)) return 'unknown';
   if (v < 6.5 || v > 10.5) return 'critical';
   if (v < 7.2 || v > 9.8) return 'warning';
   return 'optimal';
 }
 function phHint(v: number | null): string {
-  if (v === null) return 'No reading';
-  if (v < 6.5) return 'Far too acidic — check for a crash';
+  if (v == null || !Number.isFinite(v)) return 'No reading';
+  if (v < 6.5) return 'Low pH — review the pond';
   if (v < 7.2) return 'Drifting acidic — worth a look';
-  if (v > 10.5) return 'Very alkaline — growth will suffer';
-  return 'Normal for a working pond';
+  if (v > 10.5) return 'High pH — review the pond';
+  if (v > 9.8) return 'Above the indicative pH range';
+  return 'Within the indicative pH range';
 }
 
 export function PondCard({ pond, siteName }: { pond: FleetPond; siteName: string }) {
-  const s = state(pond);
-  const atRisk = pond.claimedCo2Kg && pond.creditableCo2Kg !== null
+  const s = pondState(pond);
+  const atRisk = pond.claimedCo2Kg != null && pond.creditableCo2Kg != null
     ? Math.max(0, pond.claimedCo2Kg - pond.creditableCo2Kg)
     : 0;
 
@@ -119,9 +70,11 @@ export function PondCard({ pond, siteName }: { pond: FleetPond; siteName: string
       )}
 
       {atRisk > 0 && (
-        <p className="pond-risk">
-          {inr(atRisk * 1.83 * 12)} of this pond&rsquo;s carbon could not be
-          confirmed yet.
+        /* Deliberately neutral, not amber: unconfirmed carbon is a paperwork
+         * state, and colouring it like a warning made a healthy pond look
+         * like it had two problems. */
+        <p className="pond-note">
+          {mass(atRisk)} of reported CO₂ is not supported by the latest check. Open the report to review the evidence.
         </p>
       )}
 
@@ -148,41 +101,42 @@ export function PondCard({ pond, siteName }: { pond: FleetPond; siteName: string
             label="Oxygen" icon={<Sun />}
             value={fmt(pond.latest.dissolvedOxygenMgL, 1)} unit="mg/L"
             hint={
-              pond.latest.dissolvedOxygenMgL === null ? 'No reading'
+              pond.latest.dissolvedOxygenMgL == null ? 'No reading'
                 : pond.latest.dissolvedOxygenMgL < 2 ? 'Low — the pond may not be mixing'
-                : 'Healthy for the culture'
+                : 'Above the low-oxygen warning level'
             }
             band={
-              pond.latest.dissolvedOxygenMgL === null ? 'warning'
+              pond.latest.dissolvedOxygenMgL == null ? 'unknown'
                 : pond.latest.dissolvedOxygenMgL < 2 ? 'critical' : 'optimal'
             }
           />
           <BigReading
             label="Paddlewheel" icon={<Waves />}
             value={
-              pond.latest.mixing === null ? 'No meter'
+              pond.latest.mixing == null ? 'No meter'
                 : pond.latest.mixing ? 'Running' : 'Stopped'
             }
             hint={
-              pond.latest.mixing === null
-                ? 'This pond has no energy meter fitted'
+              pond.latest.mixing == null
+                ? 'No mixing status is available'
                 : pond.latest.mixing
-                  ? 'Water is circulating as it should'
-                  : 'Start it — the pond will stratify within hours'
+                  ? 'The latest record indicates mixing'
+                  : 'Check the equipment and pond alerts'
             }
             band={
-              pond.latest.mixing === null ? 'unknown'
+              pond.latest.mixing == null ? 'unknown'
                 : pond.latest.mixing ? 'optimal' : 'critical'
             }
           />
         </div>
       )}
 
+      <p className="helper">Reading bands are indicative. Use the pond alerts and your operating limits to decide on an action.</p>
       <footer>
         <Link className="button" href={`/console/pond/${pond.id}`}>
           {s.tone === 'ok' ? 'Look at this pond' : 'See what to do'}
         </Link>
-        <span className="helper">Last reading {ago(pond.lastReadingAt)}</span>
+        <span className="helper">Last reading: {readingTime(pond.lastReadingAt)}</span>
       </footer>
     </article>
   );

@@ -13,7 +13,7 @@
  * underneath, so you can see what your change did without scrolling.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   DEFAULT_CONFIG, runTwin, type RunConfig, type RunResult,
 } from '@/lib/twin';
@@ -34,7 +34,6 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   const [cfg, setCfg] = useState<RunConfig>({ ...DEFAULT_CONFIG, ...initial });
   const [result, setResult] = useState<RunResult | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
-  const pending = useRef<number | null>(null);
 
   /*
    * Playback across the simulated days. The pond drawing animates continuously
@@ -42,7 +41,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
    * scrubbing stays smooth even while the physics is re-running.
    */
   const [playDay, setPlayDay] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false);
 
   /* Probes the operator has dropped on the water. Positions are 0..1 so they
    * survive a resize and a change of pond size. */
@@ -56,27 +55,26 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
     setSensors((prev) => prev.map((s) => (s.id === id ? { ...s, x, y } : s)));
   }, []);
 
-  /*
-   * Re-run on the next animation frame rather than on every input event.
-   * A drag fires far more often than the screen refreshes, so without this we
-   * would compute several runs per visible frame and throw most away.
-   */
-  const schedule = useCallback((next: RunConfig) => {
-    if (pending.current !== null) cancelAnimationFrame(pending.current);
-    pending.current = requestAnimationFrame(() => {
-      runTwin(next)
-        .then((r) => { setResult(r); setStatus('ready'); })
-        .catch(() => setStatus('failed'));
-    });
-  }, []);
-
-  useEffect(() => { schedule(cfg); }, [cfg, schedule]);
+  // Start independently of animation frames, including in throttled tabs.
+  // Cancel obsolete responses when inputs change or the component unmounts.
+  useEffect(() => {
+    let cancelled = false;
+    setStatus('loading');
+    const timeout = setTimeout(() => {
+      if (!cancelled) { cancelled = true; setStatus('failed'); }
+    }, 15000);
+    runTwin(cfg).then((r) => {
+      if (!cancelled) { setResult(r); setStatus('ready'); }
+    }).catch(() => { if (!cancelled) setStatus('failed'); })
+      .finally(() => clearTimeout(timeout));
+    return () => { cancelled = true; clearTimeout(timeout); };
+  }, [cfg]);
 
   /* One tick per 220 ms — fast enough to feel alive, slow enough to read. */
   useEffect(() => {
-    if (!playing || !result) return;
+    if (!playing || !result || !result.daily.length) return;
     const total = result.daily.length;
-    const t = setInterval(() => setPlayDay((d) => (d + 1) % total), 220);
+    const t = setInterval(() => setPlayDay((d) => (d + 1) % total), 750);
     return () => clearInterval(t);
   }, [playing, result]);
 
@@ -90,7 +88,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
 
   if (status === 'failed') {
     return (
-      <div className="sim-failed">
+      <div className="sim-failed" role="alert">
         <p>The pond model could not load.</p>
         <button type="button" className="button" onClick={() => location.reload()}>
           Try again
@@ -106,10 +104,11 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   return (
     <div className="sim">
       {/* Sticky on phones so the numbers stay in view while you drag below. */}
-      <div className="sim-summary" aria-live="polite">
+      <div className="sim-summary" aria-busy={status === 'loading'}>
+        <p className="helper" role="status">{status === 'loading' ? 'Calculating your pond estimate…' : `Model estimate over ${cfg.days} days · not a live forecast`}</p>
         {pondLabel && (
           <p className="sim-context">
-            {pondLabel}{siteName ? ` · ${siteName}` : ''} — your pond&rsquo;s real setup
+            {pondLabel}{siteName ? ` · ${siteName}` : ''} — using this pond’s size and depth
           </p>
         )}
         <div className="sim-figures">
@@ -148,7 +147,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
               onClick={() => setPlaying((p) => !p)}
               aria-pressed={playing}
             >
-              {playing ? 'Pause' : 'Play'}
+              {playing ? 'Pause timeline' : 'Play timeline'}
             </button>
             <input
               type="range" min={0} max={Math.max(0, result.daily.length - 1)}
@@ -164,9 +163,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
             </button>
           </div>
           <p className="helper">
-            Drag the probes to move them. Stopping the paddlewheel is the
-            failure the energy meter catches outright — watch the water stop
-            circulating.
+            Play or scrub through the simulated days. Stop the paddlewheel to explore how the model responds. Probe positions are visual only.
           </p>
         </div>
       )}

@@ -24,8 +24,8 @@ export function Navigation() {
   const path = usePathname();
   return (
     <nav className="main-nav" aria-label="Main navigation">
-      {path === '/' && <><Link href="/#how-it-works">How it works</Link><Link href="/#who-its-for">Who it helps</Link></>}
-      {(path === '/' ? NAV.slice(0, 1) : NAV).map(({ href, label, icon: Icon }) => (
+      {path === '/' && <><Link href="/#how-it-works">How it works</Link><Link href="/#who-its-for">Find your view</Link></>}
+      {(path === '/' ? [] : NAV).map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
           href={href}

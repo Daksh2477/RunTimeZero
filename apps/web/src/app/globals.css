@@ -703,10 +703,16 @@ h1, h2, h3, .big-reading-value, .wordmark { font-family: var(--font-display); }
   background: var(--accent); color: var(--accent-foreground);
   font-weight: 700;
 }
-.main-nav { display: flex; flex: 1; flex-wrap: wrap; gap: 4px; margin-left: 0; }
+.main-nav {
+  display: flex; flex: 1; gap: 2px; margin-left: 0;
+  /* Scrolls sideways rather than wrapping: a second row of tabs pushed the
+   * page content below the fold on a phone. */
+  overflow-x: auto; scrollbar-width: none;
+}
+.main-nav::-webkit-scrollbar { display: none; }
 .main-nav a {
-  display: flex; align-items: center; gap: 6px;
-  padding: 9px 12px; min-height: 44px; border-radius: 6px;
+  display: flex; align-items: center; gap: 6px; flex: none;
+  padding: 9px 11px; min-height: 44px; border-radius: 6px; white-space: nowrap;
   font-size: 0.875rem; font-weight: 500;
   color: color-mix(in oklch, var(--panel-dark-foreground) 60%, transparent);
   text-decoration: none; transition: color .15s, background-color .15s;
@@ -724,8 +730,12 @@ h1, h2, h3, .big-reading-value, .wordmark { font-family: var(--font-display); }
 
 /* --- big reading cards -------------------------------------------------- */
 .reading-grid {
-  display: grid; gap: 12px;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  display: grid; gap: 10px;
+  /* 130px, not 155px: at 390px the content box is ~326px, and anything wider
+   * than 148px per track collapses this to a single column — which made each
+   * pond four screens tall. */
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin-top: 14px;
 }
 .big-reading {
   border: 2px solid var(--border);
@@ -777,7 +787,11 @@ h1, h2, h3, .big-reading-value, .wordmark { font-family: var(--font-display); }
 @media (max-width: 560px) {
   .masthead-inner { gap: 8px 12px; padding: 10px 14px; }
   .prototype-label { display: none; }
-  .big-reading-value { font-size: 1.9rem; }
+  .big-reading-value { font-size: 1.6rem; }
+  .big-reading { padding: 12px; }
+  .big-reading-label { font-size: 0.65rem; }
+  .wordmark { font-size: 0.95rem; }
+  .brand-icon { width: 28px; height: 28px; }
 }
 
 /* "We have no instrument here" — grey, and deliberately not alarming. */
@@ -785,3 +799,66 @@ h1, h2, h3, .big-reading-value, .wordmark { font-family: var(--font-display); }
 .band-unknown .big-reading-value,
 .band-unknown .big-reading-label svg { color: var(--muted-foreground); }
 .band-unknown .big-reading-dot { background: var(--muted-foreground); opacity: 0.45; }
+
+/* Paperwork state, not a pond problem — so it must not look like a warning. */
+.pond-note {
+  margin: 8px 0 0; font-size: 0.88rem; color: var(--muted-foreground);
+  padding-left: 10px; border-left: 2px solid var(--border);
+}
+
+/* Readable shared controls and surfaces across monitoring, reports and lab. */
+.main-nav a { color: #cbd8dd; }
+.prototype-label { color: #d6e4e8; }
+.wordmark > span:last-child { color: #a5ed83; }
+.skip-link { z-index: 50; }
+:where(a, button, input, select, summary):focus-visible { outline: 3px solid #2570aa; outline-offset: 4px; }
+.masthead :where(a, button):focus-visible { outline-color: #b5f399; }
+.band-optimal .big-reading-value, .band-optimal .big-reading-label svg { color: #246b3e; }
+.band-warning .big-reading-value, .band-warning .big-reading-label svg { color: #87510c; }
+.band-critical .big-reading-value, .band-critical .big-reading-label svg { color: #b62f28; }
+.big-reading-label { font-size: .8rem; letter-spacing: .025em; }
+.big-reading-hint { font-size: .9rem; line-height: 1.55; }
+.big-reading-value { overflow-wrap: anywhere; }
+.farm .reading-grid { margin-block: 20px; }
+.farm .pond-card { padding: 24px; }
+.farm .pond-where, .farm .state-pill, .farm .helper { font-size: .95rem; }
+.farm-verdict h2 { font-size: 1.4rem; margin: 0 0 10px; }
+.state-pill.tone-watch { color: #87510c; }
+.pond-risk { color: #87510c; }
+.farm .pond-card header { flex-wrap: wrap; }
+.pond-card, .report-card, .summary-card { box-shadow: 0 2px 7px #182b3505; }
+a.pond-card:hover, .report-card:hover { border-color: #6f957e; box-shadow: 0 5px 16px #182b3510; }
+.inline-notice { padding: 16px 20px; background: #fff4db; border: 1px solid #dbc695; border-radius: 10px; margin-bottom: 24px; line-height: 1.6; }
+.inline-notice a { text-decoration: underline; }
+@media(max-width:720px) {
+  .masthead-inner { gap: 8px 16px; }
+  .main-nav { flex-basis: 100%; }
+  .main-nav a { flex: 1 1 auto; justify-content: center; padding-inline: 9px; font-size: .82rem; }
+  .farm .pond-card { padding: 18px; }
+  .reading-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .big-reading { padding: 12px; }
+  .big-reading-value { font-size: 1.7rem; }
+  .big-reading-unit { font-size: .8rem; }
+  .big-reading-label { font-size: .75rem; }
+}
+@media(max-width:359px) { .reading-grid { grid-template-columns: 1fr; } }
+.sim { grid-template-areas: 'summary' 'pond' 'controls' 'expansion'; grid-template-columns: minmax(0,1fr); }
+.sim-summary { grid-area: summary; position: static; padding: 22px; }
+.sim-pond { grid-area: pond; min-width: 0; }
+.sim-controls { grid-area: controls; background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 24px; }
+.sim-expansion { grid-area: expansion; }
+.sim-figures span { font-size: .85rem; line-height: 1.5; }
+.sim-field .helper { font-size: .9rem; line-height: 1.6; }
+.pond-controls { flex-wrap: wrap; }
+.pond-controls input[type='range'] { min-width: 80px; min-height: 44px; }
+@media(min-width:960px) { .sim { grid-template-columns: minmax(0,1.15fr) minmax(0,1fr); grid-template-areas: 'summary controls' 'pond controls' 'expansion expansion'; } }
+@media(max-width:560px) { .sim-summary,.sim-controls { padding: 16px; }.sim-figures { gap: 8px; }.sim-figures strong { font-size: 1.1rem; }.sim-figures span { font-size: .78rem; }.pond-controls .button { flex: 1 1 auto; } }
+.farm-verdict.is-watch { background: #fff6e5; border-color: #d8bd83; }
+@media(max-width:720px) {
+  .masthead { position: static; }
+  .main-nav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); overflow: visible; width: 100%; gap: 4px; }
+  .main-nav a { white-space: normal; justify-content: flex-start; font-size: .85rem; }
+  .page-heading .refresh-group { align-items: flex-start; flex-direction: row; flex-wrap: wrap; width: 100%; }
+  .page-heading .refresh-group .button { white-space: nowrap; }
+  .page-heading .refresh-group .helper { align-self: center; }
+}

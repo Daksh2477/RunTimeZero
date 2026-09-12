@@ -16,7 +16,7 @@ export default function Landing() {
           <p className="home-kicker">SMALL ALGAE. BIG POSSIBILITIES.</p>
           <h1>Healthier ponds.<br /><span>Clearer carbon claims.</span></h1>
           <p className="home-lede">Know what’s happening in your algae ponds. Spot problems, explore changes, and see the evidence behind every carbon claim — all in one place.</p>
-          <div className="home-actions"><Link className="button home-primary" href="/farm">See your ponds <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="/sim">Try the simulator</Link></div>
+          <div className="home-actions"><Link className="button home-primary" href="#who-its-for">Find your view <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="#how-it-works">See how it works</Link></div>
           <p className="home-caption">Explore the prototype. No sign-up needed.</p>
         </div>
         <div className="home-preview" aria-label="Illustration of pond monitoring and a carbon check">
@@ -46,6 +46,6 @@ export default function Landing() {
       <details><summary>Do I need sensors to try it?</summary><p>No sensors are needed to explore the browser simulator or existing reports. Monitoring your own pond requires a site and sensors to be configured; that setup is not available through this interface yet.</p></details>
       <details><summary>Can I inspect how it works?</summary><p>Yes. The project source includes the models, physics engine and application code. <a href={REPO_URL}>Explore the RunTimeZero repository.</a></p></details>
     </div></section>
-    <section className="home-shell home-final"><p className="home-kicker">SEE IT FOR YOURSELF</p><h2>Your next decision starts<br />with a clearer picture.</h2><div className="home-actions"><Link className="button home-primary" href="/farm">Open pond monitoring <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="/sim">Experiment with a pond</Link></div></section>
+    <section className="home-shell home-final"><p className="home-kicker">SEE IT FOR YOURSELF</p><h2>Your next decision starts<br />with a clearer picture.</h2><div className="home-actions"><Link className="button home-primary" href="#who-its-for">Explore the platform <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="#how-it-works">How it works</Link></div></section>
   </main>;
 }

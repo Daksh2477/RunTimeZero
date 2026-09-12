@@ -1,25 +1,8 @@
-/**
- * The farmer's view. Deliberately contains no chart of any kind.
- *
- * WHY THIS EXISTS SEPARATELY FROM /console
- *
- * /console shows readings, divergence figures and trends. That is the right
- * view for a researcher or an investor, and the wrong one for the person who
- * actually owns the pond: they are standing at the bank of it, on a phone, in
- * sunlight, and they need to know one thing — is anything wrong, and what do I
- * do today. A time-series of optical density does not answer that.
- *
- * So this page answers in that order: a single verdict per pond, then the
- * action, then what it costs to ignore. Numbers appear only where they are the
- * answer to a question a farmer actually asks (how much will I lose).
- *
- * The role split — farmer / researcher / investor — comes from Chetan's
- * frontend branch, which had the right instinct about audience.
- */
-
 import Link from 'next/link';
 import { getFleet, type FleetPond, type FleetSite } from '@/lib/api';
+import { RefreshControls } from '@/components/refresh-controls';
 import { PondCard } from '@/components/pond-card';
+import { pondState, TONE_RANK } from '@/lib/pond-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,15 +11,13 @@ export const metadata = {
   description: 'What needs doing today.',
 };
 
-/** Worst-first: a farmer opening this should meet the problem, not scroll to it. */
-const RANK: Record<string, number> = { critical: 0, warning: 1, info: 2 };
-
 function sortPonds(sites: FleetSite[]): { pond: FleetPond; site: string }[] {
   return sites
     .flatMap((s) => s.ponds.map((pond) => ({ pond, site: s.name })))
     .sort((a, b) => {
-      const ra = RANK[a.pond.worstSeverity ?? 'info'] ?? 3;
-      const rb = RANK[b.pond.worstSeverity ?? 'info'] ?? 3;
+      // The same function the cards use, so the order and the labels agree.
+      const ra = TONE_RANK[pondState(a.pond).tone];
+      const rb = TONE_RANK[pondState(b.pond).tone];
       return ra - rb || a.pond.label.localeCompare(b.pond.label);
     });
 }
@@ -50,18 +31,16 @@ export default async function FarmPage() {
   const sites: FleetSite[] = fetched ?? [];
 
   const ponds = sortPonds(sites);
-  const needAttention = ponds.filter((p) => p.pond.worstSeverity && p.pond.worstSeverity !== 'info');
-
+  const needAttention = ponds.filter((p) => pondState(p.pond).tone !== 'ok');
   if (failed) {
     return (
       <main className="wrap farm">
         <div className="farm-offline">
           <h1>Cannot reach your ponds right now</h1>
           <p>
-            This is a connection problem, not a problem with your pond. Your
-            sensors keep recording either way.
+            We could not load the pond records. This does not tell us whether the sensors or ponds are working normally.
           </p>
-          <Link className="button" href="/farm">Try again</Link>
+          <RefreshControls />
         </div>
       </main>
     );
@@ -69,31 +48,10 @@ export default async function FarmPage() {
 
   return (
     <main className="wrap farm">
-      {/*
-        The headline verdict. One sentence, biggest thing on the page, and it
-        is the only element on the screen that is ever red.
-      */}
-      <section className={`farm-verdict ${needAttention.length ? 'is-bad' : 'is-good'}`}>
-        <p className="farm-eyebrow">Your ponds today</p>
-        {needAttention.length === 0 ? (
-          <>
-            <h1>Everything looks fine.</h1>
-            <p>
-              {ponds.length === 1
-                ? 'Your pond is growing normally. Nothing needs doing today.'
-                : `All ${ponds.length} ponds are growing normally. Nothing needs doing today.`}
-            </p>
-          </>
-        ) : (
-          <>
-            <h1>
-              {needAttention.length === 1
-                ? '1 pond needs you today.'
-                : `${needAttention.length} ponds need you today.`}
-            </h1>
-            <p>Start at the top. The rest are fine.</p>
-          </>
-        )}
+      <div className="page-heading"><div><p className="eyebrow">POND MONITORING</p><h1>Your ponds today</h1><p>Start with the alerts, then check the latest readings.</p></div><RefreshControls auto /></div>
+      <section className={`farm-verdict ${ponds.some(({ pond }) => pondState(pond).tone === 'bad') ? 'is-bad' : needAttention.length ? 'is-watch' : ''}`}>
+        <h2>{!ponds.length ? 'No ponds have been added yet' : needAttention.length ? `${needAttention.length} ${needAttention.length === 1 ? 'pond needs' : 'ponds need'} a closer look` : 'No urgent alerts in the available records'}</h2>
+        <p>{!ponds.length ? 'Explore a sample pond while your site is being configured.' : 'Readings can be old or incomplete. Check the time shown on each pond before acting.'}</p>
       </section>
 
       <section className="farm-list">
@@ -102,8 +60,7 @@ export default async function FarmPage() {
         ))}
         {ponds.length === 0 && (
           <p className="helper">
-            No ponds are set up yet. Once a sensor starts reporting, it appears
-            here on its own.
+            Your site and its sensors need to be configured before readings can appear here.
           </p>
         )}
       </section>

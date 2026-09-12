@@ -53,11 +53,13 @@ export default async function SimPage({
           <h1>{p ? `What could ${p.label} do?` : 'Try a pond'}</h1>
           <p>
             {p
-              ? 'Starting from this pond as it is today. Move anything and watch what changes — nothing here touches your real records.'
+              ? 'Using this pond’s size and depth with sample starting conditions. Adjust the controls to explore the model; your real records stay unchanged.'
               : 'Move the controls and watch the pond respond. Nothing is saved.'}
           </p>
         </div>
       </div>
+
+      {pondId && !p && <div className="inline-notice" role="status">We couldn’t load that pond. The simulator below uses a sample pond instead. <Link href="/farm">Return to your ponds</Link>.</div>}
 
       <LiveSimulator
         initial={initial}
