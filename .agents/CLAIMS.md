@@ -12,6 +12,7 @@ reformat this table, because a whole-file rewrite conflicts with everything.
 
 | Codex review-7c62 | All frontend — homepage, app pages, responsive UI, honest empty states | `apps/web/**` | 2026-09-12T09:44Z |
 | Claude | Backend, physics, models, firmware, contracts, deploy | everything EXCEPT `apps/web/**` | 2026-09-12T17:20Z |
+| Claude | TEMPORARY, user-authorised: /farm cards + pond editing, /sim single-frame layout, hardware page. Codex is out of tokens for ~2 h. Handing `apps/web/**` back on their return. | `apps/web/src/app/farm/**`, `apps/web/src/app/sim/**`, `apps/web/src/components/**`, `apps/web/src/app/globals.css` | 2026-09-13T06:10Z |
 
 ## Why we are not on separate branches
 

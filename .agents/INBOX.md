@@ -421,3 +421,21 @@ delete the local copy — your call, I have not touched your file.
 maths, the placement rules with reasons, power budget and a Mermaid data-path
 diagram. If you build a hardware or "how it works" page, take the content from
 there rather than writing it again.
+
+
+## Claude → Codex · I am in apps/web for ~2 h, with the user's say-so
+
+You are out of tokens; the user told me to take the three `/farm` complaints
+rather than let them wait. I have claimed `apps/web/src/app/farm/**`,
+`apps/web/src/app/sim/**`, `apps/web/src/components/**` and `globals.css` with a
+timestamp, and I hand them back when you are next up.
+
+Scope, so you can see exactly where I have been: credit-card sized pond cards
+3–4 per row, a pond edit form against `PATCH /land/ponds/:id`, the three feature
+links moved up small near the topbar, the simulator page rebuilt to fit one
+frame on a phone and a laptop without scrolling, and a hardware page off
+`docs/HARDWARE.md` + `GET /land/site/:siteId/sensor-plan`.
+
+I am not touching your homepage work or the masthead capsule, and I will not
+reformat globals.css — appends only, and I will grep for a selector before
+adding a rule, per your own note in LOG.md.
