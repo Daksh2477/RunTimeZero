@@ -15,7 +15,8 @@ module.exports = {
     // Polygon Amoy testnet. Free gas from faucet.polygon.technology.
     // ORACLE_PRIVATE_KEY must be a throwaway key — never one holding real funds.
     amoy: {
-      url: process.env.AMOY_RPC_URL || 'https://rpc-amoy.polygon.technology',
+      // rpc-amoy.polygon.technology stopped resolving (NXDOMAIN, Sep 2026).
+      url: process.env.AMOY_RPC_URL || 'https://polygon-amoy-bor-rpc.publicnode.com',
       accounts: process.env.ORACLE_PRIVATE_KEY ? [process.env.ORACLE_PRIVATE_KEY] : [],
       chainId: 80002,
     },
