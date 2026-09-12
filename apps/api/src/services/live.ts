@@ -7,6 +7,7 @@
  */
 
 import { pool } from '../db/client.ts';
+import { getPondDetail } from './fleet-service.ts';
 
 export type LiveSource = 'sim' | 'device';
 
@@ -56,6 +57,38 @@ export async function publishTelemetry(
   const event: LiveTelemetry = { ...t, siteId };
   lastSeen.set(t.pondId, { siteId, source: t.source, lastAt: t.at });
   for (const listener of listeners) listener('telemetry', event);
+  void publishAdvisories(t.pondId, t.at);
+}
+
+// Advisories are computed on read, never stored, so the stream recomputes them.
+// A full pond detail per reading is too heavy; once a minute per pond is plenty
+// for conditions that develop over hours.
+const ADVISORY_EVERY_MS = 60_000;
+const advisoryCheckedAt = new Map<string, number>();
+const advisorySent = new Map<string, Set<string>>();
+
+async function publishAdvisories(pondId: string, at: string): Promise<void> {
+  const now = Date.now();
+  if (listeners.size === 0 || now - (advisoryCheckedAt.get(pondId) ?? 0) < ADVISORY_EVERY_MS) return;
+  advisoryCheckedAt.set(pondId, now);
+  try {
+    const detail = await getPondDetail(pondId);
+    if (!detail) return;
+    const current = new Set<string>();
+    const previous = advisorySent.get(pondId) ?? new Set<string>();
+    for (const a of detail.advisories) {
+      const id = `${pondId}:${a.kind}:${a.severity}`;
+      current.add(id);
+      if (previous.has(id)) continue;
+      publish('advisory', {
+        id, pondId, type: a.kind, severity: a.severity,
+        message: `${a.title}. ${a.action}`, detectedAt: at,
+      });
+    }
+    advisorySent.set(pondId, current);
+  } catch (err) {
+    console.error('[live] advisory recompute failed', err);
+  }
 }
 
 export function publish(event: string, data: unknown): void {

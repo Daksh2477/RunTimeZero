@@ -1,7 +1,7 @@
 /**
  * Live telemetry for dashboards.
  *
- *   GET /live/stream   Server-Sent Events: telemetry, heartbeat
+ *   GET /live/stream   Server-Sent Events: telemetry, advisory, heartbeat
  *   GET /live/status   last reading per pond
  *
  * SSE rather than WebSockets: one direction is all a dashboard needs, it rides
