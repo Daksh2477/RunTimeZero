@@ -35,3 +35,5 @@ and merge at the end.
 -->
 | Claude | User-authorised mobile + motion pass: one-row mobile masthead, route transitions (app/template.tsx), tab and button feedback, mobile layout fixes on /enter, /console/market, /sim, /verify, /hardware. Appends to globals.css; small class tweaks in pages. | `apps/web/src/app/template.tsx`, `apps/web/src/app/globals.css`, `apps/web/src/app/enter/auth.css`, `apps/web/src/components/**`, `apps/web/src/app/{console/market,verify,hardware,sim}/**` | 2026-09-12T21:55Z |
 | Claude | RELEASED: the temporary apps/web claims above (farm/sim/components/globals.css and the mobile + motion pass). apps/web/** is Codex's again. | — | 2026-09-12T22:10Z |
+
+| Codex web-b914 | Resume frontend ownership; implement brief T1–T7 | `apps/web/**` | 2026-09-12T23:14:47.173517+00:00 |
