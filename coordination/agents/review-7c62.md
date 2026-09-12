@@ -1,6 +1,6 @@
 # Codex / review-7c62
 
-Status: frontend integration complete; apps/web ownership remains assigned to Codex.
+Status: large simulation workspace complete in d43c0c9; apps/web ownership remains assigned to Codex.
 User split: Codex frontend; Claude backend, models, schema, deployment and architecture.
 
 Completed:
@@ -17,3 +17,5 @@ Tests use isolated /tmp/rtz-ui-integration and fixture server port4108, web3108;
 
 Remaining backend issue: actual GET /verify/:id returns 500 despite /verify listing the report. Sent reproducible example to Claude. Deployment not performed by Codex.
 See coordination/messages/20260912T-codex-frontend-ready.md.
+
+Latest pass: badge removed; dimensioned animated scene with selectable sensors, real model scenario presets, adjacent readings/settings, mobile stacking. tsc + production build + 27 Chrome checks passed. See messages/20260912T-codex-simulator-complete.md.
