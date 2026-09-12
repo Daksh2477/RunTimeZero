@@ -20,7 +20,6 @@
  */
 
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
 import {
   getMarket, getProduce, orderProduce, retireCredits,
   type Listing, type Produce,
@@ -87,16 +86,14 @@ export default function MarketPage() {
             { label: 'Algae available', value: `${Math.round(produceKg).toLocaleString('en-IN')} kg` },
             { label: 'Produce value at asking', value: inr(produceValue) },
           ].map((s, i) => (
-            <motion.div
+            <div
               key={s.label}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.08 }}
-              className="rounded-2xl border border-border/60 bg-card/50 p-5 shadow-sm backdrop-blur-md"
+              style={{ animationDelay: `${i * 80}ms` }}
+              className="rise-in rounded-2xl border border-border/60 bg-card/50 p-5 shadow-sm backdrop-blur-md"
             >
               <p className="text-sm font-medium text-muted-foreground">{s.label}</p>
               <h3 className="mt-1.5 font-display text-2xl font-bold sm:text-3xl">{s.value}</h3>
-            </motion.div>
+            </div>
           ))}
         </div>
 
@@ -119,14 +116,12 @@ export default function MarketPage() {
           <div className="grid gap-5 lg:grid-cols-3">
             <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
               {shownCredits.map((c, i) => (
-                <motion.button
+                <button
                   key={c.batchId}
                   type="button"
                   onClick={() => setSelected(c)}
-                  initial={{ opacity: 0, scale: 0.97 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.05 }}
-                  className={`rounded-2xl border bg-card/60 p-5 text-left shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                  style={{ animationDelay: `${i * 50}ms` }}
+                  className={`rise-in rounded-2xl border bg-card/60 p-5 text-left shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-lg ${
                     selected?.batchId === c.batchId ? 'border-primary' : 'border-border/60'
                   }`}
                 >
@@ -157,7 +152,7 @@ export default function MarketPage() {
                       {c.anchored ? 'on chain' : 'hash verified'}
                     </p>
                   </div>
-                </motion.button>
+                </button>
               ))}
               {shownCredits.length === 0 && (
                 <p className="text-sm text-muted-foreground">No credits match that search.</p>
@@ -201,11 +196,9 @@ function ProduceCard({ produce: p, index, onOrdered }: {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.97 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.05 }}
-      className="flex flex-col rounded-2xl border border-border/60 bg-card/60 p-5 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-lg"
+    <div
+      style={{ animationDelay: `${index * 50}ms` }}
+      className="rise-in flex flex-col rounded-2xl border border-border/60 bg-card/60 p-5 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-lg"
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -283,6 +276,6 @@ function ProduceCard({ produce: p, index, onOrdered }: {
           </button>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }

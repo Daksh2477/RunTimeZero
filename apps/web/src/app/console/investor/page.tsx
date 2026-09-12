@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import {
   getMarket, getOpportunities, retireCredits,
   type Listing, type Opportunity,
@@ -25,14 +26,6 @@ import { RetirePanel } from '@/components/retire-panel';
 import { OpportunityCard } from '@/components/opportunity-card';
 
 const kg = (v: number) => `${Math.round(v).toLocaleString('en-IN')} kg`;
-
-/** Divergence in basis points, as something a buyer can act on. */
-function quality(bps: number): { label: string; cls: string } {
-  if (bps <= 0) return { label: 'Nothing refused', cls: 'text-status-optimal' };
-  if (bps < 500) return { label: `${(bps / 100).toFixed(1)}% refused`, cls: 'text-status-optimal' };
-  if (bps < 2000) return { label: `${(bps / 100).toFixed(1)}% refused`, cls: 'text-status-warning' };
-  return { label: `${(bps / 100).toFixed(1)}% refused`, cls: 'text-status-critical' };
-}
 
 export default function InvestorConsole() {
   const [listings, setListings] = useState<Listing[] | null>(null);
@@ -78,72 +71,29 @@ export default function InvestorConsole() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <section className="rounded-xl border border-border bg-card p-5 shadow-sm lg:col-span-2">
-          <h2 className="font-display text-sm font-semibold">Credits for sale</h2>
-          <p className="text-xs text-muted-foreground">
-            Sorted newest first. &ldquo;Refused&rdquo; is how much of the
-            operator&rsquo;s own claim the evidence did not support.
+        <section className="rounded-2xl border border-border/60 bg-card/60 p-5 shadow-sm backdrop-blur-xl lg:col-span-2">
+          <h2 className="font-display text-sm font-semibold">Credits available</h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Trading lives on the marketplace, where listings also show the
+            algae itself. This is the summary.
           </p>
-
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[640px] text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  <th className="pb-2 font-semibold">Site</th>
-                  <th className="pb-2 font-semibold">Period</th>
-                  <th className="pb-2 font-semibold">Evidence</th>
-                  <th className="pb-2 text-right font-semibold">Available</th>
-                  <th className="pb-2 text-right font-semibold">Quality</th>
-                  <th className="pb-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {(listings ?? []).map((l) => {
-                  const q = quality(l.divergenceBps);
-                  return (
-                    <tr key={l.batchId} className="border-b border-border/60 last:border-0">
-                      <td className="py-2.5 pr-3">
-                        <div className="font-medium">{l.siteName}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {l.tier} · {l.disposition.replace(/_/g, ' ')}
-                        </div>
-                      </td>
-                      <td className="py-2.5 pr-3 font-mono text-xs text-muted-foreground">
-                        {l.periodStart.slice(0, 10)}
-                      </td>
-                      <td className="py-2.5 pr-3 text-xs">
-                        {l.anchored ? (
-                          <span className="text-status-optimal">on chain</span>
-                        ) : (
-                          <span className="text-muted-foreground" title={l.reportHash ?? ''}>
-                            hash only
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-2.5 pr-3 text-right font-mono">{kg(l.availableKg)}</td>
-                      <td className={`py-2.5 pr-3 text-right text-xs font-semibold ${q.cls}`}>
-                        {q.label}
-                      </td>
-                      <td className="py-2.5 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setSelected(l)}
-                          className="rounded-md border border-border px-2.5 py-1 text-xs font-semibold hover:border-accent"
-                        >
-                          Retire
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {listings?.length === 0 && (
-                  <tr><td colSpan={6} className="py-6 text-center text-sm text-muted-foreground">
-                    Nothing has been issued yet.
-                  </td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {[
+              ['Listings', String(listings?.length ?? '—')],
+              ['Available', kg(totalAvailable)],
+              ['Retired', kg(totalRetired)],
+              ['Farms raising', String(farms?.length ?? '—')],
+            ].map(([label, v]) => (
+              <div key={label}>
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">{label}</dt>
+                <dd className="mt-1 font-display text-xl font-semibold">{v}</dd>
+              </div>
+            ))}
+          </dl>
+          <Link href="/console/market"
+            className="mt-5 inline-block rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground">
+            Open the marketplace →
+          </Link>
         </section>
 
         <RetirePanel
