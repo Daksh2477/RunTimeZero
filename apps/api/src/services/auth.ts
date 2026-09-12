@@ -181,7 +181,25 @@ function toAccount(r: Record<string, unknown>): Account {
   };
 }
 
-export async function register(input: Record<string, unknown>): Promise<Account> {
+/**
+ * Roles anyone may sign up as.
+ *
+ * `admin` is NOT here, and that was a real hole: the route took `role`
+ * straight from the body, so a stranger could POST `{"role":"admin"}` and
+ * issue batches. An admin is made by `npm run db:account`, on the machine,
+ * by somebody with shell access.
+ */
+const SELF_SERVE_ROLES: Role[] = ['operator', 'buyer', 'researcher'];
+
+export interface RegisterOptions {
+  /** True only when an existing admin is creating the account. */
+  privileged?: boolean;
+}
+
+export async function register(
+  input: Record<string, unknown>,
+  options: RegisterOptions = {},
+): Promise<Account> {
   const username = typeof input.username === 'string' ? input.username.trim().toLowerCase() : '';
   const password = typeof input.password === 'string' ? input.password : '';
 
@@ -196,8 +214,27 @@ export async function register(input: Record<string, unknown>): Promise<Account>
   if (password.length < 8) {
     throw new AuthError('Password must be at least 8 characters.');
   }
-  const role: Role = ROLES.includes(input.role as Role) ? input.role as Role : 'operator';
-  const siteId = typeof input.siteId === 'string' && input.siteId ? input.siteId : null;
+  const allowed = options.privileged ? ROLES : SELF_SERVE_ROLES;
+  const asked = input.role as Role;
+  if (input.role !== undefined && !allowed.includes(asked)) {
+    throw new AuthError(
+      `role must be one of: ${allowed.join(', ')}.`,
+      // 403 rather than 400: the request is well-formed and understood, and
+      // refused. A 400 would invite the caller to retry with better JSON.
+      403,
+    );
+  }
+  const role: Role = allowed.includes(asked) ? asked : 'operator';
+
+  /*
+   * Binding an account to a site is an authorisation decision.
+   *
+   * Self-service signup cannot claim one — otherwise anybody could register
+   * against somebody else's farm and read its telemetry. An operator who signs
+   * up unbound sees "setup needed", which is the honest state.
+   */
+  const siteId = options.privileged && typeof input.siteId === 'string' && input.siteId
+    ? input.siteId : null;
 
   const hash = await hashPassword(password);
   try {

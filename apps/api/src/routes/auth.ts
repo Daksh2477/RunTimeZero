@@ -25,9 +25,14 @@ function send(res: Response, err: unknown) {
   return res.status(500).json({ error: 'Could not complete that.' });
 }
 
-authRouter.post('/register', async (req, res) => {
+authRouter.post('/register', async (req: Authenticated, res) => {
   try {
-    const account = await register((req.body ?? {}) as Record<string, unknown>);
+    // Only an existing admin may choose a role freely or bind the new account
+    // to a site. `readToken` has already attached the caller if there is one.
+    const privileged = (req as Authenticated).account?.role === 'admin';
+    const account = await register(
+      (req.body ?? {}) as Record<string, unknown>, { privileged },
+    );
     // Registering logs you in. A prototype that makes you type the password
      // twice in a row is just a worse prototype.
     const { token } = await login({
