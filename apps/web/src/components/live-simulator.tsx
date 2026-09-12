@@ -5,7 +5,7 @@ import { DEFAULT_CONFIG, runTwin, type RunConfig, type RunResult } from '@/lib/t
 import { ExpansionPanel } from '@/components/expansion-panel';
 import { PondView } from '@/components/pond-view';
 import { SkyStrip } from '@/components/sky-strip';
-import { CollapsiblePanel } from '@/components/collapsible-panel';
+import { SimulatorControls } from '@/components/simulator-controls';
 import './simulation-workspace.css';
 
 interface Props { initial?: Partial<RunConfig>; pondLabel?: string; siteName?: string; }
@@ -32,7 +32,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   const [failure, setFailure] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   const [playDay, setPlayDay] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const [playing, setPlaying] = useState(true);
   const [sensors, setSensors] = useState(initialSensors);
   const [selectedSensor, setSelectedSensor] = useState('ph');
   const [controls, setControls] = useState('pond');
@@ -51,15 +51,15 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
         setStatus('failed');
       }
     }, 15000);
-    runTwin(cfg).then(r => { if (!cancelled) { setResult(r); setStatus('ready'); } })
-      .catch((err: unknown) => {
-        if (cancelled) return;
-        const message = err instanceof Error ? err.message : String(err);
-        console.error('[simulator]', err);
-        setFailure(message);
-        setStatus('failed');
-      })
-      .finally(() => clearTimeout(timeout));
+    async function calculate() {
+      try {
+        const r = await runTwin(cfg);
+        if (!cancelled) { setResult(r); setStatus('ready'); setPlayDay(0); setPlaying(true); }
+      } catch (err) {
+        if (!cancelled) { setFailure(err instanceof Error ? err.message : String(err)); setStatus('failed'); }
+      } finally { clearTimeout(timeout); }
+    }
+    void calculate();
     return () => { cancelled = true; clearTimeout(timeout); };
   }, [cfg, retry]);
 
@@ -79,27 +79,27 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
     { id: 'temp', name: 'Water temperature', value: point?.temperatureC.toFixed(1) ?? '—', unit: '°C', description: 'Water temperature follows the air conditions and the pond model.' },
     { id: 'od', name: 'Algae density', value: point?.opticalDensity.toFixed(2) ?? '—', unit: 'OD', description: 'Optical density describes how much light the culture blocks. Darker water represents a denser culture.' },
   ];
+  const elapsed = result?.daily.slice(0, playDay + 1);
+  const totals = elapsed && { co2: elapsed.reduce((n,d) => n+d.co2Kg,0), harvest: elapsed.reduce((n,d) => n+d.harvestKg,0), peak: Math.max(...elapsed.map(d=>d.biomassKg)) };
   const selected = measurements.find(m => m.id === selectedSensor)!;
   const reset = () => { setCfg({ ...DEFAULT_CONFIG, ...initial }); setPlayDay(0); setPlaying(false); setSensors(initialSensors); setSelectedSensor('ph'); };
 
   return <div className="sim-workspace">
-    <div className="scenario-toolbar"><div><span className="workspace-step">01 / TRY A SCENARIO</span><div className="scenario-options" role="group" aria-label="Environmental scenarios">{scenarios.map(s => <button key={s.id} aria-pressed={selectedScenario?.id === s.id} onClick={() => { setCfg(c => ({ ...c, meanAirTempC: s.temperature, diurnalSwingC: s.swing, mixerRunning: s.mixing, crashOnDay: null })); setPlayDay(0); setPlaying(false); }}>{s.label}</button>)}</div></div><button className="button secondary reset-simulation" onClick={reset}>Reset simulation</button></div>
     <div className="simulation-grid">
       <section className="simulation-stage" aria-label="Pond simulation scene">
         {/* Sky sits directly above the water so the two read as one picture,
             and so day length — the biggest seasonal driver of yield — is
             visible rather than buried in the conditions panel. */}
         <SkyStrip point={point} airTempC={cfg.meanAirTempC} />
-        <div className="stage-header"><div><span className="workspace-step">02 / EXPLORE YOUR POND</span><h2>{pondLabel ?? 'Your virtual pond'}</h2><p>{siteName ? `${siteName} · ` : ''}{selectedScenario?.label ?? 'Custom conditions'} · model simulation</p></div><span className={`mixing-indicator ${cfg.mixerRunning ? '' : 'is-stopped'}`}>{cfg.mixerRunning ? 'Water mixing' : 'Mixer stopped'}</span></div>
+        <div className="stage-header"><div><h2>{pondLabel ?? 'Your virtual pond'}</h2><p>{siteName ? `${siteName} · ` : ''}{selectedScenario?.label ?? 'Custom conditions'} · model simulation</p></div><span className={`mixing-indicator ${cfg.mixerRunning ? '' : 'is-stopped'}`}>{cfg.mixerRunning ? 'Water mixing' : 'Mixer stopped'}</span></div>
         <div className="scene-dimensions"><span><strong>{Math.sqrt(cfg.areaM2 * 3).toFixed(1)} m</strong> length</span><span><strong>{Math.sqrt(cfg.areaM2 / 3).toFixed(1)} m</strong> width</span><span><strong>{Math.round(cfg.depthM * 100)} cm</strong> depth</span></div>
         <PondView daily={result?.daily ?? []} areaM2={cfg.areaM2} depthM={cfg.depthM} mixing={cfg.mixerRunning} sensors={sensors} onMoveSensor={moveSensor} day={playDay} airTemperature={cfg.meanAirTempC} selectedSensor={selectedSensor} onSelectSensor={setSelectedSensor} />
         <div className="simulation-playback"><div className="playback-top"><button className="button" disabled={!result || status !== 'ready'} onClick={() => setPlaying(p => !p)} aria-pressed={playing}>{playing ? 'Pause' : 'Play days'} <span aria-hidden="true">{playing ? 'Ⅱ' : '▷'}</span></button><strong>Day {point?.day ?? 1} <span>of {cfg.days}</span></strong><button className="button secondary" onClick={() => setCfg(c => ({ ...c, mixerRunning: !c.mixerRunning }))}>{cfg.mixerRunning ? 'Stop mixer' : 'Start mixer'}</button></div><input type="range" aria-label="Simulation day" aria-valuetext={`Day ${point?.day ?? 1} of ${cfg.days}`} min={0} max={Math.max(0, (result?.daily.length ?? 1) - 1)} value={Math.min(playDay, Math.max(0, (result?.daily.length ?? 1) - 1))} disabled={!result} onChange={e => { setPlaying(false); setPlayDay(Number(e.target.value)); }} /><div className="timeline-labels"><span>Day 1</span><span>Scrub to see readings for any day</span><span>Day {cfg.days}</span></div></div>
-        <div className="simulation-totals" aria-busy={status === 'loading'}><div className="totals-heading"><h3>Over the full {cfg.days} days</h3><span role="status">{status === 'loading' ? 'Updating estimate…' : status === 'failed' ? 'Calculation unavailable' : 'Model estimate'}</span></div>{status === 'failed' ? <div role="alert"><p>The model could not finish. Your settings are still here.</p>{failure && <p className="sim-failure-detail">{failure}</p>}<button className="button secondary" onClick={() => setRetry(n => n+1)}>Try again</button></div> : <div className="sim-figures"><div><strong>{result ? kg(result.totalHarvestKg) : '—'}</strong><span>algae harvested</span></div><div><strong>{result ? kg(result.totalCo2Kg) : '—'}</strong><span>CO₂ absorbed</span></div><div><strong>{result ? kg(result.peakBiomassKg) : '—'}</strong><span>peak algae biomass</span></div></div>}{result && <Trace daily={result.daily} day={playDay} />}</div>
+        <div className="simulation-totals" aria-busy={status === 'loading'}><div className="totals-heading"><h3>Through day {point?.day ?? 1}</h3><span role="status">{status === 'loading' ? 'Updating estimate…' : status === 'failed' ? 'Calculation unavailable' : 'Model estimate'}</span></div>{status === 'failed' ? <div role="alert"><p>The model could not finish. Your settings are still here.</p>{failure && <p className="sim-failure-detail">{failure}</p>}<button className="button secondary" onClick={() => setRetry(n => n+1)}>Try again</button></div> : <div className="sim-figures"><div><strong>{totals ? kg(totals.harvest) : '—'}</strong><span>algae harvested</span></div><div><strong>{totals ? kg(totals.co2) : '—'}</strong><span>CO₂ absorbed</span></div><div><strong>{totals ? kg(totals.peak) : '—'}</strong><span>peak algae biomass</span></div></div>}{result && <Trace daily={result.daily} day={playDay} />}</div>
       </section>
-      <aside className="simulation-sidebar" aria-label="Measurements and simulation settings">
-        <CollapsiblePanel step="03 / READ THE RESPONSE" title="Sensor readings" summary={`Day ${point?.day ?? 1}`}><section className="sensor-panel" aria-busy={status === 'loading'}><div className="sensor-readings">{measurements.map(m => <button key={m.id} className="sensor-reading" aria-pressed={selectedSensor === m.id} onClick={() => setSelectedSensor(m.id)}><span>{m.name}</span><strong>{m.value}<small>{m.unit}</small></strong></button>)}</div><div className="sensor-explanation"><strong>{selected.name} sensor</strong><p>{selected.description}</p></div><p className="sensor-note">Select a sensor on the plan or a reading here. Marker positions are illustrative; readings describe the whole pond.</p></section></CollapsiblePanel>
-
-        <CollapsiblePanel step="04 / ADJUST CONDITIONS" title="Adjust conditions" summary={`${cfg.meanAirTempC} °C · ${cfg.areaM2.toLocaleString('en-IN')} m²`}><section className="setup-panel"><div className="setup-heading"><h2>Adjust conditions</h2><span>Updates automatically</span></div><div className="setup-switch" role="group" aria-label="Simulation settings"><button aria-pressed={controls === 'pond'} onClick={() => setControls('pond')}>Pond setup</button><button aria-pressed={controls === 'environment'} onClick={() => setControls('environment')}>Environment</button></div>
+      <SimulatorControls scenario={<>    <div className="scenario-toolbar"><div><div className="scenario-options" role="group" aria-label="Environmental scenarios">{scenarios.map(s => <button key={s.id} aria-pressed={selectedScenario?.id === s.id} onClick={() => { setCfg(c => ({ ...c, meanAirTempC: s.temperature, diurnalSwingC: s.swing, mixerRunning: s.mixing, crashOnDay: null })); setPlayDay(0); setPlaying(true); }}>{s.label}</button>)}</div></div><button className="button secondary reset-simulation" onClick={reset}>Reset simulation</button></div>
+<p>Sample conditions run through the pond physics model. Estimates are not verified credits.</p></>}
+        conditions={<section className="setup-panel"><div className="setup-heading"><h2>Adjust conditions</h2><span>Updates automatically</span></div><div className="setup-switch" role="group" aria-label="Simulation settings"><button aria-pressed={controls === 'pond'} onClick={() => setControls('pond')}>Pond setup</button><button aria-pressed={controls === 'environment'} onClick={() => setControls('environment')}>Environment</button></div>
           {controls === 'pond' ? <div className="setup-fields">
             <Slider id="area" label="Pond area" value={cfg.areaM2} min={200} max={50000} step={100} display={`${cfg.areaM2.toLocaleString('en-IN')} m²`} onChange={set('areaM2')} hint="Dimensions and the scale bar follow this area." />
             <Slider id="depth" label="Water depth" value={Math.round(cfg.depthM * 100)} min={15} max={60} step={1} display={`${Math.round(cfg.depthM * 100)} cm`} onChange={e => setCfg(c => ({ ...c, depthM: Number(e.target.value) / 100 }))} />
@@ -111,10 +111,8 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
             <Slider id="nitrogen" label="Nitrogen in the water" value={cfg.influentNitrogenMgL} min={2} max={80} step={1} display={`${cfg.influentNitrogenMgL} mg/L`} onChange={set('influentNitrogenMgL')} />
             <details className="advanced-setup"><summary>Simulate a culture crash</summary><Slider id="crash" label="Crash starts" value={cfg.crashOnDay ?? 0} min={0} max={cfg.days - 1} step={1} display={cfg.crashOnDay ? `Day ${cfg.crashOnDay}` : 'No crash'} onChange={e=>setCfg(c=>({...c,crashOnDay:Number(e.target.value)||null}))} /></details>
           </div>}
-        </section></CollapsiblePanel>
-      </aside>
+        </section>} sensors={<section className="sensor-panel" aria-busy={status === 'loading'}><div className="sensor-readings">{measurements.map(m => <button key={m.id} className="sensor-reading" aria-pressed={selectedSensor === m.id} onClick={() => setSelectedSensor(m.id)}><span>{m.name}</span><strong>{m.value}<small>{m.unit}</small></strong></button>)}</div><div className="sensor-explanation"><strong>{selected.name} sensor</strong><p>{selected.description}</p></div><p className="sensor-note">Select a sensor on the plan or a reading here. Marker positions are illustrative; readings describe the whole pond.</p></section>} details={<><SkyStrip point={point} airTempC={cfg.meanAirTempC} /><p>Illustrative 3:1 footprint. Sensor positions are movable; readings describe the entire pond.</p>{result && <details className="workspace-expansion"><summary>Planning a bigger farm? Explore expansion costs <span aria-hidden="true">↗</span></summary><ExpansionPanel currentAreaM2={cfg.areaM2} yieldKgPerM2PerYear={(result.totalHarvestKg/cfg.areaM2)*(365/cfg.days)} /></details>}</>} />
     </div>
-    {result && <details className="workspace-expansion"><summary>Planning a bigger farm? Explore expansion costs <span aria-hidden="true">↗</span></summary><ExpansionPanel currentAreaM2={cfg.areaM2} yieldKgPerM2PerYear={(result.totalHarvestKg/cfg.areaM2)*(365/cfg.days)} /></details>}
   </div>;
 }
 function Slider({

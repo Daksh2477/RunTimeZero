@@ -43,12 +43,17 @@ function Workspace() {
   const [missing, setMissing] = useState(false);
 
   useEffect(() => {
+    setPond(null); setMissing(false);
     if (!pondId) return;
     let live = true;
-    fetch(`${BASE}/fleet/pond/${pondId}`, { cache: 'no-store' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (live) { if (d?.pond) setPond(d.pond); else setMissing(true); } })
-      .catch(() => { if (live) setMissing(true); });
+    async function load() {
+      try {
+        const r = await fetch(`${BASE}/fleet/pond/${encodeURIComponent(pondId!)}`, { cache: 'no-store' });
+        const d = r.ok ? await r.json() : null;
+        if (live) { if (d?.pond) setPond(d.pond); else setMissing(true); }
+      } catch { if (live) setMissing(true); }
+    }
+    void load();
     return () => { live = false; };
   }, [pondId]);
 
@@ -68,18 +73,6 @@ function Workspace() {
         </Link>
       )}
 
-      <div className="page-heading">
-        <div>
-          <p className="eyebrow">PLAN AHEAD</p>
-          <h1>{pond ? `What could ${pond.label} do?` : 'Explore a virtual pond'}</h1>
-          <p>
-            {pond
-              ? 'Using this pond’s size and depth with sample starting conditions. Adjust the controls to explore the model; your real records stay unchanged.'
-              : 'Choose a scenario, explore the pond, and read the response. Adjust the conditions alongside it.'}
-          </p>
-        </div>
-      </div>
-
       {missing && (
         <div className="inline-notice" role="status">
           We couldn’t load that pond. The simulator below uses a sample pond
@@ -96,11 +89,6 @@ function Workspace() {
         siteName={pond?.siteName}
       />
 
-      <p className="helper" style={{ marginTop: 20, maxWidth: '60ch' }}>
-        This uses the same physics that checks your carbon claims — sunlight
-        for your latitude, algae growth, and the way a dense pond shades
-        itself. It is an estimate, not a promise.
-      </p>
     </main>
   );
 }

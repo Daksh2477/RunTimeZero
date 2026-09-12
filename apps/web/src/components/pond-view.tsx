@@ -26,6 +26,7 @@ export function PondView({ daily, areaM2, depthM, mixing, sensors, onMoveSensor,
   const heat = airTemperature >= 35;
   const cool = airTemperature <= 20;
   const density = Math.min(1, Math.max(0, (point?.opticalDensity ?? .2) / .8));
+  const readings: Record<string,string> = point ? { ph: point.ph.toFixed(1), do: `${point.dissolvedOxygenMgL.toFixed(1)} mg/L`, temp: `${point.temperatureC.toFixed(1)} °C`, od: point.opticalDensity.toFixed(2) } : {};
   const water = `hsl(${100 - density * 25} 36% ${53 - density * 20}%)`;
   const move = (sensor: Sensor, dx: number, dy: number) => {
     const y = Math.max(.12, Math.min(.88, sensor.y + dy));
@@ -73,7 +74,7 @@ export function PondView({ daily, areaM2, depthM, mixing, sensors, onMoveSensor,
       style={{ left: `${(pond.x + sensor.x * pond.width - 80) / 840 * 100}%`, top: `${(pond.y + sensor.y * pond.height - 90) / 470 * 100}%` }}
       onClick={() => onSelectSensor(sensor.id)} onPointerDown={e => { onSelectSensor(sensor.id); dragging.current = sensor.id; e.currentTarget.setPointerCapture(e.pointerId); }}
       onKeyDown={e => { const delta: Record<string,number[]> = { ArrowLeft: [-.025,0], ArrowRight: [.025,0], ArrowUp: [0,-.08], ArrowDown: [0,.08] }; if(delta[e.key]) { e.preventDefault(); move(sensor,delta[e.key]![0]!,delta[e.key]![1]!); } }}>
-      <span className="probe-dot" /><span className="probe-name">{sensor.label}</span>
+      <span className="probe-dot" /><span className="probe-name">{sensor.label} {readings[sensor.id]}</span>
     </button>)}
     </div>
     <div className="scene-caption"><span>Overhead plan · auto-fit scale</span><span>Illustrative 3:1 footprint; equipment not to scale</span></div>

@@ -180,3 +180,64 @@
   .panel-fold-summary { grid-area: summary; margin-left: 0; }
   .panel-fold-chevron { grid-area: chevron; align-self: center; }
 }
+
+/* The frame allocates space to the scene first; controls scroll independently. */
+body:has(.simulation-page) { height: 100dvh; overflow: hidden; }
+body:has(.simulation-page) .footer, body:has(.simulation-page) .masthead-spacer { display: none; }
+body .masthead.masthead-simulation { position: relative; inset: auto; border-radius: 0; max-width: none; height: 64px; }
+body .masthead-simulation .masthead-inner { height: 64px; min-height: 0; padding-block: 6px; flex-wrap: nowrap; }
+body:has(.simulation-page) #main-content { height: calc(100dvh - 64px); }
+body:has(.simulation-page) .route-enter { height: 100%; animation: none; }
+body .simulation-page.wrap { height: 100%; max-width: none; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+body .simulation-page .back, body .simulation-page .inline-notice { margin: 0; padding: 4px; font-size: .8rem; }
+body .sim-workspace { flex: 1; min-height: 0; }
+body .simulation-grid { height: 100%; display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 35%); gap: 12px; }
+body .simulation-stage { height: 100%; display: flex; flex-direction: column; min-height: 0; }
+body .simulation-stage > .sky-strip { display: none; }
+body .stage-header { padding: 8px 14px; flex-wrap: nowrap; }
+body .stage-header h2 { margin: 0; font-size: 1.1rem; }
+body .stage-header p { font-size: .75rem; }
+body .scene-dimensions { padding: 0 14px 6px; font-size: .7rem; }
+body .pond-landscape { flex: 1; min-height: 0; display: grid; place-items: center; }
+body .pond-landscape .scene-weather, body .pond-landscape .scene-caption { display: none; }
+body .pond-map { width: 100%; max-height: 100%; aspect-ratio: 840/470; }
+body .pond-scene-svg { width: 100%; height: 100%; }
+body .simulation-playback { padding: 6px 12px 0; }
+body .playback-top { flex-wrap: nowrap; }
+body .playback-top .button { min-height: 44px; padding: 6px 10px; }
+body .simulation-playback input { min-height: 32px; margin: 0; }
+body .timeline-labels { display: none; }
+body .simulation-totals { padding: 6px 12px; }
+body .totals-heading { margin-bottom: 6px; flex-wrap: nowrap; }
+body .totals-heading h3, body .totals-heading > span { font-size: .7rem; }
+body .simulation-totals .sim-figures { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; margin: 0; }
+body .simulation-totals .sim-figures strong { font-size: 1.1rem; white-space: nowrap; }
+body .simulation-totals .sim-figures span { font-size: .7rem; }
+body .simulation-totals .sim-trace { height: 24px; margin-top: 6px; }
+.simulator-controls { min-height: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 14px; background: var(--card); overflow: hidden; }
+.sim-tabs { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+.sim-tabs button { flex: 1; min-width: 0; min-height: 48px; padding: 4px; background: transparent; color: var(--foreground); font-size: .8rem; border: 0; }
+.sim-tabs button[aria-pressed=true] { box-shadow: inset 0 -3px var(--primary); background: var(--muted); }
+.sim-control-content { padding: 14px; overflow: auto; min-height: 0; overscroll-behavior: contain; }
+.sim-control-content .scenario-toolbar { display: block; }
+.sim-control-content .reset-simulation { margin-top: 16px; }
+.sim-control-content .sensor-panel, .sim-control-content .setup-panel { border: 0; padding: 0; }
+.sim-control-content .workspace-expansion { margin: 16px 0 0; padding: 0 10px; }
+.sim-sheet { position: fixed; inset: auto 0 0; margin: 0; padding: 0; width: 100%; max-width: none; height: 55dvh; max-height: 80dvh; border: 0; border-radius: 20px 20px 0 0; background: var(--card); color: var(--foreground); }
+.sim-sheet::backdrop { background: #10271c66; }
+.sim-sheet-inner { height: 100%; display: flex; flex-direction: column; }
+.sim-sheet-inner > header { display: flex; align-items: center; justify-content: space-between; padding: 0 16px 8px; }
+.sim-sheet-inner > header h2 { margin: 0; font-size: 1.15rem; }
+.sim-sheet-handle { display: grid; place-items: center; min-height: 28px; touch-action: none; }
+.sim-sheet-handle span { height: 4px; width: 40px; background: #9ba99e; border-radius: 3px; }
+@media(max-width:1023px) {
+  body .simulation-grid { grid-template-columns: minmax(0,1fr); grid-template-rows: minmax(0,1fr) auto; gap: 6px; }
+  body .simulation-page.wrap { padding: 6px; }
+  body .simulator-controls { border-radius: 10px; padding-bottom: env(safe-area-inset-bottom); }
+  body .stage-header h2 { font-size: 1rem; }
+  body .mixing-indicator { font-size: .65rem; padding: 5px; }
+  body .pond-map { max-width: calc((100dvh - 345px) * 840 / 470); }
+}
+@media(min-width:1024px) {
+  body .pond-map { max-width: calc((100dvh - 330px) * 840 / 470); }
+}

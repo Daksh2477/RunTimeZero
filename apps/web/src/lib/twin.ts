@@ -46,6 +46,7 @@ export interface DayPoint {
   ph: number;
   dissolvedOxygenMgL: number;
   harvested: boolean;
+  harvestKg: number;
   /** Midday sun angle for the day, degrees. Drives the sky in the scene. */
   solarElevationDeg: number;
   /** Peak PAR for the day, µmol/m²/s. */
@@ -217,8 +218,10 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
     peakBiomass = Math.max(peakBiomass, biomass);
 
     let harvested = false;
+    let harvestKg = 0;
     if (cfg.harvestEveryDays > 0 && (d + 1) % cfg.harvestEveryDays === 0) {
-      totalHarvest += pond.harvest(cfg.harvestFraction);
+      harvestKg = pond.harvest(cfg.harvestFraction);
+      totalHarvest += harvestKg;
       harvested = true;
     }
 
@@ -231,6 +234,7 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
       ph: last?.ph ?? 0,
       dissolvedOxygenMgL: last?.dissolved_oxygen_mg_l ?? 0,
       harvested,
+      harvestKg,
       solarElevationDeg: peakSun,
       parUmol: peakPar,
       daylightHours: last?.daylight_hours ?? 0,

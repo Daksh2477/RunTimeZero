@@ -25,12 +25,14 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Navigation } from '@/components/navigation';
 
 /** Far enough that a stray touch-scroll does not make it jump. */
 const LIFT_AT = 28;
 
 export function Masthead() {
+  const simulation = usePathname() === '/sim';
   const [lifted, setLifted] = useState(false);
   const ticking = useRef(false);
 
@@ -50,7 +52,7 @@ export function Masthead() {
 
   return (
     <>
-      <header className={`masthead${lifted ? ' is-lifted' : ''}`}>
+      <header className={`masthead${simulation ? ' masthead-simulation' : lifted ? ' is-lifted' : ''}`}>
         <div className="masthead-inner">
           <Link href="/" className="wordmark" aria-label="AlgaCarbon home">
             <span className="brand-icon" aria-hidden="true">a</span>
