@@ -67,6 +67,15 @@ export class WasmPond {
      * Advance one hour and return what the sensor would report.
      */
     step(): Reading;
+    /**
+     * Build a pond with the site conditions spelled out.
+     *
+     * The plain constructor uses sensible defaults for Gujarat. This one
+     * exists because an operator planning an expansion genuinely needs to ask
+     * "what if my water runs colder" or "what if the effluent thins out" —
+     * and those are the inputs that actually move the answer.
+     */
+    static with_conditions(lat_deg: number, area_m2: number, depth_m: number, seed: bigint, day_of_year: number, mean_air_temp_c: number, diurnal_swing_c: number, influent_nitrogen_mg_l: number): WasmPond;
 }
 
 export function co2_from_biomass(biomass_kg: number): number;
@@ -112,6 +121,7 @@ export interface InitOutput {
     readonly wasmpond_new: (a: number, b: number, c: number, d: bigint, e: number) => number;
     readonly wasmpond_standing_biomass_kg: (a: number) => number;
     readonly wasmpond_step: (a: number) => number;
+    readonly wasmpond_with_conditions: (a: number, b: number, c: number, d: bigint, e: number, f: number, g: number, h: number) => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;

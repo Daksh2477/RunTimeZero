@@ -125,6 +125,12 @@ if (Symbol.dispose) Reading.prototype[Symbol.dispose] = Reading.prototype.free;
  * simulator. Both get readings only.
  */
 export class WasmPond {
+    static __wrap(ptr) {
+        const obj = Object.create(WasmPond.prototype);
+        obj.__wbg_ptr = ptr;
+        WasmPondFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+    }
     __destroy_into_raw() {
         const ptr = this.__wbg_ptr;
         this.__wbg_ptr = 0;
@@ -210,6 +216,27 @@ export class WasmPond {
     step() {
         const ret = wasm.wasmpond_step(this.__wbg_ptr);
         return Reading.__wrap(ret);
+    }
+    /**
+     * Build a pond with the site conditions spelled out.
+     *
+     * The plain constructor uses sensible defaults for Gujarat. This one
+     * exists because an operator planning an expansion genuinely needs to ask
+     * "what if my water runs colder" or "what if the effluent thins out" —
+     * and those are the inputs that actually move the answer.
+     * @param {number} lat_deg
+     * @param {number} area_m2
+     * @param {number} depth_m
+     * @param {bigint} seed
+     * @param {number} day_of_year
+     * @param {number} mean_air_temp_c
+     * @param {number} diurnal_swing_c
+     * @param {number} influent_nitrogen_mg_l
+     * @returns {WasmPond}
+     */
+    static with_conditions(lat_deg, area_m2, depth_m, seed, day_of_year, mean_air_temp_c, diurnal_swing_c, influent_nitrogen_mg_l) {
+        const ret = wasm.wasmpond_with_conditions(lat_deg, area_m2, depth_m, seed, day_of_year, mean_air_temp_c, diurnal_swing_c, influent_nitrogen_mg_l);
+        return WasmPond.__wrap(ret);
     }
 }
 if (Symbol.dispose) WasmPond.prototype[Symbol.dispose] = WasmPond.prototype.free;
