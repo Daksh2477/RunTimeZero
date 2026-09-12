@@ -28,7 +28,42 @@ interface TelemetryMessage {
   temperatureC: number;
   co2UptakeKg?: number;
   energyKwh?: number;
+  /**
+   * When the reading was taken, if the publisher knows.
+   *
+   * The ESP32 has no clock, so the firmware omits it and the API stamps
+   * arrival — that stays the default. The simulator rig does know: it runs
+   * simulated days in seconds of real time, and without this every reading
+   * lands at "now", which crushes weeks of production into minutes of
+   * timestamps and makes every claim exceed the physics ceiling for its own
+   * window. A verifier refusing the demo on stage is not the demo.
+   *
+   * Bounded on read, because on a public broker anyone can claim any time.
+   */
+  observedAt?: string;
   raw?: { vPh: number; vDo: number; vOd: number };
+}
+
+/** How far from now a claimed observation time may sit before we ignore it. */
+const OBSERVED_AT_PAST_LIMIT_MS = 90 * 24 * 60 * 60 * 1000;
+const OBSERVED_AT_FUTURE_LIMIT_MS = 60 * 60 * 1000;
+
+/**
+ * A publisher-supplied timestamp, or null to fall back to arrival.
+ *
+ * Out-of-range times are dropped rather than clamped: a reading dated 2031 is
+ * a broken or hostile sender, and silently moving it to now would file its
+ * data under a window it has nothing to do with.
+ */
+function parseObservedAt(value: unknown): string | null | 'invalid' {
+  if (value === undefined) return null;
+  if (typeof value !== 'string') return 'invalid';
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) return 'invalid';
+  const drift = ms - Date.now();
+  if (drift > OBSERVED_AT_FUTURE_LIMIT_MS) return 'invalid';
+  if (drift < -OBSERVED_AT_PAST_LIMIT_MS) return 'invalid';
+  return new Date(ms).toISOString();
 }
 
 function isFiniteNumber(v: unknown): v is number {
@@ -59,6 +94,18 @@ export function parseTelemetry(raw: string): TelemetryMessage | null {
     if (!isFiniteNumber(m[key])) return null;
   }
 
+  /*
+   * A timestamp we cannot believe kills the whole message.
+   *
+   * Falling back to arrival time looked harmless and was not: a rig running
+   * faster than the wall clock then had every reading past "now" quietly filed
+   * under now, which compressed weeks of production into seconds of timestamps
+   * — the exact problem `observedAt` exists to solve, reintroduced silently.
+   * Rejecting is loud, and the counter in IngestStats shows it.
+   */
+  const observedAt = parseObservedAt(m.observedAt);
+  if (observedAt === 'invalid') return null;
+
   // Physically impossible readings mean a broken probe or a spoofed message.
   const ph = m.ph as number;
   const temp = m.temperatureC as number;
@@ -75,6 +122,7 @@ export function parseTelemetry(raw: string): TelemetryMessage | null {
     temperatureC: temp,
     co2UptakeKg: isFiniteNumber(m.co2UptakeKg) ? m.co2UptakeKg : undefined,
     energyKwh: isFiniteNumber(m.energyKwh) ? m.energyKwh : undefined,
+    observedAt: observedAt ?? undefined,
   };
 }
 
@@ -114,7 +162,7 @@ export function startMqttIngest(onStats?: (s: IngestStats) => void) {
     try {
       await insertTelemetry({
         pondId: msg.pondId,
-        observedAt: new Date().toISOString(),
+        observedAt: msg.observedAt ?? new Date().toISOString(),
         // Every reading is an assertion regardless of origin. Recording the
         // source is provenance, not a trust level — see DECISIONS.md #2.
         source: 'sensor',
