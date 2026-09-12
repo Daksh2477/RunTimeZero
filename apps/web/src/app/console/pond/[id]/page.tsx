@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LiveDashboard } from '@/components/live-dashboard';
 import { RelatedLinks, Breadcrumbs } from '@/components/related-links';
 import { getPond } from '@/lib/api';
 import { channelLabel, dateLabel, mass, money, statusInfo } from '@/lib/display';
@@ -19,6 +20,7 @@ export default async function PondPage({ params }: { params: Promise<{ id: strin
   return <main className="wrap">
     <Link className="back" href="/console">← Back to my ponds</Link>
     <div className="page-heading"><div><p className="eyebrow">POND DETAILS</p><h1>{pond.label}</h1><p>{pond.siteName} · {pond.areaM2.toLocaleString('en-IN')} square metres</p></div><div className="heading-actions"><Link className="button secondary" href={`/sim?pond=${id}`}>Plan ahead →</Link><RefreshControls auto /></div></div>
+    <LiveDashboard pondId={id} siteId={pond.siteId} areaM2={pond.areaM2} depthM={pond.depthM}/>
     <RelatedLinks pondId={id} siteId={pond.siteId} checkId={latestCheck?.id ? String(latestCheck.id) : undefined}/><Breadcrumbs items={[{href:"/farm",label:"My ponds"},{href:`/console/site/${pond.siteId}`,label:pond.siteName},{href:`/console/pond/${id}`,label:pond.label}]}/>
     <div className="detail-grid">
       <div><section className="panel"><div className="section-heading"><h2>Carbon check</h2><StatusBadge verdict={verdict} /></div><p className="sub">{status.detail}</p>

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LiveDashboard } from '@/components/live-dashboard';
 import { getFleet, type FleetPond, type FleetSite } from '@/lib/api';
 import { RefreshControls } from '@/components/refresh-controls';
 import { FarmPonds } from '@/components/farm-ponds';
@@ -35,7 +36,7 @@ export default async function FarmPage() {
   if (failed) {
     return (
       <main className="wrap farm">
-        <div className="farm-offline">
+        <LiveDashboard/><div className="farm-offline">
           <h1>Cannot reach your ponds right now</h1>
           <p>
             We could not load the pond records. This does not tell us whether the sensors or ponds are working normally.
@@ -67,6 +68,7 @@ export default async function FarmPage() {
         <span className="farm-manage-go" aria-hidden="true">→</span>
       </Link>
 
+      <LiveDashboard/>
       <FarmPonds sites={sites} />
 
       <section className="farm-foot">

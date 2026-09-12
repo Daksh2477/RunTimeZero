@@ -189,3 +189,15 @@ main button.rounded-xl {
 .market-record { padding: 16px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
 .price-chart { width: 100%; height: 180px; }
 @media(max-width:767px) { .detail-sheet { inset: auto 0 0; height: 88dvh; border-radius: 18px 18px 0 0; }.detail-sheet-body { padding: 16px; } }
+.live-indicator { font-size: .8rem; color: var(--muted-foreground); }
+.live-indicator.live { color: #287746; }
+.live-reading-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,260px),1fr)); gap: 12px; }
+.live-reading-grid article { border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.live-reading-grid dl { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.live-reading-grid dt { font-size: .8rem; }
+.live-reading-grid dd { margin: 0; font-family: var(--font-mono); white-space: nowrap; }
+.reading-change { animation: reading-flash 1s ease-out backwards; }
+@keyframes reading-flash { from { background: #8fe8ac; } to { background: transparent; } }
+body .live-pond-scene { max-width: 850px; margin: auto; }
+body .live-pond-scene .pond-map { max-width: 100%; }
+body .live-pond-scene .pond-landscape { display: block; }

@@ -5,7 +5,7 @@ import type { DayPoint } from '@/lib/twin';
 
 type Sensor = { id: string; x: number; y: number; label: string };
 interface Props {
-  daily: DayPoint[]; areaM2: number; depthM: number; mixing: boolean;
+  daily: Pick<DayPoint,'ph'|'temperatureC'|'dissolvedOxygenMgL'|'opticalDensity'>[]; pinValues?: Record<string,string>; areaM2: number; depthM: number; mixing: boolean;
   sensors: Sensor[]; onMoveSensor: (id: string, x: number, y: number) => void;
   day: number; airTemperature: number; selectedSensor: string;
   onSelectSensor: (id: string) => void;
@@ -14,7 +14,7 @@ interface Props {
 // The scene uses a stated 3:1 rectangular footprint, not surveyed site geometry.
 // One shared transform keeps the dimensions, scale bar and probe positions aligned.
 const pond = { x: 155, y: 228, width: 660, height: 220 };
-export function PondView({ daily, areaM2, depthM, mixing, sensors, onMoveSensor, day, airTemperature, selectedSensor, onSelectSensor }: Props) {
+export function PondView({ daily, areaM2, depthM, mixing, sensors, onMoveSensor, day, airTemperature, selectedSensor, onSelectSensor, pinValues }: Props) {
   const id = useId().replaceAll(':', '');
   const svg = useRef<SVGSVGElement>(null);
   const dragging = useRef<string | null>(null);
@@ -74,7 +74,7 @@ export function PondView({ daily, areaM2, depthM, mixing, sensors, onMoveSensor,
       style={{ left: `${(pond.x + sensor.x * pond.width - 80) / 840 * 100}%`, top: `${(pond.y + sensor.y * pond.height - 90) / 470 * 100}%` }}
       onClick={() => onSelectSensor(sensor.id)} onPointerDown={e => { onSelectSensor(sensor.id); dragging.current = sensor.id; e.currentTarget.setPointerCapture(e.pointerId); }}
       onKeyDown={e => { const delta: Record<string,number[]> = { ArrowLeft: [-.025,0], ArrowRight: [.025,0], ArrowUp: [0,-.08], ArrowDown: [0,.08] }; if(delta[e.key]) { e.preventDefault(); move(sensor,delta[e.key]![0]!,delta[e.key]![1]!); } }}>
-      <span className="probe-dot" /><span className="probe-name">{sensor.label} {readings[sensor.id]}</span>
+      <span className="probe-dot" /><span className="probe-name">{sensor.label} {readings[sensor.id]}{pinValues?.[sensor.id] && <><br/>{pinValues[sensor.id]}</>}</span>
     </button>)}
     </div>
     <div className="scene-caption"><span>Overhead plan · auto-fit scale</span><span>Illustrative 3:1 footprint; equipment not to scale</span></div>

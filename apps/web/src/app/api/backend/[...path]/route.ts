@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { API_ORIGIN, SESSION_COOKIE, serverApiFetch } from '@/lib/server-api';
-const ROOTS=new Set(['auth','fleet','land','ponds','batches','market','verify','summary','simulate','weather','research','invest','produce','harvests','health']);
+const ROOTS=new Set(['auth','fleet','land','ponds','batches','market','verify','summary','simulate','weather','research','invest','produce','harvests','health','live']);
 async function handle(request:NextRequest,{params}:{params:Promise<{path:string[]}>}){
  const {path}=await params;
  if(!ROOTS.has(path[0]??'') || path.some(p=>!p || p==='.' || p==='..' || p.includes('/') || p.includes('\\')))return NextResponse.json({error:'Unknown API route.'},{status:404});
@@ -12,9 +12,11 @@ async function handle(request:NextRequest,{params}:{params:Promise<{path:string[
  try{
   const body=write?await request.text():undefined;
   const route=`/${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`;
-  const init={method:request.method,headers:{'Content-Type':'application/json'},body,signal:AbortSignal.timeout(30000)};
+  const stream=path.join('/')==='live/stream' && !write;
+  const init={method:request.method,headers:{'Content-Type':'application/json'},body,signal:stream?request.signal:AbortSignal.timeout(30000)};
   const upstream=authEntry?await fetch(`${API_ORIGIN}${route}`,{...init,cache:'no-store'}):await serverApiFetch(route,init);
   const type=upstream.headers.get('content-type')??'';
+  if(stream && upstream.ok && type.startsWith('text/event-stream'))return new NextResponse(upstream.body,{status:upstream.status,headers:{'Content-Type':type,'Cache-Control':'no-cache, no-transform','X-Accel-Buffering':'no'}});
   if(type.startsWith('image/'))return new NextResponse(await upstream.arrayBuffer(),{status:upstream.status,headers:{'Content-Type':type,'Cache-Control':'private, max-age=86400'}});
   const data=await upstream.json().catch(()=>({error:'The service returned an unreadable response.'}));
   if(authEntry && upstream.ok){
