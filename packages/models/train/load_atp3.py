@@ -1,202 +1,502 @@
-"""Step 2 — turn the real pond data into a training file.
-
-YOU ONLY EDIT ONE THING IN THIS FILE: the COLUMN_MAP below.
-
-Everything else is written. Your job is to look at the output of
-inspect_atp3.py and fill in which column name in the real data matches each
-thing we need. That is it.
-
-    python3 packages/models/train/load_atp3.py
-
-It writes packages/models/data/crash_real.csv, which train_all.py can then
-learn from instead of our simulator.
-"""
-
 import csv
 import pathlib
-import sys
-from datetime import datetime
+import statistics
+from datetime import datetime, timedelta
+
 
 DATA = pathlib.Path(__file__).parent.parent / "data" / "atp3"
 OUT = pathlib.Path(__file__).parent.parent / "data" / "crash_real.csv"
 
-# ---------------------------------------------------------------------------
-# EDIT THIS PART. Nothing else.
-#
-# On the left is what we need. On the right, put the column name exactly as it
-# appears in the real data — copy and paste it, including capitals and spaces.
-#
-# If a measurement genuinely is not in the file, leave it as None and the
-# script will cope.
-# ---------------------------------------------------------------------------
-COLUMN_MAP = {
-    "timestamp": None,      # e.g. "Date_Time" or "SampleDate"
-    "pond_id": None,        # e.g. "Site" or "Pond_ID" — which pond this row is
-    "ph": None,             # e.g. "pH"
-    "temperature_c": None,  # e.g. "Temp_C" or "Water Temperature"
-    "dissolved_oxygen": None,   # e.g. "DO_mgL"
-    "optical_density": None,    # e.g. "OD750" or "AFDW_g_L"
-}
 
-# Which file inside data/atp3/ to read. Use the path exactly as inspect_atp3.py
-# printed it, e.g. "instrumentation/arizona_2014.csv".
-SOURCE_FILE = None
+# -------------------------------------------------------------------
+# ATP3 files
+# -------------------------------------------------------------------
 
-# ---------------------------------------------------------------------------
-# Nothing below here needs editing.
-# ---------------------------------------------------------------------------
+INSTRUMENTATION_FILE = "ATP3-UFS-Instrumentation.csv"
+OPERATIONAL_FILE = "ATP3-UFS-PondOperationalData (1).csv"
+
 
 HEADER = [
-    "ph", "do_mgl", "temp_c", "od",
-    "ph_trend", "do_trend", "od_trend", "temp_trend",
-    "ph_mean", "od_mean", "label",
+    "ph",
+    "do_mgl",
+    "temp_c",
+    "od",
+    "ph_trend",
+    "do_trend",
+    "od_trend",
+    "temp_trend",
+    "ph_mean",
+    "od_mean",
+    "label",
 ]
 
+
 WINDOW_HOURS = 48
-COLLAPSE_FRACTION = 0.67  # lost a third of its density
+COLLAPSE_FRACTION = 0.67
 
 
-def die(msg: str) -> None:
-    sys.exit(f"\n{msg}\n")
+# -------------------------------------------------------------------
+# Helpers
+# -------------------------------------------------------------------
+
+def die(message):
+    raise SystemExit(f"\nERROR: {message}\n")
 
 
-def check_setup() -> pathlib.Path:
-    if SOURCE_FILE is None:
-        die(
-            "SOURCE_FILE is still None.\n\n"
-            "Run inspect_atp3.py first, pick the file with 15-minute pond\n"
-            "readings in it, and put its path at the top of this file."
-        )
-    path = DATA / SOURCE_FILE
-    if not path.exists():
-        die(f"{path} does not exist. Check the path you put in SOURCE_FILE.")
+def parse_time(raw):
+    if not raw:
+        return None
 
-    missing = [k for k, v in COLUMN_MAP.items() if v is None and k != "pond_id"]
-    if missing:
-        die(
-            "These still need a column name in COLUMN_MAP:\n  "
-            + "\n  ".join(missing)
-            + "\n\nRun inspect_atp3.py to see what the real names are."
-        )
-    return path
+    raw = raw.strip()
 
+    formats = [
+        "%m-%d-%Y %H:%M",
+        "%m-%d-%Y",
+        "%m/%d/%Y %H:%M",
+        "%m/%d/%Y",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%Y-%m-%d",
+        "%Y-%m-%dT%H:%M:%S",
+    ]
 
-def parse_time(raw: str):
-    """ATP3 files use a few date formats; try the common ones."""
-    for fmt in (
-        "%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%m/%d/%Y %H:%M",
-        "%m/%d/%y %H:%M", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d",
-    ):
+    for fmt in formats:
         try:
-            return datetime.strptime(raw.strip(), fmt)
-        except (ValueError, AttributeError):
-            continue
+            return datetime.strptime(raw, fmt)
+        except ValueError:
+            pass
+
     return None
 
 
-def num(row: dict, key: str):
-    col = COLUMN_MAP[key]
-    if col is None:
+def to_float(value):
+    if value is None:
         return None
-    raw = (row.get(col) or "").strip()
-    if raw in ("", "NA", "N/A", "null", "-"):
+
+    value = str(value).strip()
+
+    if value == "":
         return None
+
     try:
-        return float(raw)
+        return float(value)
     except ValueError:
         return None
 
 
-def main() -> None:
-    path = check_setup()
+def mean(values):
+    values = [v for v in values if v is not None]
 
-    with path.open(encoding="utf-8", errors="replace") as fh:
-        rows = list(csv.DictReader(fh))
-    print(f"read {len(rows):,} rows from {SOURCE_FILE}")
+    if not values:
+        return None
 
-    # Group by pond so a window never spans two different ponds.
-    ponds: dict[str, list] = {}
-    for r in rows:
-        pond = r.get(COLUMN_MAP["pond_id"], "all") if COLUMN_MAP["pond_id"] else "all"
-        ts = parse_time(r.get(COLUMN_MAP["timestamp"], ""))
-        if ts is None:
+    return statistics.mean(values)
+
+
+def safe_trend(current, previous):
+    if current is None or previous is None:
+        return 0.0
+
+    return current - previous
+
+
+# -------------------------------------------------------------------
+# Read instrumentation data
+#
+# Contains:
+#   pH
+#   temperature
+#   dissolved oxygen
+#
+# Does NOT contain OD.
+# -------------------------------------------------------------------
+
+def read_instrumentation():
+    path = DATA / INSTRUMENTATION_FILE
+
+    if not path.exists():
+        die(f"Instrumentation file not found:\n{path}")
+
+    print(f"Reading instrumentation: {path.name}")
+
+    ponds = {}
+
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+
+        required = [
+            "PondID",
+            "DateTime",
+            "Date",
+            "pH",
+            "Temp (C)",
+            "DO (mg.L)",
+        ]
+
+        missing = [c for c in required if c not in reader.fieldnames]
+
+        if missing:
+            die(
+                "Instrumentation file is missing columns: "
+                + ", ".join(missing)
+            )
+
+        rows = 0
+
+        for row in reader:
+            rows += 1
+
+            pond = row.get("PondID", "").strip()
+
+            if not pond or pond == "inoc":
+                continue
+
+            raw_time = row.get("DateTime") or row.get("Date")
+            timestamp = parse_time(raw_time)
+
+            if timestamp is None:
+                continue
+
+            ph = to_float(row.get("pH"))
+            temp = to_float(row.get("Temp (C)"))
+            do = to_float(row.get("DO (mg.L)"))
+
+            key = (pond, timestamp.date())
+
+            ponds.setdefault(key, {
+                "times": [],
+                "ph": [],
+                "temp": [],
+                "do": [],
+            })
+
+            ponds[key]["times"].append(timestamp)
+
+            if ph is not None:
+                ponds[key]["ph"].append(ph)
+
+            if temp is not None:
+                ponds[key]["temp"].append(temp)
+
+            if do is not None:
+                ponds[key]["do"].append(do)
+
+    print(f"  Raw instrumentation rows: {rows}")
+    print(f"  Pond-days: {len(ponds)}")
+
+    return ponds
+
+
+# -------------------------------------------------------------------
+# Read operational data
+#
+# Contains:
+#   OD750
+#   biomass-related measurements
+#
+# Does NOT contain DO.
+#
+# There can be multiple OD measurements per pond per day, so we
+# aggregate them to one daily OD value.
+# -------------------------------------------------------------------
+
+def read_operational():
+    path = DATA / OPERATIONAL_FILE
+
+    if not path.exists():
+        die(f"Operational file not found:\n{path}")
+
+    print(f"Reading operational: {path.name}")
+
+    ponds = {}
+
+    with path.open("r", encoding="utf-8-sig", newline="") as f:
+        reader = csv.DictReader(f)
+
+        required = [
+            "PondID",
+            "DATETIME",
+            "OD750",
+        ]
+
+        missing = [c for c in required if c not in reader.fieldnames]
+
+        if missing:
+            die(
+                "Operational file is missing columns: "
+                + ", ".join(missing)
+            )
+
+        rows = 0
+
+        for row in reader:
+            rows += 1
+
+            pond = row.get("PondID", "").strip()
+
+            if not pond or pond == "inoc":
+                continue
+
+            timestamp = parse_time(row.get("DATETIME"))
+
+            if timestamp is None:
+                continue
+
+            od = to_float(row.get("OD750"))
+
+            if od is None:
+                continue
+
+            key = (pond, timestamp.date())
+
+            ponds.setdefault(key, [])
+
+            ponds[key].append(od)
+
+    daily_od = {}
+
+    for key, values in ponds.items():
+        daily_od[key] = mean(values)
+
+    print(f"  Raw operational rows: {rows}")
+    print(f"  Pond-days with OD: {len(daily_od)}")
+
+    return daily_od
+
+
+# -------------------------------------------------------------------
+# Build unified daily dataset
+# -------------------------------------------------------------------
+
+def build_dataset(instrumentation, operational):
+
+    print("\nCombining instrumentation + operational data...")
+
+    combined = {}
+
+    common_keys = set(instrumentation.keys()) & set(operational.keys())
+
+    for key in common_keys:
+
+        inst = instrumentation[key]
+
+        ph = mean(inst["ph"])
+        temp = mean(inst["temp"])
+        do = mean(inst["do"])
+        od = operational[key]
+
+        # We need the important biological measurements.
+        if ph is None or od is None:
             continue
-        point = {
-            "t": ts,
-            "ph": num(r, "ph"),
-            "do": num(r, "dissolved_oxygen"),
-            "temp": num(r, "temperature_c"),
-            "od": num(r, "optical_density"),
+
+        combined[key] = {
+            "date": key[1],
+            "ph": ph,
+            "temp": temp,
+            "do": do,
+            "od": od,
         }
-        if point["od"] is None or point["ph"] is None:
-            continue
-        ponds.setdefault(pond, []).append(point)
 
-    out_rows, positives = [], 0
+    print(f"  Matching pond-days: {len(common_keys)}")
+    print(f"  Usable unified pond-days: {len(combined)}")
 
-    for pond, points in ponds.items():
-        points.sort(key=lambda p: p["t"])
-        if len(points) < 8:
-            continue
+    return combined
 
-        # Readings may be 15-minute or thrice-weekly depending on the file, so
-        # windows are built by TIME rather than by row count.
-        for i, start in enumerate(points):
-            win_end = start["t"].timestamp() + WINDOW_HOURS * 3600
-            window = [p for p in points[i:] if p["t"].timestamp() <= win_end]
-            if len(window) < 4:
-                continue
 
-            future_end = win_end + WINDOW_HOURS * 3600
-            future = [
-                p for p in points[i + len(window):]
-                if p["t"].timestamp() <= future_end
-            ]
-            if not future:
-                continue
+# -------------------------------------------------------------------
+# Create crash prediction features
+#
+# Current row:
+#   current pH
+#   current DO
+#   current temperature
+#   current OD
+#
+# Trend:
+#   change compared with previous available pond-day
+#
+# Mean:
+#   current + previous available observations
+#
+# Label:
+#   1 when OD falls below 67% of the current OD within the next
+#   48 hours.
+# -------------------------------------------------------------------
 
-            first, last = window[0], window[-1]
-            hours = max(1.0, (last["t"] - first["t"]).total_seconds() / 3600)
+def make_training_rows(combined):
 
-            def d(key: str) -> float:
-                a, b = first.get(key), last.get(key)
-                return 0.0 if a is None or b is None else (b - a) / hours
+    by_pond = {}
 
-            def mean(key: str) -> float:
-                vals = [p[key] for p in window if p[key] is not None]
-                return sum(vals) / len(vals) if vals else 0.0
+    for (pond, date), values in combined.items():
+        by_pond.setdefault(pond, []).append(values)
 
-            od_now = last["od"] or 0.0
-            od_later = min((p["od"] for p in future if p["od"] is not None), default=od_now)
-            label = 1 if od_now > 0.05 and od_later < od_now * COLLAPSE_FRACTION else 0
-            positives += label
+    output_rows = []
 
-            out_rows.append([
-                f'{last["ph"] or 0:.4f}', f'{last["do"] or 0:.4f}',
-                f'{last["temp"] or 0:.4f}', f"{od_now:.4f}",
-                f'{d("ph"):.6f}', f'{d("do"):.6f}',
-                f'{d("od"):.6f}', f'{d("temp"):.6f}',
-                f'{mean("ph"):.4f}', f'{mean("od"):.4f}', label,
-            ])
+    for pond in sorted(by_pond):
 
-    if not out_rows:
-        die(
-            "No usable windows were produced.\n\n"
-            "Usually this means the timestamp column was not parsed. Send the\n"
-            "first few rows of the file back and we will adjust the formats."
+        points = sorted(
+            by_pond[pond],
+            key=lambda x: x["date"]
         )
 
-    with OUT.open("w", newline="", encoding="utf-8") as fh:
-        w = csv.writer(fh)
-        w.writerow(HEADER)
-        w.writerows(out_rows)
+        for index, current in enumerate(points):
 
-    pct = positives / len(out_rows) * 100
-    print(f"wrote {OUT}")
-    print(f"  {len(out_rows):,} windows, {positives:,} crashes ({pct:.1f}%)")
-    if positives < 20:
-        print("\n  WARNING: very few crashes found. The model needs perhaps 50+")
-        print("  to learn anything. Try another site's file, or say so.")
+            current_date = current["date"]
+
+            # Previous available point.
+            previous = None
+
+            if index > 0:
+                previous = points[index - 1]
+
+            # Previous history for rolling means.
+            history_start = max(0, index - 2)
+            history = points[history_start:index + 1]
+
+            ph_mean = mean([x["ph"] for x in history])
+            od_mean = mean([x["od"] for x in history])
+
+            ph_trend = safe_trend(
+                current["ph"],
+                previous["ph"] if previous else None
+            )
+
+            do_trend = safe_trend(
+                current["do"],
+                previous["do"] if previous else None
+            )
+
+            od_trend = safe_trend(
+                current["od"],
+                previous["od"] if previous else None
+            )
+
+            temp_trend = safe_trend(
+                current["temp"],
+                previous["temp"] if previous else None
+            )
+
+            # -------------------------------------------------------
+            # Look forward 48 hours.
+            #
+            # We use the next available OD measurement inside the
+            # 48-hour window instead of requiring an exact timestamp.
+            # -------------------------------------------------------
+
+            future_od = None
+
+            for future in points[index + 1:]:
+
+                delta_days = (
+                    future["date"] - current_date
+                ).days
+
+                if delta_days > 2:
+                    break
+
+                if future["od"] is not None:
+                    future_od = future["od"]
+                    break
+
+            label = 0
+
+            if (
+                future_od is not None
+                and current["od"] > 0.05
+                and future_od < current["od"] * COLLAPSE_FRACTION
+            ):
+                label = 1
+
+            output_rows.append([
+                current["ph"],
+                current["do"],
+                current["temp"],
+                current["od"],
+                ph_trend,
+                do_trend,
+                od_trend,
+                temp_trend,
+                ph_mean,
+                od_mean,
+                label,
+            ])
+
+    return output_rows
+
+
+# -------------------------------------------------------------------
+# Write dataset
+# -------------------------------------------------------------------
+
+def write_dataset(rows):
+
+    OUT.parent.mkdir(parents=True, exist_ok=True)
+
+    with OUT.open(
+        "w",
+        encoding="utf-8",
+        newline=""
+    ) as f:
+
+        writer = csv.writer(f)
+
+        writer.writerow(HEADER)
+
+        writer.writerows(rows)
+
+    print(f"\nWrote: {OUT}")
+    print(f"Rows: {len(rows)}")
+
+    crash_count = sum(
+        1 for row in rows
+        if str(row[-1]) == "1"
+    )
+
+    normal_count = len(rows) - crash_count
+
+    print(f"Normal samples: {normal_count}")
+    print(f"Crash samples:  {crash_count}")
+
+    if rows:
+        percentage = crash_count / len(rows) * 100
+        print(f"Crash percentage: {percentage:.2f}%")
+
+
+# -------------------------------------------------------------------
+# Main
+# -------------------------------------------------------------------
+
+def main():
+
+    print("=" * 60)
+    print("ATP3 REAL-DATA CRASH DATASET BUILDER")
+    print("=" * 60)
+
+    instrumentation = read_instrumentation()
+
+    operational = read_operational()
+
+    combined = build_dataset(
+        instrumentation,
+        operational
+    )
+
+    if not combined:
+        die(
+            "No matching instrumentation + operational pond-days "
+            "were found."
+        )
+
+    rows = make_training_rows(combined)
+
+    if not rows:
+        die(
+            "No training rows were generated."
+        )
+
+    write_dataset(rows)
+
+    print("\nSUCCESS: ATP3 real-data crash dataset created.")
 
 
 if __name__ == "__main__":
