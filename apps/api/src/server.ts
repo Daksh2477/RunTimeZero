@@ -15,6 +15,7 @@ import { fleetRouter } from './routes/fleet.ts';
 import { harvestsRouter } from './routes/harvests.ts';
 import { investRouter } from './routes/invest.ts';
 import { landRouter } from './routes/land.ts';
+import { liveRouter } from './routes/live.ts';
 import { marketRouter } from './routes/market.ts';
 import { researchRouter } from './routes/research.ts';
 import { summaryRouter } from './routes/summary.ts';
@@ -95,6 +96,7 @@ app.use('/summary', summaryRouter);
 app.use('/land', requireAuthForReads, writesNeedAuth, landRouter);
 app.use('/harvests', requireAuthForReads, writesNeedAuth, harvestsRouter);
 app.use('/weather', weatherRouter);
+app.use('/live', requireAuthForReads, liveRouter);
 
 const port = Number(process.env.API_PORT ?? 4000);
 

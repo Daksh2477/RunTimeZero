@@ -13,6 +13,7 @@
 
 import mqtt from 'mqtt';
 import { insertTelemetry } from '../db/client.ts';
+import { publishTelemetry, type LiveSource } from '../services/live.ts';
 
 const BROKER_URL = process.env.MQTT_BROKER_URL ?? 'mqtt://broker.hivemq.com:1883';
 const TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX ?? 'rtz/9f3a/pond';
@@ -41,6 +42,8 @@ interface TelemetryMessage {
    * Bounded on read, because on a public broker anyone can claim any time.
    */
   observedAt?: string;
+  /** 'sim' from the simulator rig; anything else is treated as a device. */
+  origin?: LiveSource;
   raw?: { vPh: number; vDo: number; vOd: number };
 }
 
@@ -123,6 +126,7 @@ export function parseTelemetry(raw: string): TelemetryMessage | null {
     co2UptakeKg: isFiniteNumber(m.co2UptakeKg) ? m.co2UptakeKg : undefined,
     energyKwh: isFiniteNumber(m.energyKwh) ? m.energyKwh : undefined,
     observedAt: observedAt ?? undefined,
+    origin: m.origin === 'sim' ? 'sim' : 'device',
   };
 }
 
@@ -160,9 +164,10 @@ export function startMqttIngest(onStats?: (s: IngestStats) => void) {
     }
 
     try {
+      const observedAt = msg.observedAt ?? new Date().toISOString();
       await insertTelemetry({
         pondId: msg.pondId,
-        observedAt: msg.observedAt ?? new Date().toISOString(),
+        observedAt,
         // Every reading is an assertion regardless of origin. Recording the
         // source is provenance, not a trust level — see DECISIONS.md #2.
         source: 'sensor',
@@ -174,6 +179,20 @@ export function startMqttIngest(onStats?: (s: IngestStats) => void) {
         energyKwh: msg.energyKwh ?? null,
       });
       stats.stored += 1;
+      await publishTelemetry({
+        pondId: msg.pondId,
+        at: observedAt,
+        source: msg.origin ?? 'device',
+        readings: {
+          tempC: msg.temperatureC,
+          ph: msg.ph,
+          doMgL: msg.dissolvedOxygenMgL,
+          od: msg.opticalDensity,
+          co2UptakeKg: msg.co2UptakeKg ?? null,
+          energyKwh: msg.energyKwh ?? null,
+          paddlewheelOn: null,
+        },
+      });
     } catch (err) {
       stats.rejected += 1;
       // A foreign-key violation here almost always means an unknown pondId —

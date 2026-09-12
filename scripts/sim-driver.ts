@@ -355,6 +355,7 @@ async function main() {
 
         client.publish(`${TOPIC_PREFIX}/${t.meta.id}/telemetry`, JSON.stringify({
           pondId: t.meta.id,
+          origin: 'sim',
           seq: rig.simHour + h,
           uptimeMs: (rig.simHour + h) * 3_600_000,
           observedAt: new Date(
