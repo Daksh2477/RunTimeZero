@@ -80,7 +80,7 @@ export default function MarketPage() {
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           {[
             { label: 'Credits available', value: `${Math.round(creditKg).toLocaleString('en-IN')} kg` },
             { label: 'Algae available', value: `${Math.round(produceKg).toLocaleString('en-IN')} kg` },
@@ -89,10 +89,10 @@ export default function MarketPage() {
             <div
               key={s.label}
               style={{ animationDelay: `${i * 80}ms` }}
-              className="rise-in rounded-2xl border border-border/60 bg-card/50 p-5 shadow-sm backdrop-blur-md"
+              className="rise-in rounded-2xl border border-border/60 bg-card/50 p-3 shadow-sm backdrop-blur-md sm:p-5"
             >
-              <p className="text-sm font-medium text-muted-foreground">{s.label}</p>
-              <h3 className="mt-1.5 font-display text-2xl font-bold sm:text-3xl">{s.value}</h3>
+              <p className="text-xs font-medium leading-snug text-muted-foreground sm:text-sm">{s.label}</p>
+              <h3 className="mt-1 font-display text-lg font-bold sm:mt-1.5 sm:text-3xl">{s.value}</h3>
             </div>
           ))}
         </div>
@@ -103,7 +103,7 @@ export default function MarketPage() {
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`rounded-xl px-5 py-2.5 text-sm font-semibold transition-colors ${
+              className={`flex-1 rounded-xl px-4 py-2.5 text-sm font-semibold transition-colors sm:flex-none sm:px-5 ${
                 tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
@@ -121,7 +121,7 @@ export default function MarketPage() {
                   type="button"
                   onClick={() => setSelected(c)}
                   style={{ animationDelay: `${i * 50}ms` }}
-                  className={`rise-in rounded-2xl border bg-card/60 p-5 text-left shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-lg ${
+                  className={`rise-in rounded-2xl border bg-card/60 p-4 text-left sm:p-5 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-lg ${
                     selected?.batchId === c.batchId ? 'border-primary' : 'border-border/60'
                   }`}
                 >
@@ -132,7 +132,7 @@ export default function MarketPage() {
                         {c.tier} · {c.disposition.replace(/_/g, ' ')}
                       </p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    <span className={`shrink-0 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold ${
                       c.divergenceBps < 500
                         ? 'bg-status-optimal/15 text-status-optimal'
                         : 'bg-status-warning/15 text-status-warning'
@@ -140,7 +140,7 @@ export default function MarketPage() {
                       {(c.divergenceBps / 100).toFixed(1)}% refused
                     </span>
                   </div>
-                  <div className="mt-6 flex items-end justify-between">
+                  <div className="mt-4 flex items-end justify-between sm:mt-6">
                     <div>
                       <p className="text-xs uppercase tracking-wider text-muted-foreground">Available</p>
                       <p className="font-display text-2xl font-bold">

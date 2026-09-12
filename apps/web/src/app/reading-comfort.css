@@ -89,3 +89,67 @@ body main .text-xs.uppercase { text-transform: none; letter-spacing: .02em; }
   body .nav-cluster .role-pill { order: 2; flex: none; margin: 0; padding: 10px 12px; }
   body .role-name { display: none; }
 }
+
+/* ================================================ mobile + motion pass
+ * Kept last in the last stylesheet on purpose: the `body`-prefixed phone rules
+ * above have to lose to these.
+ */
+
+/* Page entrances. app/template.tsx re-mounts per navigation. The fill is
+   `backwards`, never `both`, so a page whose animation never starts is still
+   visible — see the framer-motion note in globals.css. */
+.route-enter { animation: route-in 300ms cubic-bezier(.2,.7,.2,1) backwards; }
+@keyframes route-in { from { opacity: 0; transform: translateY(10px); } }
+@keyframes menu-drop { from { opacity: 0; transform: translateY(-6px); } }
+
+/* Press feedback on every control that acts. The base transition list in
+   globals.css leaves out transform, so it is restated here. */
+.button, .role-pill, .mobile-nav-toggle, .filter-button, .main-nav a,
+.scenario-options button, .setup-switch button, .auth-modes button,
+.password-control button, .audience-options button, .farm-shortcuts a,
+main button.rounded-xl {
+  transition: transform 160ms cubic-bezier(.2,.7,.2,1), background-color 180ms ease,
+              border-color 180ms ease, color 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+}
+:is(.button, .role-pill, .mobile-nav-toggle, .filter-button, .main-nav a,
+    .scenario-options button, .setup-switch button, .auth-modes button,
+    .password-control button, .audience-options button, main button.rounded-xl):active:not(:disabled) {
+  transform: scale(.96);
+}
+@media (hover: hover) {
+  .button:hover:not(:disabled), .role-pill:hover { transform: translateY(-1px); box-shadow: 0 6px 18px #1d3b2626; }
+}
+.auth-card h2 { animation: route-in 240ms cubic-bezier(.2,.7,.2,1) backwards; }
+
+/* In a column flex the 200px basis on .search-label turns into a 200px-tall
+   empty gap under the search box on /verify. */
+@media (max-width: 860px) { .toolbar .search-label { flex: none; } }
+
+@media (max-width: 700px) {
+  /* One-row masthead: mark, current page + menu, sign in. The cluster dissolves
+     into the bar so the opened menu can span its full width underneath. */
+  body .masthead-inner { flex-wrap: wrap; gap: 8px; padding: 8px 14px; min-height: 58px; }
+  body .nav-cluster { display: contents; }
+  body .wordmark { margin-right: auto; }
+  body .mobile-nav-toggle { flex: none; min-height: 42px; padding: 8px 12px; gap: 10px; font-size: .95rem; white-space: nowrap; }
+  body .nav-cluster .role-pill { order: 0; min-height: 42px; padding: 8px 14px; }
+  body .nav-cluster .main-nav { order: 3; flex-basis: 100%; }
+  body .nav-cluster .main-nav[data-open='true'] { padding-bottom: 6px; animation: menu-drop 200ms cubic-bezier(.2,.7,.2,1) backwards; }
+
+  body .auth-modes button { white-space: nowrap; min-height: 44px; padding: 10px 8px; }
+  body .auth-card h2 { margin-top: 20px; }
+
+  body .section-heading { flex-direction: column; align-items: flex-start; gap: 12px; }
+  body .filter-button { white-space: nowrap; font-size: .85rem; }
+
+  /* The sky readout was two columns of seven facts — a full screen before the pond. */
+  body .sky-strip { padding: 14px 16px; }
+  body .sky-arc { height: 30px; }
+  body .sky-facts { grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px 8px; }
+  body .sky-facts dt { font-size: .68rem; }
+  body .sky-facts dd { font-size: .92rem; margin-top: 2px; }
+  body .sky-note { font-size: .85rem; }
+
+  .hw-channels + .helper { margin-top: 14px; }
+}
+@media (max-width: 420px) { body .wordmark-text { display: none; } }
