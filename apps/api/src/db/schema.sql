@@ -381,6 +381,25 @@ ALTER TABLE batches ADD COLUMN IF NOT EXISTS divergence_check_ids UUID[] NOT NUL
 -- Kept in step with the ponds beneath it by the land routes.
 ALTER TABLE sites ADD COLUMN IF NOT EXISTS total_area_m2 DOUBLE PRECISION;
 
+-- What an operator knows about a pond that geometry does not say.
+--
+-- Each of these changes an answer rather than decorating a form:
+--   inoculated_at    — culture age. A three-week culture and a fresh one behave
+--                      nothing alike, and the projection warm-start needs it.
+--   inlet_source     — decides influent nitrogen, which is the single biggest
+--                      input to projected growth after sunlight.
+--   liner            — an unlined pond loses water and nutrients to the soil.
+--   paddlewheel_kw   — measured motor rating beats the 0.5 W/m² rule of thumb
+--                      that energy cost and the mixing check currently assume.
+--   target_od        — the density this operator harvests at, so advice can be
+--                      "harvest now" rather than a generic band.
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS inoculated_at TIMESTAMPTZ;
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS inlet_source TEXT;
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS liner TEXT;
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS paddlewheel_kw DOUBLE PRECISION;
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS target_od DOUBLE PRECISION;
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS notes TEXT;
+
 -- ------------------------------------------------------------ accounts
 --
 -- Username and password, and nothing else. No email, no reset flow, no

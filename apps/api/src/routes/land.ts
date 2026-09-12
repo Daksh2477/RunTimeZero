@@ -31,6 +31,32 @@ function send(res: Response, err: unknown) {
 /** Beyond this a single raceway cannot be mixed evenly by one paddlewheel. */
 const MAX_POND_M2 = 12_000;
 
+/*
+ * What the water arrives as. This is not a label — it decides the influent
+ * nitrogen the projection runs on, which after sunlight is the biggest input
+ * to how fast a pond grows.
+ */
+const INLET_SOURCES = ['cetp', 'dairy', 'textile', 'sewage', 'borewell', 'canal', 'other'] as const;
+
+/** An unlined pond loses water and nutrients to the soil beneath it. */
+const LINERS = ['none', 'clay', 'hdpe', 'concrete'] as const;
+
+/** Optional free-form detail, validated rather than trusted. */
+function optionalText<T extends readonly string[]>(
+  value: unknown, allowed: T, field: string,
+): string | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null || value === '') return null;
+  const v = String(value).trim().toLowerCase();
+  if (!allowed.includes(v as T[number])) {
+    throw Object.assign(
+      new Error(`${field} must be one of: ${allowed.join(', ')}`),
+      { status: 400 },
+    );
+  }
+  return v;
+}
+
 /**
  * Why a proposed shape is impossible, or null if it is fine.
  *
@@ -56,6 +82,8 @@ landRouter.get('/site/:siteId/ponds', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT p.id, p.label, p.area_m2, p.depth_m, p.length_m, p.width_m,
               p.strain, p.active, p.retired_at, p.retired_reason, p.created_at,
+              p.inoculated_at, p.inlet_source, p.liner, p.paddlewheel_kw,
+              p.target_od, p.notes,
               (SELECT MAX(observed_at) FROM telemetry t WHERE t.pond_id = p.id)
                 AS last_reading,
               (SELECT COUNT(*)::int FROM divergence_checks d WHERE d.pond_id = p.id)
@@ -84,6 +112,12 @@ landRouter.get('/site/:siteId/ponds', async (req, res) => {
       satelliteResolvable: Number(r.width_m) >= 40,
       // One multiparameter sonde and one node per pond. See lib/planning.ts.
       sensorsNeeded: r.active ? 1 : 0,
+      inoculatedAt: r.inoculated_at ? r.inoculated_at.toISOString() : null,
+      inletSource: r.inlet_source,
+      liner: r.liner,
+      paddlewheelKw: r.paddlewheel_kw === null ? null : Number(r.paddlewheel_kw),
+      targetOd: r.target_od === null ? null : Number(r.target_od),
+      notes: r.notes,
     })));
   } catch (err) {
     send(res, err);
@@ -185,7 +219,10 @@ landRouter.patch('/ponds/:id', async (req, res) => {
     const pond = existing[0];
     if (!pond) return res.status(404).json({ error: 'No such pond' });
 
-    const EDITABLE = ['label', 'lengthM', 'widthM', 'depthM', 'strain', 'active'] as const;
+    const EDITABLE = [
+      'label', 'lengthM', 'widthM', 'depthM', 'strain', 'active',
+      'inoculatedAt', 'inletSource', 'liner', 'paddlewheelKw', 'targetOd', 'notes',
+    ] as const;
     if (!EDITABLE.some((key) => key in b)) {
       if ('areaM2' in b) {
         return res.status(400).json({
@@ -251,6 +288,59 @@ landRouter.patch('/ponds/:id', async (req, res) => {
     const problem = geometryProblem(areaM2, dims.depthM);
     if (problem) return res.status(422).json({ error: problem });
 
+    // The operating record. `undefined` means untouched, `null` means cleared —
+    // COALESCE below keeps the stored value for the former.
+    const inletSource = optionalText(b.inletSource, INLET_SOURCES, 'inletSource');
+    const liner = optionalText(b.liner, LINERS, 'liner');
+
+    let inoculatedAt: Date | null | undefined;
+    if ('inoculatedAt' in b) {
+      if (b.inoculatedAt === null || b.inoculatedAt === '') inoculatedAt = null;
+      else {
+        const at = new Date(String(b.inoculatedAt));
+        if (Number.isNaN(at.getTime())) {
+          return res.status(400).json({ error: 'inoculatedAt must be a date' });
+        }
+        if (at.getTime() > Date.now() + 86_400_000) {
+          return res.status(422).json({ error: 'A culture cannot have been started in the future.' });
+        }
+        inoculatedAt = at;
+      }
+    }
+
+    let paddlewheelKw: number | null | undefined;
+    if ('paddlewheelKw' in b) {
+      if (b.paddlewheelKw === null || b.paddlewheelKw === '') paddlewheelKw = null;
+      else {
+        const kw = Number(b.paddlewheelKw);
+        // A paddlewheel on a raceway this size is hundreds of watts to a few kW.
+        if (!Number.isFinite(kw) || kw <= 0 || kw > 50) {
+          return res.status(422).json({
+            error: 'paddlewheelKw looks wrong — a raceway paddlewheel is 0.2 to a few kW.',
+          });
+        }
+        paddlewheelKw = kw;
+      }
+    }
+
+    let targetOd: number | null | undefined;
+    if ('targetOd' in b) {
+      if (b.targetOd === null || b.targetOd === '') targetOd = null;
+      else {
+        const od = Number(b.targetOd);
+        if (!Number.isFinite(od) || od <= 0 || od > 4) {
+          return res.status(422).json({
+            error: 'targetOd must be between 0 and 4 — working raceways harvest around 0.6 to 1.5.',
+          });
+        }
+        targetOd = od;
+      }
+    }
+
+    const notes = 'notes' in b
+      ? (typeof b.notes === 'string' && b.notes.trim() ? b.notes.trim().slice(0, 2000) : null)
+      : undefined;
+
     const { rows } = await pool.query(
       `UPDATE ponds
           SET label = $2,
@@ -261,12 +351,25 @@ landRouter.patch('/ponds/:id', async (req, res) => {
               strain = $7,
               active = $8,
               retired_at = CASE WHEN $8 THEN NULL ELSE COALESCE(retired_at, now()) END,
-              retired_reason = CASE WHEN $8 THEN NULL ELSE $9 END
+              retired_reason = CASE WHEN $8 THEN NULL ELSE $9 END,
+              inoculated_at = COALESCE($10, CASE WHEN $11 THEN NULL ELSE inoculated_at END),
+              inlet_source = COALESCE($12, CASE WHEN $13 THEN NULL ELSE inlet_source END),
+              liner = COALESCE($14, CASE WHEN $15 THEN NULL ELSE liner END),
+              paddlewheel_kw = COALESCE($16, CASE WHEN $17 THEN NULL ELSE paddlewheel_kw END),
+              target_od = COALESCE($18, CASE WHEN $19 THEN NULL ELSE target_od END),
+              notes = COALESCE($20, CASE WHEN $21 THEN NULL ELSE notes END)
         WHERE id = $1
       RETURNING id, site_id, label, area_m2, depth_m, length_m, width_m, strain,
-                active, retired_reason`,
+                active, retired_reason, inoculated_at, inlet_source, liner,
+                paddlewheel_kw, target_od, notes`,
       [req.params.id, label, dims.lengthM, dims.widthM, dims.depthM, areaM2,
-       strain, active, reason],
+       strain, active, reason,
+       inoculatedAt ?? null, inoculatedAt === null,
+       inletSource ?? null, inletSource === null,
+       liner ?? null, liner === null,
+       paddlewheelKw ?? null, paddlewheelKw === null,
+       targetOd ?? null, targetOd === null,
+       notes ?? null, notes === null],
     );
     const row = rows[0];
 
@@ -281,18 +384,18 @@ landRouter.patch('/ponds/:id', async (req, res) => {
     // its life, so it is said out loud rather than left for the farmer to notice.
     const wasResolvable = Number(pond.width_m) >= 40;
     const nowResolvable = Number(row.width_m) >= 40;
-    const notes: string[] = [];
+    const changeNotes: string[] = [];
     if (Boolean(pond.active) !== Boolean(row.active)) {
-      notes.push(row.active
+      changeNotes.push(row.active
         ? 'Back in use. New readings will be checked again.'
         : 'Out of use. Its history and any credits it produced are unchanged.');
     }
     if (Number(pond.area_m2) !== Number(row.area_m2)) {
-      notes.push(`Area is now ${Math.round(Number(row.area_m2)).toLocaleString('en-IN')} m²`
+      changeNotes.push(`Area is now ${Math.round(Number(row.area_m2)).toLocaleString('en-IN')} m²`
         + ` (${row.length_m} × ${row.width_m} m).`);
     }
     if (wasResolvable !== nowResolvable) {
-      notes.push(nowResolvable
+      changeNotes.push(nowResolvable
         ? 'Now wide enough for satellite verification.'
         : `At ${row.width_m} m wide this pond is below the 40 m satellites need, so it `
           + 'will be verified by drone or weighbridge instead.');
@@ -309,8 +412,14 @@ landRouter.patch('/ponds/:id', async (req, res) => {
       strain: row.strain,
       active: row.active,
       retiredReason: row.retired_reason,
+      inoculatedAt: row.inoculated_at ? row.inoculated_at.toISOString() : null,
+      inletSource: row.inlet_source,
+      liner: row.liner,
+      paddlewheelKw: row.paddlewheel_kw === null ? null : Number(row.paddlewheel_kw),
+      targetOd: row.target_od === null ? null : Number(row.target_od),
+      notes: row.notes,
       satelliteResolvable: nowResolvable,
-      note: notes.join(' ') || 'Saved.',
+      note: changeNotes.join(' ') || 'Saved.',
     });
   } catch (err) {
     send(res, err);

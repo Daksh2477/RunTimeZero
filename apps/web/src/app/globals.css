@@ -1312,7 +1312,16 @@ button, a, input, select {
   font: inherit; font-size: 0.9rem; background: var(--panel); color: var(--ink);
   min-height: 38px;
 }
-.land-edit input:focus-visible { outline: 2px solid var(--culture); outline-offset: 1px; }
+.land-edit select, .land-edit textarea {
+  padding: 8px 10px; border: 1px solid var(--hairline); border-radius: 8px;
+  font: inherit; font-size: 0.9rem; background: var(--panel); color: var(--ink);
+  min-height: 38px;
+}
+.land-edit textarea { resize: vertical; line-height: 1.45; }
+.land-edit-wide { grid-column: 1 / -1; }
+.land-edit input:focus-visible,
+.land-edit select:focus-visible,
+.land-edit textarea:focus-visible { outline: 2px solid var(--culture); outline-offset: 1px; }
 .land-edit-note { grid-column: 1 / -1; margin: 0; }
 .land-edit-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
 

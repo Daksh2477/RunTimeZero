@@ -27,12 +27,37 @@ interface Pond {
   retiredAt: string | null; retiredReason: string | null;
   lastReadingAt: string | null; checkCount: number;
   satelliteResolvable: boolean; sensorsNeeded: number;
+  /* The operating record — what the model needs that geometry cannot say. */
+  inoculatedAt: string | null; inletSource: string | null; liner: string | null;
+  paddlewheelKw: number | null; targetOd: number | null; notes: string | null;
 }
+
+/** Decides the influent nitrogen the projection runs on. */
+const INLET_SOURCES = [
+  ['', 'Not recorded'],
+  ['cetp', 'CETP effluent'],
+  ['dairy', 'Dairy effluent'],
+  ['textile', 'Textile effluent'],
+  ['sewage', 'Municipal sewage'],
+  ['borewell', 'Borewell'],
+  ['canal', 'Canal or surface water'],
+  ['other', 'Something else'],
+] as const;
+
+const LINERS = [
+  ['', 'Not recorded'],
+  ['none', 'Unlined earth'],
+  ['clay', 'Compacted clay'],
+  ['hdpe', 'HDPE liner'],
+  ['concrete', 'Concrete'],
+] as const;
 interface Site { id: string; name: string; tier: string }
 
 /** What can be changed about an existing pond. Area is never edited directly. */
 interface Draft {
   label: string; lengthM: number; widthM: number; depthM: number; strain: string;
+  inoculatedAt: string; inletSource: string; liner: string;
+  paddlewheelKw: string; targetOd: string; notes: string;
 }
 
 export default function LandPage() {
@@ -111,22 +136,45 @@ export default function LandPage() {
       widthM: pond.widthM,
       depthM: pond.depthM,
       strain: pond.strain,
+      // Dates and numbers are held as strings while editing so a half-typed
+      // value does not become NaN or jump to today under the farmer's cursor.
+      inoculatedAt: pond.inoculatedAt ? pond.inoculatedAt.slice(0, 10) : '',
+      inletSource: pond.inletSource ?? '',
+      liner: pond.liner ?? '',
+      paddlewheelKw: pond.paddlewheelKw == null ? '' : String(pond.paddlewheelKw),
+      targetOd: pond.targetOd == null ? '' : String(pond.targetOd),
+      notes: pond.notes ?? '',
     });
   };
 
   const saveEdit = async (pond: Pond) => {
     if (!draft) return;
+    type Change = Record<string, string | number | null>;
     setBusy(true); setError(null);
     try {
       // Only what actually changed. The API treats an absent key as "leave it
       // alone", so sending the whole object would rewrite fields the farmer
       // never touched — and would overwrite a change someone else just made.
-      const changed: Partial<Draft> = {};
+      const changed: Change = {};
       if (draft.label.trim() !== pond.label) changed.label = draft.label.trim();
       if (draft.lengthM !== pond.lengthM) changed.lengthM = draft.lengthM;
       if (draft.widthM !== pond.widthM) changed.widthM = draft.widthM;
       if (draft.depthM !== pond.depthM) changed.depthM = draft.depthM;
       if (draft.strain.trim() !== pond.strain) changed.strain = draft.strain.trim();
+
+      // Empty means "clear it", which the API accepts as null — not the same as
+      // leaving the key out, which means "leave it alone".
+      const inoculated = pond.inoculatedAt ? pond.inoculatedAt.slice(0, 10) : '';
+      if (draft.inoculatedAt !== inoculated) changed.inoculatedAt = draft.inoculatedAt || null;
+      if (draft.inletSource !== (pond.inletSource ?? '')) changed.inletSource = draft.inletSource || null;
+      if (draft.liner !== (pond.liner ?? '')) changed.liner = draft.liner || null;
+      if (draft.paddlewheelKw !== (pond.paddlewheelKw == null ? '' : String(pond.paddlewheelKw))) {
+        changed.paddlewheelKw = draft.paddlewheelKw === '' ? null : Number(draft.paddlewheelKw);
+      }
+      if (draft.targetOd !== (pond.targetOd == null ? '' : String(pond.targetOd))) {
+        changed.targetOd = draft.targetOd === '' ? null : Number(draft.targetOd);
+      }
+      if (draft.notes.trim() !== (pond.notes ?? '')) changed.notes = draft.notes.trim() || null;
 
       if (Object.keys(changed).length === 0) {
         setEditingId(null); setDraft(null); return;
@@ -260,9 +308,42 @@ export default function LandPage() {
                     <input value={draft.strain}
                       onChange={(e) => setDraft({ ...draft, strain: e.target.value })} />
                   </label>
+                  <label><span>Culture started</span>
+                    <input type="date" value={draft.inoculatedAt}
+                      onChange={(e) => setDraft({ ...draft, inoculatedAt: e.target.value })} />
+                  </label>
+                  <label><span>Water comes from</span>
+                    <select value={draft.inletSource}
+                      onChange={(e) => setDraft({ ...draft, inletSource: e.target.value })}>
+                      {INLET_SOURCES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </label>
+                  <label><span>Pond lining</span>
+                    <select value={draft.liner}
+                      onChange={(e) => setDraft({ ...draft, liner: e.target.value })}>
+                      {LINERS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  </label>
+                  <label><span>Paddlewheel (kW)</span>
+                    <input type="number" min={0.2} max={50} step={0.05} value={draft.paddlewheelKw}
+                      placeholder="e.g. 0.75"
+                      onChange={(e) => setDraft({ ...draft, paddlewheelKw: e.target.value })} />
+                  </label>
+                  <label><span>Harvest at density</span>
+                    <input type="number" min={0.1} max={4} step={0.05} value={draft.targetOd}
+                      placeholder="e.g. 1.1"
+                      onChange={(e) => setDraft({ ...draft, targetOd: e.target.value })} />
+                  </label>
+                  <label className="land-edit-wide"><span>Notes</span>
+                    <textarea rows={2} value={draft.notes} placeholder="Anything the next person should know"
+                      onChange={(e) => setDraft({ ...draft, notes: e.target.value })} />
+                  </label>
 
                   <p className="helper land-edit-note">
-                    Area becomes{' '}
+                    Where the water comes from sets the nutrients the projection
+                    assumes, the paddlewheel rating replaces a rule-of-thumb in
+                    the energy figures, and the culture date is what the
+                    projection warm-starts from. Area becomes{' '}
                     <strong>
                       {Math.round(draft.lengthM * draft.widthM).toLocaleString('en-IN')} m²
                     </strong>
