@@ -61,6 +61,87 @@ export interface AdvisoryInput {
   forecastYieldKg: number;
   /** Actual yield over the trailing 7 days, kg. */
   actualYield7dKg: number;
+  /**
+   * Site context the crash model needs beyond the probes themselves.
+   *
+   * Optional because the fleet list does not carry pond geometry and filling
+   * it with a guess would be worse than letting the model fall back to the
+   * training mean for these columns.
+   */
+  context?: Partial<CrashContext>;
+}
+
+export interface CrashContext {
+  depthM: number;
+  areaM2: number;
+  dayOfYear: number;
+  /** Hours since the last weighed harvest. A pond just cut looks thin. */
+  hoursSinceHarvest: number;
+}
+
+/**
+ * Build the crash-model feature vector.
+ *
+ * MUST stay in lockstep with `windowFeatures()` in
+ * `packages/models/train/make_dataset.ts`. If the two drift, the model is
+ * scoring something the product never sees and nothing will throw to tell us.
+ *
+ * The amplitudes are the part worth understanding. A healthy sunlit pond
+ * swings dissolved oxygen hard between day and night — photosynthesis
+ * supersaturates it by afternoon, respiration strips it by dawn. A pond that
+ * stops swinging has stopped photosynthesising, and that shows up before the
+ * density visibly falls. It is the one leading indicator the four probes can
+ * give us, and an earlier version of this file threw it away.
+ */
+export function crashFeatures(
+  recent: TelemetryPoint[],
+  ctx: Partial<CrashContext> = {},
+): Record<string, number> {
+  const first = recent[0]!;
+  const last = recent[recent.length - 1]!;
+  const hours = spanHours(first, last) || 1;
+  // A probe that dropped out leaves nulls; a gap must not read as a zero,
+  // which would look to the model like a pond with no diurnal swing at all.
+  const values = (f: (t: TelemetryPoint) => number | null) =>
+    recent.map(f).filter((n): n is number => n !== null && Number.isFinite(n));
+  const amp = (f: (t: TelemetryPoint) => number | null) => {
+    const v = values(f);
+    return v.length ? Math.max(...v) - Math.min(...v) : 0;
+  };
+  const sd = (f: (t: TelemetryPoint) => number | null) => {
+    const v = values(f);
+    if (!v.length) return 0;
+    const m = v.reduce((a, b) => a + b, 0) / v.length;
+    return Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length);
+  };
+  const at = new Date(Date.parse(last.observedAt));
+  const doy =
+    ctx.dayOfYear ??
+    Math.floor(
+      (at.getTime() - Date.UTC(at.getUTCFullYear(), 0, 0)) / 86_400_000,
+    );
+
+  return {
+    ph: last.ph ?? 0,
+    do_mgl: last.dissolvedOxygenMgL ?? 0,
+    temp_c: last.temperatureC ?? 0,
+    od: last.opticalDensity ?? 0,
+    ph_trend: delta(first.ph, last.ph) / hours,
+    do_trend: delta(first.dissolvedOxygenMgL, last.dissolvedOxygenMgL) / hours,
+    od_trend: delta(first.opticalDensity, last.opticalDensity) / hours,
+    temp_trend: delta(first.temperatureC, last.temperatureC) / hours,
+    ph_mean: meanOf(recent, (t) => t.ph),
+    od_mean: meanOf(recent, (t) => t.opticalDensity),
+    do_amplitude: amp((t) => t.dissolvedOxygenMgL),
+    ph_amplitude: amp((t) => t.ph),
+    od_volatility: sd((t) => t.opticalDensity),
+    temp_amplitude: amp((t) => t.temperatureC),
+    depth_m: ctx.depthM ?? 0.25,
+    log_area: Math.log10(Math.max(1, ctx.areaM2 ?? 1200)),
+    season_sin: Math.sin((2 * Math.PI * doy) / 365),
+    season_cos: Math.cos((2 * Math.PI * doy) / 365),
+    hours_since_harvest: ctx.hoursSinceHarvest ?? 84,
+  };
 }
 
 /**
@@ -92,21 +173,10 @@ export function buildAdvisories(input: AdvisoryInput): Advisory[] {
   // pushes pH up, so a culture doing both is dying rather than resting. An
   // operator can check that themselves.
   //
-  // The model (crash_classifier, AUC 0.79) catches cases the rule misses, but
+  // The model (crash_classifier, AUC 0.84) catches cases the rule misses, but
   // it is a support, not the authority — a model telling someone to drain a
   // pond without a reason they can verify is worse than no alert at all.
-  const risk = crashRisk({
-    ph: latest.ph ?? 0,
-    do_mgl: latest.dissolvedOxygenMgL ?? 0,
-    temp_c: latest.temperatureC ?? 0,
-    od: latest.opticalDensity ?? 0,
-    ph_trend: phTrend,
-    do_trend: doTrend,
-    od_trend: odTrend,
-    temp_trend: delta(earliest.temperatureC, latest.temperatureC) / hours,
-    ph_mean: meanOf(recent, (t) => t.ph),
-    od_mean: meanOf(recent, (t) => t.opticalDensity),
-  });
+  const risk = crashRisk(crashFeatures(recent, input.context ?? {}));
 
   const ruleFired = phTrend < -0.02 && odTrend < -0.002;
   // 0.75 rather than the model's own 0.5: a false "drain your pond" costs the

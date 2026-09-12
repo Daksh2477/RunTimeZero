@@ -55,6 +55,10 @@ packages/models/data/atp3/
 
 (Create the folder if it does not exist.)
 
+Note: ATP3 records contamination and culture-health indicators, so there are
+real crash-like events in there. Whether they line up cleanly with our
+definition of a crash is exactly what Step 3 is for.
+
 ---
 
 ## Step 2 — look at what is inside
@@ -143,7 +147,7 @@ Write down the new AUC number.
 
 ## Step 5 — report the number honestly
 
-The current crash model scores **AUC 0.790** on our simulator's data.
+The current crash model scores **AUC 0.843** on our simulator's data.
 
 Real data will probably score **worse**. That is expected and it is fine.
 A model at 0.68 on real ponds is worth more to us than 0.79 on our own
@@ -165,7 +169,7 @@ Then:
 node --experimental-strip-types --input-type=module -e "
 import { crashRisk, modelsLoaded } from './apps/api/src/models/infer.ts';
 console.log(modelsLoaded());
-console.log(crashRisk({ph:7.9,do_mgl:2.1,temp_c:32,od:0.25,ph_trend:-0.03,do_trend:-0.05,od_trend:-0.006,temp_trend:0,ph_mean:8.4,od_mean:0.4}));
+console.log(crashRisk({ph:7.9,do_mgl:2.1,temp_c:32,od:0.25,ph_trend:-0.03,do_trend:-0.05,od_trend:-0.006,temp_trend:0,ph_mean:8.4,od_mean:0.4,do_amplitude:0.8,ph_amplitude:0.2,od_volatility:0.05,temp_amplitude:6,depth_m:0.25,log_area:3.08,season_sin:0.5,season_cos:0.86,hours_since_harvest:90}));
 "
 ```
 

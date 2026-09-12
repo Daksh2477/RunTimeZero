@@ -208,6 +208,14 @@ export async function getPondDetail(pondId: string): Promise<PondDetail | null> 
       // 7-day physics forecast, converted back from CO2 to biomass.
       forecastYieldKg: ceilingCo2Kg / 1.83 / 3,
       actualYield7dKg: harvested7d,
+      context: {
+        depthM: pond.depthM,
+        areaM2: pond.areaM2,
+        // Ordered ascending, so the last row is the most recent cut.
+        hoursSinceHarvest: harvests.length
+          ? (Date.now() - harvests[harvests.length - 1]!.harvested_at.getTime()) / 3_600_000
+          : 24 * 14,
+      },
     }),
     latestCheck: checks[0]
       ? Object.fromEntries(

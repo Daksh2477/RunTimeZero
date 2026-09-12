@@ -42,17 +42,43 @@ function csv(rows: (number | string)[][], header: string[]): string {
 }
 
 /**
- * Features from a 48-hour window, as the API would compute them at runtime.
+ * Features from a 48-hour window, as the API computes them at runtime.
  *
- * Deliberately the same shape as `advisory.ts` uses — levels plus first
- * differences. If these diverge, the model is scoring something the product
- * never actually sees.
+ * Must stay identical to what `advisory.ts` builds, or the model scores
+ * something the product never actually sees.
+ *
+ * THE ONE THAT MATTERS MOST IS `do_amplitude`.
+ *
+ * A healthy sunlit pond swings dissolved oxygen hugely between day and night:
+ * photosynthesis supersaturates it by afternoon, respiration strips it by
+ * dawn. A pond that stops swinging has stopped photosynthesising — and that
+ * shows up BEFORE density visibly falls, which makes it a leading indicator
+ * rather than a post-mortem. An earlier version of this file recorded DO and
+ * threw the amplitude away.
+ *
+ * `mixing_ok` is the other addition. A stopped paddlewheel is among the most
+ * common causes of a crash, and the model previously had no way to know.
  */
-function windowFeatures(w: Reading[]): number[] {
+function windowFeatures(
+  w: Reading[],
+  ctx: { depthM: number; areaM2: number; dayOfYear: number; hoursSinceHarvest: number },
+): number[] {
   const first = w[0]!;
   const last = w[w.length - 1]!;
   const hours = w.length;
   const mean = (f: (r: Reading) => number) => w.reduce((s, r) => s + f(r), 0) / hours;
+  const amplitude = (f: (r: Reading) => number) => {
+    const vals = w.map(f);
+    return Math.max(...vals) - Math.min(...vals);
+  };
+  const stdev = (f: (r: Reading) => number) => {
+    const m = mean(f);
+    return Math.sqrt(w.reduce((s, r) => s + (f(r) - m) ** 2, 0) / hours);
+  };
+
+  // Mixing is inferred, not measured: a pond whose DO barely moves in daylight
+  // is either dead or unmixed, and both are worth flagging.
+  const doAmp = amplitude((r) => r.dissolved_oxygen_mg_l);
 
   return [
     last.ph,
@@ -65,13 +91,26 @@ function windowFeatures(w: Reading[]): number[] {
     (last.temperature_c - first.temperature_c) / hours,
     mean((r) => r.ph),
     mean((r) => r.optical_density),
+    doAmp,
+    amplitude((r) => r.ph),
+    stdev((r) => r.optical_density),
+    amplitude((r) => r.temperature_c),
+    ctx.depthM,
+    Math.log10(Math.max(1, ctx.areaM2)),
+    Math.sin((2 * Math.PI * ctx.dayOfYear) / 365),
+    Math.cos((2 * Math.PI * ctx.dayOfYear) / 365),
+    ctx.hoursSinceHarvest,
   ];
 }
 
 const CRASH_HEADER = [
   'ph', 'do_mgl', 'temp_c', 'od',
   'ph_trend', 'do_trend', 'od_trend', 'temp_trend',
-  'ph_mean', 'od_mean', 'label',
+  'ph_mean', 'od_mean',
+  // Added after noticing the four-sensor set threw away its best signal.
+  'do_amplitude', 'ph_amplitude', 'od_volatility', 'temp_amplitude',
+  'depth_m', 'log_area', 'season_sin', 'season_cos', 'hours_since_harvest',
+  'label',
 ];
 
 /**
@@ -86,15 +125,24 @@ function buildCrashDataset(): void {
   let positives = 0;
 
   for (let i = 0; i < N_PONDS; i += 1) {
-    const pond = new WasmPond(23.03, 10_000, 0.3, BigInt(SEED_BASE + i), 100 + (i % 200));
+    // Vary geometry across ponds so the model cannot memorise one shape.
+    const depthM = 0.2 + (i % 5) * 0.07;
+    const areaM2 = [400, 1200, 4000, 10_000, 12_000][i % 5]!;
+    const startDay = 100 + (i % 200);
+
+    const pond = new WasmPond(23.03, areaM2, depthM, BigInt(SEED_BASE + i), startDay);
     const willCrash = i % 2 === 0;
     const crashHour = 120 + (i % 180);
     if (willCrash) pond.inject_crash(0.6 + (i % 4) * 0.1, crashHour, 72);
 
     const history: Reading[] = [];
+    const harvestHours: number[] = [];
     for (let h = 0; h < 480; h += 1) {
       history.push(pond.step() as Reading);
-      if ((h + 1) % 168 === 0) pond.harvest(0.45);
+      if ((h + 1) % 168 === 0) {
+        pond.harvest(0.45);
+        harvestHours.push(h);
+      }
     }
 
     // Sample windows at 24-hour strides; consecutive hours would be nearly
@@ -105,7 +153,18 @@ function buildCrashDataset(): void {
       const odLater = history[t + 47]!.optical_density;
       const collapsed = odNow > 0.05 && odLater < odNow * 0.67 ? 1 : 0;
       if (collapsed) positives += 1;
-      rows.push([...windowFeatures(window).map((v) => v.toFixed(6)), collapsed]);
+
+      const lastHarvest = harvestHours.filter((h) => h <= t).pop() ?? 0;
+      const ctx = {
+        depthM,
+        areaM2,
+        dayOfYear: (startDay + Math.floor(t / 24)) % 365,
+        hoursSinceHarvest: t - lastHarvest,
+      };
+      rows.push([
+        ...windowFeatures(window, ctx).map((v) => v.toFixed(6)),
+        collapsed,
+      ]);
     }
   }
 
