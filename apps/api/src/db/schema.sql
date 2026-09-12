@@ -230,6 +230,84 @@ CREATE TABLE IF NOT EXISTS retirements (
 
 CREATE INDEX IF NOT EXISTS idx_retirements_batch ON retirements(batch_id);
 
+-- ------------------------------------------------- researcher data access
+
+-- Selling pond data to researchers is the third revenue line, and the one
+-- with the sharpest ethical edge: the data describes a real farm's
+-- performance, and a bad season is commercially sensitive.
+--
+-- So consent lives on the site, not on the buyer. A site opts in, chooses
+-- whether its identity travels with the data, and can withdraw. Nothing is
+-- licensed without a row here saying the operator agreed.
+CREATE TABLE IF NOT EXISTS data_consent (
+  site_id        UUID PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,
+  -- false means the site is published as "a 4 ha CETP site in Gujarat"
+  -- rather than by name. Most operators want this.
+  share_identity BOOLEAN NOT NULL DEFAULT false,
+  -- Revenue share to the farm, 0..1. The farm generated the data.
+  revenue_share  DOUBLE PRECISION NOT NULL DEFAULT 0.5
+                   CHECK (revenue_share >= 0 AND revenue_share <= 1),
+  granted_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  withdrawn_at   TIMESTAMPTZ
+);
+
+-- One purchased licence to a dataset. Deliberately not a file: the buyer
+-- gets a scoped, revocable API key, so a withdrawal by the farm actually
+-- takes effect instead of chasing a CSV somebody already downloaded.
+CREATE TABLE IF NOT EXISTS data_licences (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  buyer_name     TEXT NOT NULL CHECK (length(trim(buyer_name)) > 0),
+  buyer_email    TEXT NOT NULL,
+  institution    TEXT,
+  purpose        TEXT NOT NULL,
+  dataset        TEXT NOT NULL,
+  price_inr      DOUBLE PRECISION NOT NULL CHECK (price_inr >= 0),
+  api_key_hash   TEXT NOT NULL,
+  issued_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at     TIMESTAMPTZ NOT NULL,
+  revoked_at     TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_licences_key ON data_licences(api_key_hash);
+
+-- --------------------------------------------------------- investor board
+
+-- A farm advertising itself for investment. This is a noticeboard, not a
+-- securities platform: we carry the listing and the verified production
+-- record, and the investor contacts the operator directly. We take no fee
+-- and hold no money, which keeps us out of being a broker.
+CREATE TABLE IF NOT EXISTS investment_listings (
+  id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  site_id            UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  headline           TEXT NOT NULL CHECK (length(trim(headline)) > 0),
+  pitch              TEXT NOT NULL,
+  seeking_inr        DOUBLE PRECISION NOT NULL CHECK (seeking_inr > 0),
+  use_of_funds       TEXT NOT NULL,
+  expand_to_m2       DOUBLE PRECISION,
+  contact_name       TEXT NOT NULL,
+  contact_email      TEXT NOT NULL,
+  contact_phone      TEXT,
+  status             TEXT NOT NULL DEFAULT 'open'
+                       CHECK (status IN ('open', 'in_discussion', 'closed')),
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_listings_status ON investment_listings(status);
+
+-- An investor registering interest. Stored so the operator sees who asked,
+-- and so we never act as an intermediary for the conversation itself.
+CREATE TABLE IF NOT EXISTS investor_enquiries (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  listing_id    UUID NOT NULL REFERENCES investment_listings(id) ON DELETE CASCADE,
+  investor_name TEXT NOT NULL CHECK (length(trim(investor_name)) > 0),
+  investor_email TEXT NOT NULL,
+  organisation  TEXT,
+  message       TEXT NOT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_enquiries_listing ON investor_enquiries(listing_id);
+
 -- ------------------------------------------------------------ expenses
 
 CREATE TABLE IF NOT EXISTS expenses (
