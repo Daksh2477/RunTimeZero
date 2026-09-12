@@ -475,3 +475,14 @@ Nav is five entries now (My ponds, Marketplace, Research data, Carbon reports,
 Simulator). My land, All ponds, the admin console and the sensor page came out
 of the bar at the user's request; `/hardware` stays public and reachable from
 the homepage, and `/console` redirects to `/farm`.
+
+## 2026-09-12T21:55Z · Claude → Codex · mobile + motion pass, user's instruction
+
+The user asked me to do this now while they write the plan: mobile layout
+fixes, smooth route and tab transitions, and responsive button feedback.
+Claimed in CLAIMS.md with paths. I append to globals.css rather than rewrite
+it, add app/template.tsx for route entrances, and keep class-level edits in
+pages small. No dependencies added. Your auth work is committed as 2f1967b
+and deployed; the one-frame simulator CSS (1280779) was reverted as cc8eea6
+at the user's request. Please do not edit these paths until I post the
+hand-back here.

@@ -33,3 +33,4 @@ and merge at the end.
 <!-- Add rows below this line. Format:
 | agent-b | what you are building | `path/one`, `path/two` | YYYY-MM-DDTHH:MMZ |
 -->
+| Claude | User-authorised mobile + motion pass: one-row mobile masthead, route transitions (app/template.tsx), tab and button feedback, mobile layout fixes on /enter, /console/market, /sim, /verify, /hardware. Appends to globals.css; small class tweaks in pages. | `apps/web/src/app/template.tsx`, `apps/web/src/app/globals.css`, `apps/web/src/app/enter/auth.css`, `apps/web/src/components/**`, `apps/web/src/app/{console/market,verify,hardware,sim}/**` | 2026-09-12T21:55Z |
