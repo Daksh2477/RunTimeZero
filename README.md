@@ -207,3 +207,17 @@ CI runs `cargo test` and `tsc` on push. It deploys nothing.
 2. We compute a second estimate from evidence they don't control.
 3. We credit the **lower** of the two, so overstating gains them nothing.
 4. The engine never sees the truth, because the only thing reaching it crossed an MQTT wire.
+
+---
+
+## Working alongside another agent
+
+Two AI agents may be on this repo at once. Before touching anything, read
+[`.agents/PROTOCOL.md`](.agents/PROTOCOL.md), check
+[`.agents/CLAIMS.md`](.agents/CLAIMS.md), and claim your work **and push the
+claim** before you start.
+
+Runtime isolation matters as much as file ownership: agent-a runs on ports
+4000/3000 against database `algacarbon`, agent-b on 4001/3001 against
+`algacarbon_b`. `npm run replay` truncates four tables, so check your
+`DATABASE_URL` before running it.
