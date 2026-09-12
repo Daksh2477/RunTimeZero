@@ -110,7 +110,7 @@ export default function InvestorConsole() {
           operator directly — we take no fee and hold no money.
         </p>
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          {(farms ?? []).map((f) => <OpportunityCard key={f.id} opportunity={f} />)}
+          {(farms ?? []).map((f) => <div id={`listing-${f.id}`} key={f.id}><OpportunityCard opportunity={f} /></div>)}
           {farms?.length === 0 && (
             <p className="text-sm text-muted-foreground">No farms are listed right now.</p>
           )}

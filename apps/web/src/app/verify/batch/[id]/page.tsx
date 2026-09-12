@@ -14,6 +14,7 @@
  */
 
 import Link from 'next/link';
+import { RelatedLinks, Breadcrumbs } from '@/components/related-links';
 import { notFound } from 'next/navigation';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -51,6 +52,7 @@ export default async function BatchVerification({
 
   return (
     <main className="wrap verify-batch">
+      <RelatedLinks batchId={id}/><Breadcrumbs items={[{href:"/console/market",label:"Market"},{href:`/verify/batch/${id}`,label:"Batch"}]}/>
       <div className="page-heading">
         <div>
           <p className="eyebrow">BATCH VERIFICATION</p>
@@ -119,7 +121,7 @@ export default async function BatchVerification({
             <tbody>
               {b.checks.map((c) => (
                 <tr key={c.id}>
-                  <td>{c.pondLabel}</td>
+                  <td><Link href={`/verify/${c.id}`}>{c.pondLabel} report</Link></td>
                   <td className="nowrap">{c.windowStart.slice(0, 10)}</td>
                   <td className="num-col">{kg(c.claimedCo2Kg)}</td>
                   <td className="num-col">{kg(c.independentLowCo2Kg)}</td>

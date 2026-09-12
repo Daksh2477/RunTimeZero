@@ -27,7 +27,7 @@ import { LiveSimulator } from '@/components/live-simulator';
 import type { RunConfig } from '@/lib/twin';
 
 interface Pond {
-  id: string; label: string; siteName: string;
+  id: string; siteId: string; label: string; siteName: string;
   areaM2: number; depthM: number;
 }
 
@@ -69,7 +69,7 @@ function Workspace() {
     <main className="wrap simulation-page">
       {pond && (
         <Link className="back" href={`/console/pond/${pond.id}`}>
-          ← Back to {pond.label}
+          ← {pond.label} · pond records
         </Link>
       )}
 

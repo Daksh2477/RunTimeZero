@@ -46,20 +46,21 @@ export default function MarketPage() {
   const [produce, setProduce] = useState<Produce[]>([]);
   const [selected, setSelected] = useState<Listing | null>(null);
   const [query, setQuery] = useState('');
+  const [siteFilter,setSiteFilter]=useState('');
 
   const load = async () => {
     setLoading(true); setError('');
     const results=await Promise.allSettled([getMarket(),getProduce()]);
     const [c,p]=results;
-    if(c.status==='fulfilled'){setCredits(c.value);setSelected(s=>s?c.value.find(l=>l.batchId===s.batchId)??null:null);}
+    if(c.status==='fulfilled'){setCredits(c.value);setSelected(s=>s?c.value.find(l=>l.batchId===s.batchId)??null:c.value.find(l=>l.batchId===new URLSearchParams(location.search).get('batch'))??null);}
     if(p.status==='fulfilled')setProduce(p.value);
     const errors=results.filter(r=>r.status==='rejected').map(r=>String(r.reason instanceof Error?r.reason.message:r.reason));
     setError(errors.join(' · '));setLoading(false);setRevision(n=>n+1);
   };
-  useEffect(()=>{void load();}, []);
+  useEffect(()=>{setSiteFilter(new URLSearchParams(location.search).get('site')??'');void load();}, []);
 
   const match = (s: string) => s.toLowerCase().includes(query.toLowerCase());
-  const shownCredits = credits.filter(c => match(c.siteName)&&(!tier||c.tier===tier)&&(!disposition||c.disposition===disposition)&&(!refused||c.divergenceBps/100<=Number(refused))&&(!minimum||c.availableKg>=Number(minimum))).sort((a,b)=>sort==='refused'?a.divergenceBps-b.divergenceBps:sort==='site'?a.siteName.localeCompare(b.siteName):sort==='price'?a.askingInrPerTonne-b.askingInrPerTonne:b.availableKg-a.availableKg);
+  const shownCredits = credits.filter(c => match(c.siteName)&&(!siteFilter||c.siteId===siteFilter)&&(!tier||c.tier===tier)&&(!disposition||c.disposition===disposition)&&(!refused||c.divergenceBps/100<=Number(refused))&&(!minimum||c.availableKg>=Number(minimum))).sort((a,b)=>sort==='refused'?a.divergenceBps-b.divergenceBps:sort==='site'?a.siteName.localeCompare(b.siteName):sort==='price'?a.askingInrPerTonne-b.askingInrPerTonne:b.availableKg-a.availableKg);
   const shownProduce = produce.filter((p) => match(`${p.siteName} ${p.gradeLabel} ${p.pondLabel}`));
 
   const creditKg = credits.reduce((s, c) => s + c.availableKg, 0);
@@ -126,7 +127,7 @@ export default function MarketPage() {
 
         <ResourceState loading={loading} error={error}/>{error&&<button className="button secondary" onClick={()=>void load()}>Retry listings</button>}
         {tab==='activity'?<MarketActivity revision={revision} onChanged={()=>void load()}/>:tab==='create'?<MarketListingForm onChanged={()=>void load()}/>:tab==='matches'?<MarketMatches/>:tab === 'credits' ? (<>
-          <div className="market-filters"><label>Tier<select value={tier} onChange={e=>setTier(e.target.value)}><option value="">Any tier</option>{[...new Set(credits.map(c=>c.tier))].map(t=><option key={t}>{t}</option>)}</select></label><label>Disposition<select value={disposition} onChange={e=>setDisposition(e.target.value)}><option value="">Any use</option>{[...new Set(credits.map(c=>c.disposition))].map(d=><option key={d}>{d}</option>)}</select></label><label>Maximum refused (%)<input type="number" min="0" max="100" value={refused} onChange={e=>setRefused(e.target.value)}/></label><label>Minimum available (kg)<input type="number" min="0" value={minimum} onChange={e=>setMinimum(e.target.value)}/></label><label>Sort by<select value={sort} onChange={e=>setSort(e.target.value)}><option value="available">Available kg</option><option value="refused">Least refused</option><option value="price">Lowest price</option><option value="site">Farm name</option></select></label></div>
+          <div className="market-filters"><label>Farm<select value={siteFilter} onChange={e=>setSiteFilter(e.target.value)}><option value="">All farms</option>{[...new Map(credits.map(c=>[c.siteId,c.siteName])).entries()].map(([id,name])=><option value={id} key={id}>{name}</option>)}</select></label><label>Tier<select value={tier} onChange={e=>setTier(e.target.value)}><option value="">Any tier</option>{[...new Set(credits.map(c=>c.tier))].map(t=><option key={t}>{t}</option>)}</select></label><label>Disposition<select value={disposition} onChange={e=>setDisposition(e.target.value)}><option value="">Any use</option>{[...new Set(credits.map(c=>c.disposition))].map(d=><option key={d}>{d}</option>)}</select></label><label>Maximum refused (%)<input type="number" min="0" max="100" value={refused} onChange={e=>setRefused(e.target.value)}/></label><label>Minimum available (kg)<input type="number" min="0" value={minimum} onChange={e=>setMinimum(e.target.value)}/></label><label>Sort by<select value={sort} onChange={e=>setSort(e.target.value)}><option value="available">Available kg</option><option value="refused">Least refused</option><option value="price">Lowest price</option><option value="site">Farm name</option></select></label></div>
           <div className="grid gap-5">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {shownCredits.map((c, i) => (

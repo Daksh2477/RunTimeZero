@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { RelatedLinks, Breadcrumbs } from '@/components/related-links';
 import { getReport } from '@/lib/api';
 import { channelLabel, dateLabel, mass, statusInfo } from '@/lib/display';
 import { CarbonComparison, EmptyState, StatusBadge } from '@/components/ui';
@@ -11,6 +12,7 @@ export default async function VerifyPage({ params }: { params: Promise<{ id: str
   if (!c) return <main className="wrap"><Link className="back" href="/verify">← All carbon reports</Link><EmptyState title="We couldn’t open this report"><p>Check the reference and try again. The record may not exist, or the connection may be unavailable.</p><RefreshControls /></EmptyState></main>;
   const s = statusInfo(c.verdict);
   return <main className="wrap"><Link className="back" href="/verify">← All carbon reports</Link><div className="page-heading"><div><p className="eyebrow">CARBON REPORT</p><h1>{c.pond.label} · Carbon check</h1><p>{c.site.name} · {dateLabel(c.window.start)} – {dateLabel(c.window.end)}</p></div><StatusBadge verdict={c.verdict} /></div>
+    <RelatedLinks pondId={c.pond.id} siteId={c.site.id} checkId={id}/><Breadcrumbs items={[{href:"/verify",label:"Reports"},{href:`/verify/${id}`,label:c.pond.label}]}/>
     <div className="detail-grid"><div><section className={`result-hero ${s.tone}`}><p>Carbon supported by this check</p><strong className="result-number num">{mass(c.creditableCo2Kg)}</strong><p>{s.detail}</p><p className="helper">This amount is carbon dioxide (CO₂). It is not a certificate or an issued credit.</p></section>
       <section className="panel"><h2>The result, explained</h2><p className="sub">The farm reports one amount. The check compares it with available evidence.</p><CarbonComparison claimed={c.claimedCo2Kg} supported={c.creditableCo2Kg} />
         <details className="technical"><summary>Show calculations and detailed notes</summary><dl className="kv"><dt>Evidence estimate range</dt><dd>{mass(c.independentLowCo2Kg)} – {mass(c.independentHighCo2Kg)}</dd><dt>Sunlight model limit</dt><dd>{mass(c.ceilingCo2Kg)}</dd><dt>Method</dt><dd>{c.method ?? 'Earlier prototype method'}</dd></dl><p>{c.reason}</p><p className="helper">The sunlight limit depends on the model’s assumptions. New reports cap supported capture at the lower end of the evidence estimate; legacy reports may use an earlier rule.</p></details>

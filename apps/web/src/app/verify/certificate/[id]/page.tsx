@@ -12,6 +12,7 @@
  */
 
 import Link from 'next/link';
+import { RelatedLinks, Breadcrumbs } from '@/components/related-links';
 import { notFound } from 'next/navigation';
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -36,6 +37,7 @@ export default async function CertificatePage({
 
   return (
     <main className="wrap certificate">
+      <RelatedLinks batchId={c.batchId}/><Breadcrumbs items={[{href:"/console/market",label:"Market"},{href:`/verify/batch/${c.batchId}`,label:"Batch"},{href:`/verify/certificate/${id}`,label:"Certificate"}]}/>
       <article className="certificate-card">
         <p className="eyebrow">RETIREMENT CERTIFICATE</p>
         <h1>

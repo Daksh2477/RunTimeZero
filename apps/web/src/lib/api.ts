@@ -52,7 +52,7 @@ export interface Advisory {
 
 export interface PondDetail {
   pond: {
-    id: string; label: string; siteName: string; tier: string;
+    id: string; siteId: string; label: string; siteName: string; tier: string;
     areaM2: number; depthM: number; widthM: number;
   };
   telemetry: {
@@ -93,8 +93,8 @@ export interface ReportRow {
   claimedCo2Kg: number; creditableCo2Kg: number; computedAt: string;
 }
 export interface CarbonReport {
-  checkId: string; site: { name: string; tier: string; hostIndustry: string };
-  pond: { label: string; areaM2: number; widthM: number };
+  checkId: string; site: { id: string; name: string; tier: string; hostIndustry: string };
+  pond: { id: string; siteId: string; label: string; areaM2: number; widthM: number };
   window: { start: string; end: string }; claimedCo2Kg: number;
   independentCo2Kg: number; independentLowCo2Kg: number; independentHighCo2Kg: number;
   ceilingCo2Kg: number; creditableCo2Kg: number; divergence: number;
