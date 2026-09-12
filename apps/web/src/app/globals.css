@@ -716,7 +716,9 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
 .farm-list {
   display: grid;
   gap: 14px;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  /* Credit-card proportions, 3–4 to a row on a laptop and 2 on a tablet. 260px
+   * is the narrowest the 4-up reading row survives before it wraps. */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   align-items: start;
 }
 
@@ -969,7 +971,6 @@ h1, h2, h3, .big-reading-value, .wordmark { font-family: var(--font-display); }
 .big-reading-hint { font-size: .9rem; line-height: 1.55; }
 .big-reading-value { overflow-wrap: anywhere; }
 .farm .reading-grid { margin-block: 20px; }
-.farm .pond-card { padding: 24px; }
 .farm .pond-where, .farm .state-pill, .farm .helper { font-size: .95rem; }
 .farm-verdict h2 { font-size: 1.4rem; margin: 0 0 10px; }
 .state-pill.tone-watch { color: #87510c; }
@@ -1217,3 +1218,87 @@ button, a, input, select {
   .verify-row { flex-direction: column; align-items: flex-start; gap: 4px; }
   .certificate-card { padding: 20px; }
 }
+
+/* ======================================================= compact pond card
+ * The /farm card is roughly a credit card: identity, one line of state, four
+ * numbers, one action. Every sentence that used to sit under a reading is now
+ * the `title` on its cell, so the explanation is still there for a cursor and
+ * for a screen reader without costing four lines of height per pond.
+ */
+.pond-card { padding: 14px 15px; display: flex; flex-direction: column; gap: 9px; }
+.pond-card header { align-items: flex-start; gap: 8px; }
+.pond-card-id { min-width: 0; }
+.pond-card h2 { font-size: 1.05rem; line-height: 1.2; }
+.farm .pond-where { margin: 1px 0 0; font-size: 0.78rem; }
+.farm .state-pill { font-size: 0.68rem; padding: 3px 8px; }
+
+.pond-line {
+  margin: 0; font-size: 0.84rem; line-height: 1.4; color: var(--silt);
+  /* Two lines, so one wordy state cannot make its card taller than the rest. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.mini-reading-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px;
+  margin-top: auto;
+}
+.mini-reading {
+  border: 1px solid var(--hairline); border-radius: 9px;
+  padding: 7px 8px; background: var(--panel);
+  display: flex; flex-direction: column; gap: 2px; cursor: help;
+}
+.mini-reading-label {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 0.62rem; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--silt);
+}
+.mini-reading-label svg { width: 12px; height: 12px; }
+.mini-reading-value {
+  font-family: var(--font-display); font-size: 1.15rem; line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+.mini-reading-unit { font-size: 0.68rem; margin-left: 2px; color: var(--silt); }
+.mini-reading.band-optimal .mini-reading-value { color: #246b3e; }
+.mini-reading.band-warning .mini-reading-value { color: #87510c; }
+.mini-reading.band-critical .mini-reading-value { color: #b62f28; }
+.mini-reading.band-unknown .mini-reading-value { color: var(--silt); }
+.mini-reading.band-critical { border-color: #e7bdb9; background: #fdf4f3; }
+.mini-reading.band-warning { border-color: #e8d5a8; background: #fdfaf3; }
+
+.pond-card footer {
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--hairline);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.pond-card footer .button.small {
+  min-height: 34px; padding: 6px 12px; font-size: 0.8rem;
+}
+.pond-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: flex-end; }
+.pond-flag {
+  font-size: 0.68rem; padding: 2px 7px; border-radius: 999px;
+  background: var(--culture-wash); border: 1px solid var(--culture-dim); color: var(--ink);
+}
+.pond-flag.is-quiet { background: transparent; border-color: var(--hairline); color: var(--silt); cursor: help; }
+.pond-age { font-size: 0.68rem; color: var(--silt); white-space: nowrap; }
+
+/* One phone column, and the readings stay 2×2 rather than stacking to four. */
+@media (max-width: 560px) {
+  .farm-list { grid-template-columns: 1fr; }
+  .pond-card footer { flex-wrap: wrap; }
+  .pond-card footer .button.small { width: auto; }
+}
+
+/* Jump strip: chips, not cards. Scrolls sideways on a phone instead of
+ * stacking, so it never costs more than one line of height. */
+.farm-jump {
+  display: flex; gap: 7px; margin: 0 0 16px; padding-bottom: 2px;
+  overflow-x: auto; scrollbar-width: none;
+}
+.farm-jump::-webkit-scrollbar { display: none; }
+.farm-jump a {
+  flex: none; text-decoration: none; white-space: nowrap;
+  font-size: 0.78rem; padding: 6px 12px; border-radius: 999px;
+  border: 1px solid var(--hairline); background: var(--panel); color: var(--ink);
+  transition: border-color .15s, background .15s;
+}
+.farm-jump a:hover { border-color: var(--culture-dim); background: var(--culture-wash); }
