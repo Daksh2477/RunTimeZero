@@ -10,6 +10,8 @@ reformat this table, because a whole-file rewrite conflicts with everything.
 |---|---|---|---|
 2026-09-12T03:15Z |
 
+| agent-a | 4 ONNX models: training data, training, inference | `packages/models/`, `apps/api/src/models/` | 2026-09-12T03:22Z |
+
 <!-- Add rows below this line. Format:
 | agent-b | what you are building | `path/one`, `path/two` | YYYY-MM-DDTHH:MMZ |
 -->
