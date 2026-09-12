@@ -180,3 +180,65 @@
   .panel-fold-summary { grid-area: summary; margin-left: 0; }
   .panel-fold-chevron { grid-area: chevron; align-self: center; }
 }
+
+/* ==================================================== one-frame simulator
+ * The whole point of the page is cause and effect at the same time: turn a
+ * control, watch the pond and the totals move. That failed when the page was
+ * three screens tall — the slider you were dragging and the number it changed
+ * were never both visible.
+ *
+ * So the page is a frame the height of the viewport. The stage keeps the pond,
+ * the playback bar and the totals; the sidebar scrolls internally and holds one
+ * open panel at a time. `min-height: 0` on every nested flex and grid child is
+ * load-bearing: without it a child refuses to shrink below its content and the
+ * frame grows a scrollbar again.
+ *
+ * Below 900px it goes back to a normal scrolling column, because on a phone a
+ * fixed frame means a 180px-tall pond and unreachable controls.
+ */
+@media (min-width: 900px) and (min-height: 620px) {
+  .simulation-page.wrap {
+    height: calc(100dvh - 84px);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    padding-block: 12px 14px;
+  }
+  /* The heading becomes one line; the explanation lives in the tooltip and in
+     the footer note, which is still there for anyone who scrolls the sidebar. */
+  .simulation-page .page-heading { padding: 0 0 10px; border: 0; }
+  .simulation-page .page-heading h1 { font-size: 1.45rem; margin: 0; }
+  .simulation-page .page-heading p:not(.eyebrow) { display: none; }
+  .simulation-page .page-heading .eyebrow { margin-bottom: 2px; }
+  .simulation-page > .helper { display: none; }
+
+  .sim-workspace.is-framed { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+  .sim-workspace.is-framed .scenario-toolbar { margin-bottom: 10px; flex: none; }
+  .sim-workspace.is-framed .simulation-grid { flex: 1; min-height: 0; gap: 14px; }
+  .sim-workspace.is-framed .simulation-stage {
+    display: flex; flex-direction: column; min-height: 0; height: 100%;
+  }
+  /* The pond itself absorbs the slack — it is the one element that looks
+     better bigger and still reads when small. */
+  .sim-workspace.is-framed .pond-landscape { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .sim-workspace.is-framed .pond-map { flex: 1; min-height: 0; }
+  .sim-workspace.is-framed .pond-scene-svg { height: 100%; width: 100%; }
+  .sim-workspace.is-framed .simulation-playback,
+  .sim-workspace.is-framed .simulation-totals { flex: none; }
+  .sim-workspace.is-framed .simulation-totals { padding: 12px 16px; }
+  .sim-workspace.is-framed .scene-dimensions { padding-bottom: 10px; }
+  .sim-workspace.is-framed .stage-header { padding: 12px 16px 8px; }
+  .sim-workspace.is-framed .stage-header h2 { font-size: 1.1rem; }
+
+  .sim-workspace.is-framed .simulation-sidebar {
+    min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+    align-content: start; padding-right: 2px;
+  }
+  /* Expansion planning is a detour, not part of the loop — out of the frame. */
+  .sim-workspace.is-framed .workspace-expansion { display: none; }
+}
+
+/* An open accordion panel scrolls inside itself rather than pushing the ones
+   below it out of reach. */
+.panel-fold.is-accordion > .panel-fold-body { max-height: min(52vh, 460px); overflow-y: auto; }
+.panel-fold.is-accordion > summary { cursor: pointer; }
+.panel-fold.is-accordion[open] > summary { border-bottom: 1px solid var(--scene-line); }
