@@ -121,7 +121,8 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 | Seed + 14-day replay + live sim driver | ✅ |
 | Solidity contracts — evidence, credits, retirement | ✅ 10 tests |
 | Operator console — fleet board + pond detail | ✅ |
-| Public verifier · simulator | ⬜ |
+| Public verifier — no account needed | ✅ |
+| Public simulator | ⬜ |
 | 4 ONNX models | ⬜ |
 
 ---

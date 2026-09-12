@@ -30,3 +30,5 @@ npm-debug.log*
 
 # hardhat local deploy output — testnet addresses get committed deliberately
 apps/contracts/addresses.json
+
+*.pdf

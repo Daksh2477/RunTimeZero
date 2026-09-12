@@ -8,6 +8,7 @@ import { healthcheck } from './db/client.ts';
 import { startMqttIngest } from './ingest/mqtt.ts';
 import { fleetRouter } from './routes/fleet.ts';
 import { pondsRouter } from './routes/ponds.ts';
+import { verifyRouter } from './routes/verify.ts';
 
 const app = express();
 app.use(express.json());
@@ -36,6 +37,7 @@ app.get('/health', async (_req, res) => {
 
 app.use('/fleet', fleetRouter);
 app.use('/ponds', pondsRouter);
+app.use('/verify', verifyRouter);
 
 const port = Number(process.env.API_PORT ?? 4000);
 
