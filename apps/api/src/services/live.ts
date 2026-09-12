@@ -8,6 +8,7 @@
 
 import { pool } from '../db/client.ts';
 import { getPondDetail } from './fleet-service.ts';
+import { signalsFor, type PinSignal } from './circuit.ts';
 
 export type LiveSource = 'sim' | 'device';
 
@@ -26,6 +27,8 @@ export interface LiveTelemetry {
     // The firmware has no paddlewheel channel yet; null means "not reported".
     paddlewheelOn: boolean | null;
   };
+  /** What the simulated node's pins read to produce these values. */
+  signals: PinSignal[];
 }
 
 type Listener = (event: string, data: unknown) => void;
@@ -51,10 +54,10 @@ async function siteIdFor(pondId: string): Promise<string | null> {
 }
 
 export async function publishTelemetry(
-  t: Omit<LiveTelemetry, 'siteId'>,
+  t: Omit<LiveTelemetry, 'siteId' | 'signals'>,
 ): Promise<void> {
   const siteId = await siteIdFor(t.pondId);
-  const event: LiveTelemetry = { ...t, siteId };
+  const event: LiveTelemetry = { ...t, siteId, signals: signalsFor(t.readings) };
   lastSeen.set(t.pondId, { siteId, source: t.source, lastAt: t.at });
   for (const listener of listeners) listener('telemetry', event);
   void publishAdvisories(t.pondId, t.at);

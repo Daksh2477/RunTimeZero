@@ -17,6 +17,7 @@
 import { Router, type Response } from 'express';
 import { pool } from '../db/client.ts';
 import { buildSensorPlan } from '../services/sensor-plan.ts';
+import { kitFor, nodeCircuit, nodesForPond, signalsFor, type Kit } from '../services/circuit.ts';
 
 export const landRouter = Router();
 
@@ -135,6 +136,61 @@ landRouter.get('/site/:siteId/sensor-plan', async (req, res) => {
     const plan = await buildSensorPlan(req.params.siteId);
     if (!plan) return res.status(404).json({ error: 'No such site' });
     return res.json(plan);
+  } catch (err) {
+    return send(res, err);
+  }
+});
+
+/**
+ * The simulated node circuit for a pond of this size and tier: parts, pins,
+ * nets, ₹ bill of materials and power budget. ?areaM2=&tier= or ?kit=
+ */
+landRouter.get('/hardware/circuit', (req, res) => {
+  const areaM2 = Number(req.query.areaM2);
+  const tier = typeof req.query.tier === 'string' ? req.query.tier : 'small';
+  const kits: Kit[] = ['basic', 'standard', 'industrial'];
+  const kit = kits.includes(req.query.kit as Kit)
+    ? req.query.kit as Kit
+    : kitFor(Number.isFinite(areaM2) ? areaM2 : 5_000, tier);
+  const sizing = Number.isFinite(areaM2) && areaM2 > 0 ? nodesForPond(areaM2) : null;
+  const circuit = nodeCircuit(kit);
+  res.json({ sizing, circuit, totalInr: circuit.bomInr * (sizing?.nodes ?? 1) });
+});
+
+/** What each pin reads for a pond state. ?tempC&ph&doMgL&od&paddlewheelOn */
+landRouter.get('/hardware/signals', (req, res) => {
+  const n = (k: string) => Number(req.query[k]);
+  const readings = { tempC: n('tempC'), ph: n('ph'), doMgL: n('doMgL'), od: n('od') };
+  if (Object.values(readings).some((v) => !Number.isFinite(v))) {
+    return res.status(400).json({ error: 'tempC, ph, doMgL and od are required numbers' });
+  }
+  const pw = req.query.paddlewheelOn;
+  return res.json(signalsFor({ ...readings, paddlewheelOn: pw === undefined ? null : pw === 'true' }));
+});
+
+/** Every pond at a site as simulated nodes, with the site's hardware bill. */
+landRouter.get('/site/:siteId/circuit', async (req, res) => {
+  try {
+    const { rows: site } = await pool.query('SELECT id, name, tier FROM sites WHERE id = $1', [req.params.siteId]);
+    if (!site[0]) return res.status(404).json({ error: 'No such site' });
+    const { rows } = await pool.query(
+      'SELECT id, label, area_m2 FROM ponds WHERE site_id = $1 AND active ORDER BY label', [req.params.siteId],
+    );
+    const ponds = rows.map((p) => {
+      const areaM2 = Number(p.area_m2);
+      const kit = kitFor(areaM2, site[0].tier);
+      const { nodes, because } = nodesForPond(areaM2);
+      const circuit = nodeCircuit(kit);
+      return { pondId: p.id, label: p.label, areaM2, kit, nodes, because, nodeInr: circuit.bomInr, totalInr: nodes * circuit.bomInr };
+    });
+    const nodes = ponds.reduce((s, p) => s + p.nodes, 0);
+    // Industrial nodes talk LoRa, so they need somewhere to land.
+    const gatewayInr = ponds.some((p) => p.kit === 'industrial') ? 11_000 : 0;
+    return res.json({
+      site: site[0],
+      ponds,
+      totals: { nodes, gatewayInr, hardwareInr: ponds.reduce((s, p) => s + p.totalInr, 0) + gatewayInr },
+    });
   } catch (err) {
     return send(res, err);
   }
