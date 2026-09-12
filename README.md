@@ -122,7 +122,7 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 | Solidity contracts — evidence, credits, retirement | ✅ 10 tests |
 | Operator console — fleet board + pond detail | ✅ |
 | Public verifier — no account needed | ✅ |
-| Public simulator | ⬜ |
+| Public simulator | ✅ |
 | 4 ONNX models | ⬜ |
 
 ---
