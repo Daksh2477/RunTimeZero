@@ -40,6 +40,10 @@ models on that real data and tell us honestly whether they got better or worse.
 
 ---
 
+> **Daksh has already done steps 1–3.** He downloaded ATP3, found the real
+> column names, and wrote the parser; his work is merged in. If you are
+> picking this up, go straight to Step 4 — you only need the dataset on disk.
+
 ## Step 1 — download the data
 
 Go to **`data.nrel.gov/submissions/76`**
@@ -51,9 +55,12 @@ Download it, unzip it, and put the files here:
 
 ```
 packages/models/data/atp3/
+  ATP3-UFS-Instrumentation.csv
+  ATP3-UFS-PondOperationalData (1).csv
 ```
 
-(Create the folder if it does not exist.)
+(Create the folder if it does not exist. Those two filenames are what the
+loader expects — they are the names the download actually ships with.)
 
 Note: ATP3 records contamination and culture-health indicators, so there are
 real crash-like events in there. Whether they line up cleanly with our
