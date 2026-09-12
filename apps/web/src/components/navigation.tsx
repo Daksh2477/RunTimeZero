@@ -38,11 +38,18 @@ const NAV = [
 export function Navigation() {
   const path = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
-  const { role, ready } = useRole();
+  const { role } = useRole();
 
-  // Before the role is read, show nothing rather than flashing the full set.
-  if (!ready) return <nav className="main-nav" aria-label="Main navigation" />;
-
+  /*
+   * No early return while the account is still being read.
+   *
+   * `ready` used to be a localStorage read that resolved in the same tick;
+   * it is now a round trip to /auth/me. Blanking the whole bar until that
+   * lands took the sign-in link off the top of every page for as long as the
+   * request took, and forever if it failed — which is why the site looked
+   * like it had lost its way in. Show the signed-out set meanwhile; it is
+   * the correct answer for anyone who is in fact signed out.
+   */
   const visible = role ? NAV.filter((n) => canAccess(role, n.href)) : NAV.filter(n => ['/console/market','/verify','/sim'].includes(n.href));
   const active = visible.filter(n => path === n.href || path.startsWith(n.href + '/')).sort((a,b) => b.href.length - a.href.length)[0]?.href;
 
