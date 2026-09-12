@@ -39,3 +39,6 @@ apps/contracts/addresses.json
 packages/models/data/
 deploy/last-deploy.log
 packages/physics/pkg-web/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
