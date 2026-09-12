@@ -26,6 +26,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Wordmark } from '@/components/logo';
 import { Navigation } from '@/components/navigation';
 
 /** Far enough that a stray touch-scroll does not make it jump. */
@@ -55,8 +56,7 @@ export function Masthead() {
       <header className={`masthead${simulation ? ' masthead-simulation' : lifted ? ' is-lifted' : ''}`}>
         <div className="masthead-inner">
           <Link href="/" className="wordmark" aria-label="AlgaCarbon home">
-            <span className="brand-icon" aria-hidden="true">a</span>
-            <span className="wordmark-text">Alga<span>Carbon</span></span>
+            <Wordmark />
           </Link>
           <Navigation />
         </div>

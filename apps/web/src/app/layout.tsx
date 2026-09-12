@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { DM_Sans, IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
+import { Wordmark } from '@/components/logo';
 import { Masthead } from '@/components/masthead';
 import { AccountGate } from '@/components/account-gate';
 import './globals.css';
@@ -48,6 +49,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <a className="skip-link" href="#main-content">Skip to page content</a>
     <Masthead />
     <div id="main-content" tabIndex={-1}><AccountGate>{children}</AccountGate></div>
-    <footer className="footer"><span>AlgaCarbon · RunTimeZero</span><span>Prototype results may use simulated data. Carbon credits require a separate review.</span></footer>
+    <footer className="footer"><Link href="/" className="wordmark" aria-label="AlgaCarbon home"><Wordmark /></Link><span>Prototype results may use simulated data. Carbon credits require a separate review.</span></footer>
   </body></html>;
 }
