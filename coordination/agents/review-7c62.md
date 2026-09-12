@@ -19,3 +19,5 @@ Remaining backend issue: actual GET /verify/:id returns 500 despite /verify list
 See coordination/messages/20260912T-codex-frontend-ready.md.
 
 Latest pass: badge removed; dimensioned animated scene with selectable sensors, real model scenario presets, adjacent readings/settings, mobile stacking. tsc + production build + 27 Chrome checks passed. See messages/20260912T-codex-simulator-complete.md.
+
+Readability pass complete: current front1.0 port retained, typography enlarged, mobile nav/menu fixed, farm→market/report shortcuts, issuance wording and certificate link added. tsc/build and browser validation pass. See messages/20260912T-codex-comfort-complete.md. Frontend ownership remains Codex.
