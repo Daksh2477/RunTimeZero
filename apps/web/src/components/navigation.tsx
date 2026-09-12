@@ -14,17 +14,18 @@ import { usePathname } from 'next/navigation';
 import { Chart, Flask, Leaf, Users } from '@/components/icons';
 
 const NAV = [
-  { href: '/farm', label: 'Farm', icon: Leaf },
-  { href: '/verify', label: 'Market', icon: Chart },
-  { href: '/sim', label: 'Lab', icon: Flask },
-  { href: '/console', label: 'Fleet', icon: Users },
+  { href: '/farm', label: 'My ponds', icon: Leaf },
+  { href: '/verify', label: 'Carbon reports', icon: Chart },
+  { href: '/sim', label: 'Simulator', icon: Flask },
+  { href: '/console', label: 'All ponds', icon: Users },
 ] as const;
 
 export function Navigation() {
   const path = usePathname();
   return (
     <nav className="main-nav" aria-label="Main navigation">
-      {NAV.map(({ href, label, icon: Icon }) => (
+      {path === '/' && <><Link href="/#how-it-works">How it works</Link><Link href="/#who-its-for">Who it helps</Link></>}
+      {(path === '/' ? NAV.slice(0, 1) : NAV).map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
           href={href}

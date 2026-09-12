@@ -1,169 +1,51 @@
-/**
- * Landing page, and the index for everything in the project.
- *
- * Three different people arrive here — a farmer, someone checking a credit
- * they were sold, and someone deciding whether any of this is real — and each
- * needs a different door. The argument comes first because it is short and it
- * is the whole product: a claim nobody can check is worth nothing.
- *
- * The map at the bottom lists what is built AND what is not. A hackathon
- * index that quietly omits the unfinished half is the same dishonesty this
- * project exists to argue against, so unbuilt parts are listed and marked.
- */
-
 import Link from 'next/link';
+import { AudienceExplorer } from '@/components/audience-explorer';
 import { REPO_URL } from '@/lib/site';
+import './home.css';
 
 export const metadata = {
-  title: 'AlgaCarbon — carbon you can check',
-  description:
-    'Algae ponds absorb CO₂. We check the claim against evidence the farm does not control, and credit the lower of the two.',
+  title: 'Healthier ponds. Clearer carbon claims.',
+  description: 'AlgaCarbon brings algae pond monitoring, carbon evidence and an interactive simulator into one place for farmers, buyers and researchers.',
 };
 
-/*
- * Doors by audience, not by task. Chetan's frontend branch had this right:
- * a farmer, a researcher and an investor want genuinely different screens,
- * and the difference is not cosmetic — the farmer's view has no charts on it
- * at all, because nobody standing at a pond bank reads a time series.
- */
-const DOORS = [
-  {
-    href: '/farm',
-    who: 'I run ponds',
-    what: 'What needs doing today, in plain words. No graphs — just the pond, the problem and the fix.',
-    cta: 'Open my ponds',
-  },
-  {
-    href: '/verify',
-    who: 'I was given a carbon credit',
-    what: 'Check what it is based on. Every report shows its evidence and what we could not confirm.',
-    cta: 'Check a report',
-  },
-  {
-    href: '/sim',
-    who: 'I study or fund this',
-    what: 'Run the physics yourself. Change the pond, stop the paddlewheel, and see every number move with the model.',
-    cta: 'Open the simulator',
-  },
-];
-
-/** Everything in the project, built or not. `todo` renders greyed and unlinked. */
-const MAP: { group: string; items: { name: string; href?: string; note: string; todo?: boolean }[] }[] = [
-  {
-    group: 'For the farm',
-    items: [
-      { name: 'Today’s jobs', href: '/farm', note: 'The farmer’s view. One verdict per pond, the action, and what ignoring it costs. No charts' },
-      { name: 'Full console', href: '/console', note: 'Readings, trends and divergence figures — for researchers and investors' },
-      { name: 'Live simulator', href: '/sim', note: 'The same physics engine, running in your browser' },
-      { name: 'Expansion planner', href: '/sim', note: 'What more land costs in sensors, power and payback' },
-    ],
-  },
-  {
-    group: 'For the buyer',
-    items: [
-      { name: 'Verification reports', href: '/verify', note: 'What was claimed, what the evidence showed, what we credited' },
-      { name: 'Marketplace', note: 'Buy and retire credits', todo: true },
-      { name: 'Credit inventory', note: 'What you hold and what you have retired', todo: true },
-    ],
-  },
-  {
-    group: 'Underneath',
-    items: [
-      { name: 'Physics engine', href: `${REPO_URL}/tree/main/packages/physics`, note: 'Rust, compiled to 34 KB of WebAssembly. Same binary in the browser and on the server' },
-      { name: 'Sensor firmware', href: `${REPO_URL}/tree/main/apps/firmware`, note: 'Real ESP32 code on a simulated board, publishing over MQTT' },
-      { name: 'Models', href: `${REPO_URL}/tree/main/packages/models`, note: 'Crash risk, divergence and biomass. Trained in Python, shipped as readable JSON weights' },
-      { name: 'Contracts', href: `${REPO_URL}/tree/main/apps/contracts`, note: 'Evidence, credits and retirement on-chain. Written and tested, not yet wired to the app', todo: true },
-    ],
-  },
-];
-
 export default function Landing() {
-  return (
-    <main className="wrap landing">
-      <section className="hero">
-        <p className="eyebrow">ALGAE PONDS · CARBON · EVIDENCE</p>
-        <h1>A carbon claim is only worth what you can check.</h1>
-        <p className="hero-lede">
-          Algae ponds pull CO₂ out of the air while they clean wastewater. Today
-          the farm reports its own number and nobody can verify it — so we
-          compare that number against evidence the farm does not control, and
-          count only the lower of the two.
-        </p>
-
-        <div className="rule-card">
-          <p className="rule-line">
-            <span>what the farm claims</span>
-            <em>vs</em>
-            <span>what the evidence shows</span>
-          </p>
-          <p className="rule-out">We count the smaller one.</p>
-          <p className="helper">
-            So overstating earns nothing. There is no number a farm can write
-            down that beats the evidence.
-          </p>
+  return <main className="home">
+    <section className="home-hero">
+      <div className="home-shell home-hero-grid">
+        <div>
+          <p className="home-kicker">SMALL ALGAE. BIG POSSIBILITIES.</p>
+          <h1>Healthier ponds.<br /><span>Clearer carbon claims.</span></h1>
+          <p className="home-lede">Know what’s happening in your algae ponds. Spot problems, explore changes, and see the evidence behind every carbon claim — all in one place.</p>
+          <div className="home-actions"><Link className="button home-primary" href="/farm">See your ponds <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="/sim">Try the simulator</Link></div>
+          <p className="home-caption">Explore the prototype. No sign-up needed.</p>
         </div>
-      </section>
-
-      <section className="doors">
-        <h2 className="doors-title">Where would you like to start?</h2>
-        {DOORS.map((d) => (
-          <Link className="door" key={d.href + d.who} href={d.href}>
-            <strong>{d.who}</strong>
-            <span>{d.what}</span>
-            <em>{d.cta} →</em>
-          </Link>
-        ))}
-      </section>
-
-      <section className="how">
-        <h2>How the checking works</h2>
-        <ol className="how-list">
-          <li>
-            <strong>The pond reports what it captured.</strong> Sensors in the
-            water, or a note from the farmer. Either way it is a claim, not yet
-            a fact.
-          </li>
-          <li>
-            <strong>We look from outside.</strong> Satellite images of the pond,
-            weighed harvests at the bridge, and the sunlight that actually fell
-            on that patch of ground.
-          </li>
-          <li>
-            <strong>Sunlight sets a hard ceiling.</strong> Photosynthesis needs
-            about eight particles of light per molecule of CO₂. Past that limit
-            a claim is not doubtful, it is impossible.
-          </li>
-          <li>
-            <strong>We count the lower figure</strong> and show our working, so
-            anyone can disagree with the evidence rather than with us.
-          </li>
-        </ol>
-      </section>
-
-      <section className="site-map">
-        <h2>Everything in the project</h2>
-        <p className="sub">
-          Including the parts that are not finished. Those are marked.
-        </p>
-        {MAP.map((g) => (
-          <div className="map-group" key={g.group}>
-            <h3>{g.group}</h3>
-            <ul>
-              {g.items.map((i) => (
-                <li key={i.name} className={i.todo ? 'is-todo' : undefined}>
-                  {i.href ? (
-                    <Link href={i.href}>{i.name}</Link>
-                  ) : (
-                    <span className="map-name">{i.name}</span>
-                  )}
-                  {i.todo && <span className="tag">not built yet</span>}
-                  <p className="helper">{i.note}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </section>
-    </main>
-  );
+        <div className="home-preview" aria-label="Illustration of pond monitoring and a carbon check">
+          <div className="home-preview-top"><span><span className="home-dot" /> A clearer view of your pond</span><span className="home-demo">Illustration</span></div>
+          <div className="home-pond-scene" aria-hidden="true"><div className="home-raceway"><div className="home-island" /><div className="home-paddle" /></div><span className="home-sensor sensor-one" /><span className="home-sensor sensor-two" /><span className="home-scene-label">ALGAE RACEWAY POND</span></div>
+          <div className="home-preview-readings"><div><span>01 / Monitor</span><strong>Read the water</strong><small>Temperature · pH · oxygen</small></div><div><span>02 / Understand</span><strong>Find the next step</strong><small>Plain-language pond alerts</small></div></div>
+          <div className="home-evidence"><span className="home-check" aria-hidden="true">✓</span><div><strong>Look beyond the claim</strong><p>Compare reported capture with supporting evidence.</p></div><span aria-hidden="true">↗</span></div>
+        </div>
+      </div>
+    </section>
+    <div className="home-principles home-shell"><span>Pond health at a glance</span><span>Evidence you can inspect</span><span>Experiments before investment</span></div>
+    <section className="home-section home-shell" id="how-it-works">
+      <div className="home-section-heading"><p className="eyebrow">FROM POND TO PROOF</p><h2>Less guesswork.<br />A clearer next step.</h2><p>Algae capture carbon as they grow. Understanding that growth — and checking what it means — takes more than a single number.</p></div>
+      <div className="home-steps">
+        {[['01', 'See what’s happening', 'Bring pond readings and alerts together. Find the ponds that need attention without digging through charts.'], ['02', 'Check the evidence', 'Compare a farm’s reported capture with available observations and a physics-based estimate. See when records disagree or are missing.'], ['03', 'Make an informed decision', 'Review a saved report, investigate a pond, or test a change in the simulator before trying it on the farm.']].map(([n,title,body]) => <article key={n}><span className="home-step-number">{n}</span><h3>{title}</h3><p>{body}</p></article>)}
+      </div>
+    </section>
+    <section className="home-audiences" id="who-its-for"><div className="home-shell home-section"><div className="home-section-heading"><p className="eyebrow">ONE PLATFORM, DIFFERENT NEEDS</p><h2>Find your way in.</h2><p>Start with the view that answers your questions.</p></div><AudienceExplorer /></div></section>
+    <section className="home-section home-shell home-trust">
+      <div><p className="eyebrow">CONFIDENCE COMES FROM CLARITY</p><h2>A number is useful.<br />Its evidence is better.</h2><p>AlgaCarbon keeps the reported claim, the supporting estimate and the result of the check visible. You can see what supports a result and what still needs review.</p><Link className="home-text-link" href="/verify">Explore carbon reports <span aria-hidden="true">→</span></Link></div>
+      <div className="home-trust-list"><article><span aria-hidden="true">↔</span><div><h3>Compare, don’t just collect</h3><p>Review the farm’s claim alongside other available observations.</p></div></article><article><span aria-hidden="true">≈</span><div><h3>Show the uncertainty</h3><p>See an estimated range and a conservative supported amount, rather than hiding uncertainty in a single total.</p></div></article><article><span aria-hidden="true">↗</span><div><h3>Keep capture and credits separate</h3><p>A capture check is evidence to review. Issuing a carbon credit also requires decisions about storage, durability and eligibility.</p></div></article></div>
+    </section>
+    <section className="home-section home-shell home-faq"><div><p className="eyebrow">A FEW THINGS TO KNOW</p><h2>Start with the basics.</h2></div><div>
+      <details><summary>What is AlgaCarbon?</summary><p>A hackathon prototype that connects algae pond monitoring, carbon checks and growth simulation. It helps people understand pond conditions and inspect the evidence behind reported carbon capture.</p></details>
+      <details><summary>Is everything shown here live farm data?</summary><p>No. The prototype can include simulated readings and sample evidence. The simulator is a model, and the homepage illustration is not a live pond. Review the data sources in a report before relying on a result.</p></details>
+      <details><summary>Can I buy carbon credits here?</summary><p>Not yet. You can browse carbon reports and see how their amounts were checked. Trading, payments and credit retirement are not connected to this interface.</p></details>
+      <details><summary>Do I need sensors to try it?</summary><p>No sensors are needed to explore the browser simulator or existing reports. Monitoring your own pond requires a site and sensors to be configured; that setup is not available through this interface yet.</p></details>
+      <details><summary>Can I inspect how it works?</summary><p>Yes. The project source includes the models, physics engine and application code. <a href={REPO_URL}>Explore the RunTimeZero repository.</a></p></details>
+    </div></section>
+    <section className="home-shell home-final"><p className="home-kicker">SEE IT FOR YOURSELF</p><h2>Your next decision starts<br />with a clearer picture.</h2><div className="home-actions"><Link className="button home-primary" href="/farm">Open pond monitoring <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="/sim">Experiment with a pond</Link></div></section>
+  </main>;
 }
