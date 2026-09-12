@@ -153,3 +153,22 @@ main button.rounded-xl {
   .hw-channels + .helper { margin-top: 14px; }
 }
 @media (max-width: 420px) { body .wordmark-text { display: none; } }
+
+/* Phone workspace navigation reserves its own safe-area space. */
+.phone-navigation { display: none; }
+@media(max-width:767px) {
+  body:has(.phone-navigation) { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+  body .phone-navigation { display: flex; position: fixed; z-index: 80; inset: auto 0 0; padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); background: #081512; border-top: 1px solid #284337; }
+  body .phone-navigation a { flex: 1; min-width: 0; min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #c5d5cd; font-size: .65rem; text-decoration: none; }
+  body .phone-navigation svg { width: 20px; height: 20px; }
+  body .phone-navigation a[aria-current=page] { color: #71d69b; background: #20372c; border-radius: 8px; }
+  body .has-account .mobile-nav-toggle, body .has-account .main-nav { display: none; }
+  body .has-account { margin-left: auto; flex: 0 1 auto; }
+  body .masthead:has(.phone-navigation), body .masthead:has(.phone-navigation).is-lifted { position: static; transform: none; }
+  body button, body .button, body input:not([type=checkbox]):not([type=radio]), body select, body summary { min-height: 44px; }
+  body .num { white-space: nowrap; }
+  body .detail-grid > *, body .panel, body .wrap { min-width: 0; }
+  body .reference, body .kv dd { overflow-wrap: anywhere; }
+  body .hw-table, body .verify-table { display: block; max-width: 100%; overflow-x: auto; }
+  body .auth-form button[type=submit] { position: sticky; bottom: 8px; z-index: 1; }
+}

@@ -51,10 +51,11 @@ export function Navigation() {
    * the correct answer for anyone who is in fact signed out.
    */
   const visible = role ? NAV.filter((n) => canAccess(role, n.href)) : NAV.filter(n => ['/console/market','/verify','/sim'].includes(n.href));
+  const phone = role === 'admin' ? [{href:'/console/admin',label:'Admin',icon:Shield}, ...visible.filter(n=>n.href!=='/console/researcher')] : role === 'buyer' ? [{href:'/console/investor',label:'Invest',icon:Chart}, ...visible] : visible;
   const active = visible.filter(n => path === n.href || path.startsWith(n.href + '/')).sort((a,b) => b.href.length - a.href.length)[0]?.href;
 
   return (
-    <div className="nav-cluster">
+    <div className={`nav-cluster${role ? " has-account" : ""}`}>
       {<button type="button" className="mobile-nav-toggle" aria-expanded={menuOpen} aria-controls="app-navigation" onClick={() => setMenuOpen(open => !open)}>{visible.find(n=>n.href===active)?.label ?? 'Menu'} <span aria-hidden="true">{menuOpen ? '−' : '☰'}</span></button>}
       <nav id="app-navigation" className="main-nav" data-open={menuOpen} aria-label="Main navigation">
       {visible.map(({ href, label, icon: Icon }) => (
@@ -72,6 +73,7 @@ export function Navigation() {
       ))}
 
       </nav>
+      {role && path !== '/sim' && <nav className="phone-navigation" aria-label="Workspace navigation">{phone.slice(0,5).map(({href,label,icon:Icon})=><Link key={href} href={href} aria-current={path===href?'page':undefined}><Icon /><span>{label==='Marketplace'?'Market':label==='Carbon reports'?'Reports':label==='Research data'?'Research':label}</span></Link>)}</nav>}
       {role ? (
         <Link href="/enter" className="role-pill">
           <span className="role-name">{ROLE_META[role].label} · </span>My account
