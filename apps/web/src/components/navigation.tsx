@@ -15,24 +15,24 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Chart, Coins, Cog, Cpu, Flask, Leaf, Map, Shield, Users } from '@/components/icons';
+import { Chart, Coins, Flask, Leaf, Shield } from '@/components/icons';
 import { ROLE_META, canAccess, useRole } from '@/lib/session';
 
 /*
- * One distinct icon each. An earlier version reused four icons across eight
- * destinations, which on a phone — where the labels are hidden — left two
+ * Four destinations, one distinct icon each. Land management moved inside
+ * "My ponds" (it is the same job), the sensor page is reached from the
+ * homepage, and the separate all-ponds and admin consoles are gone — a top bar
+ * with eight entries is a top bar nobody reads.
+ *
+ * An earlier version reused four icons across eight
  * identical leaves, two charts and two flasks in a row.
  */
 const NAV = [
   { href: '/farm', label: 'My ponds', icon: Leaf },
-  { href: '/farm/land', label: 'My land', icon: Map },
   { href: '/console/market', label: 'Marketplace', icon: Coins },
   { href: '/console/researcher', label: 'Research data', icon: Flask },
   { href: '/verify', label: 'Carbon reports', icon: Shield },
   { href: '/sim', label: 'Simulator', icon: Chart },
-  { href: '/hardware', label: 'The sensor', icon: Cpu },
-  { href: '/console', label: 'All ponds', icon: Users },
-  { href: '/console/admin', label: 'Admin', icon: Cog },
 ] as const;
 
 export function Navigation() {

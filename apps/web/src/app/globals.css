@@ -717,9 +717,16 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
   display: grid;
   gap: 14px;
   /* Credit-card proportions, 3–4 to a row on a laptop and 2 on a tablet. 260px
-   * is the narrowest the 4-up reading row survives before it wraps. */
+   * is the narrowest the 4-up reading row survives before it wraps.
+   *
+   * `grid-auto-rows: 1fr` and stretch are what make every card IDENTICAL in
+   * size rather than each one sized to its own text — a grid of cards that are
+   * nearly the same height reads as a mistake. The readings sit on
+   * `margin-top: auto` inside, so the slack lands between the state line and
+   * the numbers instead of stretching anything. */
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  align-items: start;
+  grid-auto-rows: 1fr;
+  align-items: stretch;
 }
 
 .pond-card {
@@ -1225,7 +1232,7 @@ button, a, input, select {
  * the `title` on its cell, so the explanation is still there for a cursor and
  * for a screen reader without costing four lines of height per pond.
  */
-.pond-card { padding: 14px 15px; display: flex; flex-direction: column; gap: 9px; }
+.pond-card { padding: 14px 15px; display: flex; flex-direction: column; gap: 9px; min-height: 196px; }
 .pond-card header { align-items: flex-start; gap: 8px; }
 .pond-card-id { min-width: 0; }
 .pond-card h2 { font-size: 1.05rem; line-height: 1.2; }
@@ -1287,21 +1294,6 @@ button, a, input, select {
   .pond-card footer { flex-wrap: wrap; }
   .pond-card footer .button.small { width: auto; }
 }
-
-/* Jump strip: chips, not cards. Scrolls sideways on a phone instead of
- * stacking, so it never costs more than one line of height. */
-.farm-jump {
-  display: flex; gap: 7px; margin: 0 0 16px; padding-bottom: 2px;
-  overflow-x: auto; scrollbar-width: none;
-}
-.farm-jump::-webkit-scrollbar { display: none; }
-.farm-jump a {
-  flex: none; text-decoration: none; white-space: nowrap;
-  font-size: 0.78rem; padding: 6px 12px; border-radius: 999px;
-  border: 1px solid var(--hairline); background: var(--panel); color: var(--ink);
-  transition: border-color .15s, background .15s;
-}
-.farm-jump a:hover { border-color: var(--culture-dim); background: var(--culture-wash); }
 
 /* Inline pond editor on /farm/land. Opens under the row it belongs to. */
 .land-row-actions { display: flex; gap: 7px; flex-wrap: wrap; align-items: flex-start; }
@@ -1377,3 +1369,30 @@ button, a, input, select {
 .hw-channel-tag { font-size: 0.68rem; padding: 2px 8px; border-radius: 999px; background: var(--culture-wash); border: 1px solid var(--culture-dim); }
 .hw-notes { margin: 14px 0 0; padding-left: 18px; font-size: 0.82rem; color: var(--silt); }
 .hw-notes li { margin-bottom: 5px; }
+
+/* The one thing to do on this page, sized like it. */
+.farm-manage {
+  display: flex; align-items: center; gap: 13px;
+  margin: 0 0 18px; padding: 15px 18px;
+  text-decoration: none; color: var(--ink);
+  border: 2px solid var(--culture); border-radius: var(--radius);
+  background: var(--culture-wash);
+  transition: background .15s, transform .15s, box-shadow .15s;
+}
+.farm-manage:hover { background: #e6f1e3; box-shadow: 0 4px 16px #17321a14; }
+.farm-manage:active { transform: translateY(1px); }
+.farm-manage-icon {
+  flex: none; width: 40px; height: 40px; border-radius: 11px;
+  display: grid; place-items: center; font-size: 1.15rem;
+  background: var(--culture); color: #fff;
+}
+.farm-manage > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
+.farm-manage strong { font-size: 1.05rem; }
+.farm-manage > span:nth-child(2) > span { font-size: 0.84rem; color: var(--silt); }
+.farm-manage-go { margin-left: auto; font-size: 1.2rem; color: var(--culture); }
+
+@media (max-width: 480px) {
+  .farm-manage { padding: 13px 14px; gap: 11px; }
+  .farm-manage strong { font-size: 0.98rem; }
+  .farm-manage > span:nth-child(2) > span { font-size: 0.78rem; }
+}

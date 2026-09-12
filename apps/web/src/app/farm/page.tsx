@@ -54,19 +54,19 @@ export default async function FarmPage() {
         <p>{!ponds.length ? 'Explore a sample pond while your site is being configured.' : 'Readings can be old or incomplete. Check the time shown on each pond before acting.'}</p>
       </section>
 
-      {/* A strip under the masthead rather than three full cards. They are
-          navigation, and navigation competing with the ponds for the top of
-          the page was the reason the ponds started below the fold. */}
-      <nav className="farm-jump" aria-label="Farm tasks">
-        <Link href="/farm/land" title="Add a pond, edit its size, or take one out of use">
-          My land
-        </Link>
-        <Link href="/verify" title="See what the evidence supports">Carbon records</Link>
-        <Link href="/console/market" title="Browse carbon batches and algae produce">
-          Marketplace
-        </Link>
-        <Link href="/sim" title="Try a change before you make it">Plan ahead</Link>
-      </nav>
+      {/* One action, not four links. Managing land is the only thing a farmer
+          comes to this page to DO — everything else on the old chip strip is
+          already in the top bar, so it was competing with the ponds for
+          attention and winning. */}
+      <Link className="farm-manage" href="/farm/land">
+        <span className="farm-manage-icon" aria-hidden="true">✎</span>
+        <span>
+          <strong>Edit ponds and land</strong>
+          <span>Add a pond, change its size or depth, or take one out of use</span>
+        </span>
+        <span className="farm-manage-go" aria-hidden="true">→</span>
+      </Link>
+
       <section className="farm-list">
         {ponds.map(({ pond, site }) => (
           <PondCard key={pond.id} pond={pond} siteName={site} />
