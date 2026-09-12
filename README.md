@@ -20,6 +20,9 @@ without an account.
 
 </div>
 
+> **Picking this up cold?** Start with [`HANDOFF.md`](HANDOFF.md) — current
+> state, what is broken, what is unbuilt, and the traps.
+
 ---
 
 ## The problem
