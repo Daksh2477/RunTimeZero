@@ -119,7 +119,7 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 | Reconciliation engine | ✅ verified on 7 live ponds |
 | Farm advisory engine (7 advisory types) | ✅ |
 | Seed + 14-day replay + live sim driver | ✅ |
-| Contracts on Amoy | ⬜ |
+| Solidity contracts — evidence, credits, retirement | ✅ 10 tests |
 | Operator console — fleet board + pond detail | ✅ |
 | Public verifier · simulator | ⬜ |
 | 4 ONNX models | ⬜ |
