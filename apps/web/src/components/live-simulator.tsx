@@ -18,6 +18,7 @@ import {
   DEFAULT_CONFIG, runTwin, type RunConfig, type RunResult,
 } from '@/lib/twin';
 import { ExpansionPanel } from '@/components/expansion-panel';
+import { PondView } from '@/components/pond-view';
 
 interface Props {
   /** Seeded from a real pond when opened from the console. */
@@ -36,6 +37,26 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   const pending = useRef<number | null>(null);
 
   /*
+   * Playback across the simulated days. The pond drawing animates continuously
+   * on its own clock; this only decides which day's numbers it is showing, so
+   * scrubbing stays smooth even while the physics is re-running.
+   */
+  const [playDay, setPlayDay] = useState(0);
+  const [playing, setPlaying] = useState(true);
+
+  /* Probes the operator has dropped on the water. Positions are 0..1 so they
+   * survive a resize and a change of pond size. */
+  const [sensors, setSensors] = useState([
+    { id: 'ph', x: 0.28, y: 0.3, label: 'pH' },
+    { id: 'do', x: 0.5, y: 0.68, label: 'O₂' },
+    { id: 'od', x: 0.72, y: 0.32, label: 'density' },
+  ]);
+
+  const moveSensor = useCallback((id: string, x: number, y: number) => {
+    setSensors((prev) => prev.map((s) => (s.id === id ? { ...s, x, y } : s)));
+  }, []);
+
+  /*
    * Re-run on the next animation frame rather than on every input event.
    * A drag fires far more often than the screen refreshes, so without this we
    * would compute several runs per visible frame and throw most away.
@@ -50,6 +71,19 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   }, []);
 
   useEffect(() => { schedule(cfg); }, [cfg, schedule]);
+
+  /* One tick per 220 ms — fast enough to feel alive, slow enough to read. */
+  useEffect(() => {
+    if (!playing || !result) return;
+    const total = result.daily.length;
+    const t = setInterval(() => setPlayDay((d) => (d + 1) % total), 220);
+    return () => clearInterval(t);
+  }, [playing, result]);
+
+  /* A shorter run must not leave playback pointing past the end. */
+  useEffect(() => {
+    if (result && playDay >= result.daily.length) setPlayDay(0);
+  }, [result, playDay]);
 
   const set = (key: keyof RunConfig) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setCfg((c) => ({ ...c, [key]: Number(e.target.value) }));
@@ -94,8 +128,48 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
             <span>of what sunlight allows</span>
           </div>
         </div>
-        {result && <Trace daily={result.daily} />}
+        {result && <Trace daily={result.daily} day={playDay} />}
       </div>
+
+      {result && (
+        <div className="sim-pond">
+          <PondView
+            daily={result.daily}
+            areaM2={cfg.areaM2}
+            mixing={cfg.mixerRunning}
+            sensors={sensors}
+            onMoveSensor={moveSensor}
+            day={playDay}
+          />
+          <div className="pond-controls">
+            <button
+              type="button"
+              className="button ghost"
+              onClick={() => setPlaying((p) => !p)}
+              aria-pressed={playing}
+            >
+              {playing ? 'Pause' : 'Play'}
+            </button>
+            <input
+              type="range" min={0} max={Math.max(0, result.daily.length - 1)}
+              step={1} value={playDay} aria-label="Day"
+              onChange={(e) => { setPlaying(false); setPlayDay(Number(e.target.value)); }}
+            />
+            <button
+              type="button"
+              className={`button ${cfg.mixerRunning ? 'ghost' : 'danger'}`}
+              onClick={() => setCfg((c) => ({ ...c, mixerRunning: !c.mixerRunning }))}
+            >
+              {cfg.mixerRunning ? 'Stop paddlewheel' : 'Start paddlewheel'}
+            </button>
+          </div>
+          <p className="helper">
+            Drag the probes to move them. Stopping the paddlewheel is the
+            failure the energy meter catches outright — watch the water stop
+            circulating.
+          </p>
+        </div>
+      )}
 
       <div className="sim-controls">
         <Slider
@@ -214,7 +288,7 @@ function Slider({
  * Deliberately not a charting library: this is one series on a phone screen,
  * and a 40 KB dependency to draw rectangles is a bad trade on rural mobile.
  */
-function Trace({ daily }: { daily: RunResult['daily'] }) {
+function Trace({ daily, day }: { daily: RunResult['daily']; day: number }) {
   if (daily.length < 2) return null;
   const max = Math.max(...daily.map((d) => d.co2Kg)) || 1;
   const w = 100 / daily.length;
@@ -228,6 +302,7 @@ function Trace({ daily }: { daily: RunResult['daily'] }) {
           key={d.day} x={(d.day - 1) * w} y={32 - (d.co2Kg / max) * 30}
           width={w * 0.75} height={Math.max(0.5, (d.co2Kg / max) * 30)}
           fill={d.harvested ? 'var(--sun, #d9a02c)' : 'var(--culture, #4faf80)'}
+          opacity={d.day - 1 <= day ? 1 : 0.28}
         />
       ))}
     </svg>

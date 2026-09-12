@@ -54,6 +54,8 @@ export interface RunConfig {
   influentNitrogenMgL: number;
   /** Optional injected fault, so an operator can ask "what if it crashes?". */
   crashOnDay?: number | null;
+  /** False stops the paddlewheel — the pond stratifies and the meter reads 0. */
+  mixerRunning: boolean;
 }
 
 export interface RunResult {
@@ -84,6 +86,7 @@ interface PondHandle {
     harvest: (fraction: number) => number;
     standing_biomass_kg: () => number;
     inject_crash: (severity: number, startHour: number, durationHours: number) => void;
+    inject_pump_failure: (startHour: number, durationHours: number) => void;
     free?: () => void;
 }
 
@@ -141,6 +144,10 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
   if (cfg.crashOnDay != null && cfg.crashOnDay > 0) {
     pond.inject_crash(0.85, cfg.crashOnDay * 24, 72);
   }
+
+  // Stopped for the whole run rather than a window: the operator is asking
+  // "what does a dead paddlewheel cost me", not "what if it blips".
+  if (!cfg.mixerRunning) pond.inject_pump_failure(0, cfg.days * 24);
 
   const daily: DayPoint[] = [];
   let totalCo2 = 0;
@@ -209,4 +216,5 @@ export const DEFAULT_CONFIG: RunConfig = {
   diurnalSwingC: 8,
   influentNitrogenMgL: 40,
   crashOnDay: null,
+  mixerRunning: true,
 };
