@@ -32,13 +32,22 @@ weighbridge ticket, and the physics of how much sunlight landed on that pond —
 creditable = min(claimed, independent_lower_bound, physics_ceiling)
 ```
 
-Claim 100 t with evidence for 100 t → you get 100 t.
-Claim 150 t with evidence for 100 t → **you get 100 t.**
+Note *lower bound*, not central estimate. Evidence comes with an error band, and we credit the
+floor of it — the amount we are confident actually happened.
+
+Claim 100 t where the evidence supports 60–140 t → **you get 60 t.**
+Claim 150 t where the evidence supports 60–140 t → **you also get 60 t.**
 Claim above what physics allows → **rejected outright.**
 
 The point isn't that we catch liars. It's that **lying gains you nothing** — there is no number an
 operator can type that yields more credits than the evidence supports. Fraud stops being a risk to
 detect and becomes a strategy with no payoff.
+
+It also means an honest operator on satellite-only evidence is credited well below what they
+produced, and that is deliberate rather than a flaw. This market's failure is *over*-crediting —
+roughly a quarter of retired credits don't deliver — so erring low is the only safe direction. The
+way to earn more is better evidence, not a looser rule: a weighbridge gives a ±10% band where
+satellite gives ±2.4×, and the tier system exists to make that trade explicit.
 
 > We are not fixing the ledger. Ledgers were never the problem. We are fixing what gets written
 > into one.

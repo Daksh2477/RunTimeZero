@@ -70,17 +70,34 @@ So the rule becomes:
 creditable = min(claimed, independent_lower_bound, physics_ceiling)
 ```
 
-Read that carefully. It means:
+Read that carefully, and notice it says **lower bound**, not best estimate. Evidence never gives
+you a single number — it gives a range. We credit the bottom of that range: the amount we are
+confident actually happened.
 
-- Claim 100 t, evidence supports 100 t → you get 100 t.
-- Claim 150 t, evidence supports 100 t → **you get 100 t.**
+- Claim 100 t, evidence supports 60–140 t → **you get 60 t.**
+- Claim 150 t, evidence supports 60–140 t → **you also get 60 t.**
 - Claim 500 t when physics allows 200 t → **rejected entirely.**
+
+The second line is the one that matters: inflating the claim changed nothing.
 
 The important consequence isn't that we *catch* liars. It's that **lying gains you nothing.** There
 is no number you can type that gets you more credits than the evidence supports. Fraud stops being a
 risk to detect and becomes a strategy with no payoff.
 
 That's the sentence to say on stage.
+
+**The obvious objection, and the answer.** An honest operator whose only evidence is satellite gets
+credited at maybe 40% of what they actually produced, because a ±2.4× band has a low floor. Isn't
+that punishing honesty?
+
+It is, and we chose it knowingly. The failure this market actually suffers is *over*-crediting —
+around a quarter of retired credits don't deliver what they promised. Under-crediting is not a
+failure of the same kind: it costs an operator revenue, it doesn't put worthless carbon into
+somebody's net-zero claim. Between the two errors, only one destroys the thing we are selling.
+
+And the fix for the honest operator isn't a looser rule, it's better evidence. A weighbridge ticket
+gives a ±10% band. That's the whole point of the tier system: the band you earn determines the
+credit you get, and better instrumentation pays for itself.
 
 ---
 
@@ -162,6 +179,9 @@ flowchart TD
 
 The operator claimed 142 kg. The evidence floor was 75 kg. **They got 75.** No argument, no appeal,
 no model to dispute — just the smaller of two independently computed numbers.
+
+Had they claimed 75 kg honestly, they would still have got 75. That equivalence is the design
+working: the claim is not what earns the credit, the evidence is.
 
 ---
 
