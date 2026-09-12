@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getFleet, type FleetPond, type FleetSite } from '@/lib/api';
 import { RefreshControls } from '@/components/refresh-controls';
-import { PondCard } from '@/components/pond-card';
+import { FarmPonds } from '@/components/farm-ponds';
 import { pondState, TONE_RANK } from '@/lib/pond-state';
 
 export const dynamic = 'force-dynamic';
@@ -67,16 +67,7 @@ export default async function FarmPage() {
         <span className="farm-manage-go" aria-hidden="true">→</span>
       </Link>
 
-      <section className="farm-list">
-        {ponds.map(({ pond, site }) => (
-          <PondCard key={pond.id} pond={pond} siteName={site} />
-        ))}
-        {ponds.length === 0 && (
-          <p className="helper">
-            Your site and its sensors need to be configured before readings can appear here.
-          </p>
-        )}
-      </section>
+      <FarmPonds sites={sites} />
 
       <section className="farm-foot">
         <p className="helper">

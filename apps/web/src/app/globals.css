@@ -1396,3 +1396,49 @@ button, a, input, select {
   .farm-manage strong { font-size: 0.98rem; }
   .farm-manage > span:nth-child(2) > span { font-size: 0.78rem; }
 }
+
+/* ================================================ farm counts and filters
+ * Lifted from the old all-ponds console, which was the better layout, and
+ * pointed at the live reading cards instead of its verdict-only tiles.
+ */
+.farm-counts {
+  display: grid; gap: 10px; margin: 0 0 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+.farm-counts > div {
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--panel); padding: 12px 14px;
+}
+.farm-counts > div.is-attention { border-color: var(--sun); background: #fdfaf3; }
+.farm-counts span { font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--silt); }
+.farm-counts strong { display: block; font-family: var(--font-display); font-size: 1.9rem; line-height: 1.1; margin: 2px 0; }
+.farm-counts small { font-size: 0.75rem; color: var(--silt); }
+
+.farm-toolbar {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  margin: 0 0 14px;
+}
+.filter-group { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-button {
+  border: 1px solid var(--hairline); background: var(--panel); color: var(--ink);
+  border-radius: 999px; padding: 7px 13px; font-size: 0.8rem; min-height: 36px;
+}
+.filter-button[aria-pressed='true'] { background: var(--culture); border-color: var(--culture); color: #fff; }
+.search-label { margin-left: auto; flex: 1 1 200px; max-width: 280px; }
+.search-label input {
+  width: 100%; min-height: 36px; padding: 7px 12px; font: inherit; font-size: 0.85rem;
+  border: 1px solid var(--hairline); border-radius: 999px;
+  background: var(--panel); color: var(--ink);
+}
+.search-label input:focus-visible { outline: 2px solid var(--culture); outline-offset: 1px; }
+
+.farm-site + .farm-site { margin-top: 22px; }
+.farm-site-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-bottom: 9px; }
+.farm-site-head h2 { font-size: 1rem; margin: 0; }
+.farm-site-head span { font-size: 0.75rem; color: var(--silt); }
+.farm-empty { border: 1px dashed var(--hairline); border-radius: var(--radius); padding: 24px; text-align: center; display: grid; gap: 10px; justify-items: center; }
+
+@media (max-width: 480px) {
+  .search-label { margin-left: 0; max-width: none; }
+  .farm-counts strong { font-size: 1.5rem; }
+}
