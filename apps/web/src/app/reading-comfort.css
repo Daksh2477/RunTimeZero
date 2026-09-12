@@ -201,3 +201,7 @@ main button.rounded-xl {
 body .live-pond-scene { max-width: 850px; margin: auto; }
 body .live-pond-scene .pond-map { max-width: 100%; }
 body .live-pond-scene .pond-landscape { display: block; }
+.circuit-scroll { overflow-x: auto; max-width: 100%; }
+.circuit-diagram { display: block; width: 100%; min-width: 660px; }
+.hardware-parts { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 12px; }
+body .hardware .summary-card .num { font-size: clamp(1.2rem,3vw,2rem); }
