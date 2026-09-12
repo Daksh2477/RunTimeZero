@@ -124,6 +124,7 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 | Public verifier — no account needed | ✅ |
 | Public simulator | ✅ |
 | 3 trained models — crash, divergence, NDCI calibration | ✅ |
+| Expense ledger + site economics | ✅ |
 
 ---
 

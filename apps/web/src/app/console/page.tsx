@@ -119,7 +119,9 @@ export default async function ConsolePage() {
                   <span className="num">{site.totalAreaM2.toLocaleString()} m²</span>
                 </div>
               </div>
-              <span className="tier">{site.tier}</span>
+              <a className="tier tier-link" href={`/console/site/${site.id}`}>
+                {site.tier} · costs
+              </a>
             </div>
             {site.ponds.map((p) => (
               <PondRow key={p.id} pond={p} />

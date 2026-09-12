@@ -22,6 +22,7 @@
     "replay": "node --experimental-strip-types scripts/replay.ts",
     "ingest:sentinel": "node --experimental-strip-types scripts/ingest-sentinel.ts",
     "models:data": "node --experimental-strip-types packages/models/train/make_dataset.ts",
-    "models:train": "python3 packages/models/train/train_all.py"
+    "models:train": "python3 packages/models/train/train_all.py",
+    "db:expenses": "node --experimental-strip-types scripts/seed-expenses.ts"
   }
 }

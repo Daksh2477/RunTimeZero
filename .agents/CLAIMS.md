@@ -10,8 +10,6 @@ reformat this table, because a whole-file rewrite conflicts with everything.
 |---|---|---|---|
 2026-09-12T03:15Z |
 
-| agent-a | expense seeding + economics panel | `scripts/seed-expenses.ts`, `apps/web/src/app/console/site/` | 2026-09-12T03:35Z |
-
 <!-- Add rows below this line. Format:
 | agent-b | what you are building | `path/one`, `path/two` | YYYY-MM-DDTHH:MMZ |
 -->
