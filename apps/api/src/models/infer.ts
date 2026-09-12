@@ -49,6 +49,8 @@ export interface CrashRisk {
   probability: number;
   /** Feature contributing most to the score, in the operator's language. */
   dominantFactor: string;
+  /** Operating threshold chosen on held-out ponds at training time. */
+  threshold: number;
   modelAvailable: boolean;
 }
 
@@ -76,6 +78,10 @@ const FEATURE_LABELS: Record<string, string> = {
   hours_since_harvest: 'time since last harvest',
   energy_kwh_mean: 'paddlewheel power draw',
   mixing_uptime: 'paddlewheel stopped',
+  do_min: 'oxygen running out overnight',
+  temp_max: 'heat stress',
+  ph_max: 'pH spiking',
+  od_rel_trend: 'culture thinning',
 };
 
 /**
@@ -88,7 +94,7 @@ const FEATURE_LABELS: Record<string, string> = {
  */
 export function crashRisk(features: Record<string, number>): CrashRisk {
   if (!crashModel) {
-    return { probability: 0, dominantFactor: '', modelAvailable: false };
+    return { probability: 0, dominantFactor: '', threshold: 1, modelAvailable: false };
   }
 
   let z = crashModel.intercept;
@@ -111,6 +117,7 @@ export function crashRisk(features: Record<string, number>): CrashRisk {
   return {
     probability: 1 / (1 + Math.exp(-z)),
     dominantFactor: FEATURE_LABELS[topFeature] ?? topFeature,
+    threshold: crashModel.threshold,
     modelAvailable: true,
   };
 }

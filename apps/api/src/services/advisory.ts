@@ -93,6 +93,9 @@ export interface CrashContext {
  * density visibly falls. It is the one leading indicator the four probes can
  * give us, and an earlier version of this file threw it away.
  */
+const minOf = (v: number[]) => (v.length ? Math.min(...v) : 0);
+const maxOf = (v: number[]) => (v.length ? Math.max(...v) : 0);
+
 export function crashFeatures(
   recent: TelemetryPoint[],
   ctx: Partial<CrashContext> = {},
@@ -146,6 +149,12 @@ export function crashFeatures(
     energy_kwh_mean: meanOf(recent, (t) => t.energyKwh),
     mixing_uptime:
       recent.filter((t) => (t.energyKwh ?? 0) > 0).length / recent.length,
+    do_min: minOf(values((t) => t.dissolvedOxygenMgL)),
+    temp_max: maxOf(values((t) => t.temperatureC)),
+    ph_max: maxOf(values((t) => t.ph)),
+    od_rel_trend:
+      delta(first.opticalDensity, last.opticalDensity) / hours
+      / Math.max(0.05, meanOf(recent, (t) => t.opticalDensity)),
   };
 }
 
@@ -178,7 +187,7 @@ export function buildAdvisories(input: AdvisoryInput): Advisory[] {
   // pushes pH up, so a culture doing both is dying rather than resting. An
   // operator can check that themselves.
   //
-  // The model (crash_classifier, AUC 0.84) catches cases the rule misses, but
+  // The model (crash_classifier; metrics in its .meta.json) catches cases the rule misses, but
   // it is a support, not the authority — a model telling someone to drain a
   // pond without a reason they can verify is worse than no alert at all.
   const risk = crashRisk(crashFeatures(recent, input.context ?? {}));
@@ -186,7 +195,8 @@ export function buildAdvisories(input: AdvisoryInput): Advisory[] {
   const ruleFired = phTrend < -0.02 && odTrend < -0.002;
   // 0.75 rather than the model's own 0.5: a false "drain your pond" costs the
   // operator real biomass, so the model alone has to be quite sure.
-  const modelFired = risk.modelAvailable && risk.probability >= 0.75;
+  // The trained threshold wins if it is stricter still.
+  const modelFired = risk.modelAvailable && risk.probability >= Math.max(0.75, risk.threshold);
 
   if (!ruleFired && modelFired) {
     out.push({

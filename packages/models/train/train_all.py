@@ -27,6 +27,7 @@ from sklearn.linear_model import LinearRegression, LogisticRegression
 from sklearn.metrics import (
     classification_report,
     confusion_matrix,
+    f1_score,
     roc_auc_score,
 )
 from sklearn.model_selection import GroupShuffleSplit, train_test_split
@@ -111,16 +112,37 @@ def train_crash() -> None:
                 "test_size or generate more ponds"
             )
 
-    scaler = StandardScaler().fit(X_tr)
-    # Crashes are ~9% of rows, so without class_weight the model learns to
-    # answer "no" and reports 91% accuracy while being useless.
-    clf = LogisticRegression(
-        max_iter=2000, class_weight="balanced", random_state=SEED
-    ).fit(scaler.transform(X_tr), y_tr)
+    # Crashes are a few % of rows, so without class_weight the model learns to
+    # answer "no" and reports high accuracy while being useless.
+    def fit(X_fit, y_fit):
+        sc = StandardScaler().fit(X_fit)
+        model = LogisticRegression(
+            max_iter=2000, class_weight="balanced", random_state=SEED
+        ).fit(sc.transform(X_fit), y_fit)
+        return sc, model
+
+    # Balanced weights push probabilities up, so 0.5 raises far too many false
+    # alarms (precision was 0.26). Pick the threshold on ponds held out of the
+    # TRAINING side, never the test side, then refit on all of training.
+    threshold = 0.5
+    if groups is not None:
+        g_tr = groups[tr]
+        inner = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=SEED + 1)
+        fit_i, val_i = next(inner.split(X_tr, y_tr, g_tr))
+        if len(np.unique(y_tr[val_i])) == 2:
+            sc_v, m_v = fit(X_tr[fit_i], y_tr[fit_i])
+            p_val = m_v.predict_proba(sc_v.transform(X_tr[val_i]))[:, 1]
+            best = -1.0
+            for t in np.arange(0.3, 0.96, 0.01):
+                f1 = f1_score(y_tr[val_i], (p_val >= t).astype(int), zero_division=0)
+                if f1 > best:
+                    best, threshold = f1, float(round(t, 2))
+
+    scaler, clf = fit(X_tr, y_tr)
 
     proba = clf.predict_proba(scaler.transform(X_te))[:, 1]
     auc = roc_auc_score(y_te, proba)
-    pred = (proba >= 0.5).astype(int)
+    pred = (proba >= threshold).astype(int)
     cm = confusion_matrix(y_te, pred).tolist()
 
     save(
@@ -132,7 +154,7 @@ def train_crash() -> None:
             "scale": scaler.scale_.tolist(),
             "coef": clf.coef_[0].tolist(),
             "intercept": float(clf.intercept_[0]),
-            "threshold": 0.5,
+            "threshold": threshold,
         },
         {
             "rows": int(len(y)),
@@ -147,6 +169,8 @@ def train_crash() -> None:
                 else f"grouped by pond, {held_out} ponds held out"
             ),
             "test_positive_rate": float(y_te.mean()),
+            "threshold": threshold,
+            "threshold_method": "max F1 on ponds held out of the training split",
             "note": (
                 "Trained on twin-generated crashes. Transfers as far as the physics "
                 "does, no further. Never used for crediting."
@@ -157,7 +181,7 @@ def train_crash() -> None:
     )
     held = "row-wise split" if held_out is None else f"{held_out} ponds held out"
     print(
-        f"  crash_classifier      AUC {auc:.3f}   "
+        f"  crash_classifier      AUC {auc:.3f}, threshold {threshold:.2f}   "
         f"({len(y)} rows, {y.mean():.1%} positive, {held})"
     )
 

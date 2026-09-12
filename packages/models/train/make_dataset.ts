@@ -107,6 +107,14 @@ function windowFeatures(
     // paddlewheel reads zero, where "oxygen is low" has six explanations.
     mean((r) => r.energy_kwh ?? 0),
     w.filter((r) => (r.energy_kwh ?? 0) > 0).length / hours,
+    // Extremes, not just means: a pond dies at its worst hour. Night-time
+    // oxygen minimum is the suffocation risk, peak temperature the heat stress.
+    Math.min(...w.map((r) => r.dissolved_oxygen_mg_l)),
+    Math.max(...w.map((r) => r.temperature_c)),
+    Math.max(...w.map((r) => r.ph)),
+    // Density trend relative to density, so a thin pond and a thick one losing
+    // the same share of their culture look the same to the model.
+    (last.optical_density - first.optical_density) / hours / Math.max(0.05, mean((r) => r.optical_density)),
   ];
 }
 
@@ -118,6 +126,7 @@ const CRASH_HEADER = [
   'do_amplitude', 'ph_amplitude', 'od_volatility', 'temp_amplitude',
   'depth_m', 'log_area', 'season_sin', 'season_cos', 'hours_since_harvest',
   'energy_kwh_mean', 'mixing_uptime',
+  'do_min', 'temp_max', 'ph_max', 'od_rel_trend',
   // Not a feature. Written so train_all.py can hold entire ponds out of the
   // training set — see the grouped split there for why that matters.
   'pond_group',
