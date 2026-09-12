@@ -3,6 +3,18 @@ import Link from 'next/link';
 import { Navigation } from '@/components/navigation';
 import './globals.css';
 
+/**
+ * Without this every media query in globals.css is dead: phones assume a
+ * ~980px canvas and zoom out, which for an app aimed at farmers on phones
+ * makes the whole thing unusable. maximumScale is deliberately left alone —
+ * blocking pinch-zoom fails accessibility.
+ */
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover' as const,
+};
+
 export const metadata: Metadata = {
   title: { default: 'AlgaCarbon · Your ponds, clearly', template: '%s · AlgaCarbon' },
   description: 'Understand your algae ponds, review carbon evidence, and explore a sample pond.',

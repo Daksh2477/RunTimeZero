@@ -31,6 +31,30 @@ and there is currently no mint.
 
 ---
 
+## M0 · Live simulator and phone-first UI — IN PROGRESS
+
+**Reprioritised ahead of everything else.** The users are farmers on phones,
+and two things were broken for them:
+
+- **No viewport meta tag.** Every media query in `globals.css` was dead —
+  phones rendered a ~980 px canvas and zoomed out. Fixed.
+- **The simulator was a form.** Submit, wait, read. Nothing to explore.
+
+| Layer | Work | State |
+|---|---|---|
+| Physics | `wasm-pack --target web`, 33 KB, served from `/physics/` | done |
+| Frontend | `lib/twin.ts` runs the twin in the browser; re-runs on `requestAnimationFrame` so numbers move while the thumb is down | done |
+| Frontend | `LiveSimulator` — sticky results, 44 px touch targets, 28 px thumbs | done |
+| Frontend | `/sim?pond=<id>` seeds from the operator's real pond; "Plan ahead" from pond detail | done |
+| Remaining | Sensor placement on a pond diagram; landing page; nav across surfaces | open |
+
+**Why client-side matters:** a round trip is 100–300 ms on a good connection
+and far worse on rural mobile. The same model behind a submit button is a
+calculator, and nobody explores with a calculator. It also finally makes
+`DECISIONS.md` #7 true — one twin, server and browser, not two that can drift.
+
+---
+
 ## M1 · Batches and minting
 
 **Closes:** the credits half of the product. Highest priority by a distance.

@@ -16,7 +16,7 @@
     "db:setup": "psql \"$DATABASE_URL\" -f apps/api/src/db/schema.sql",
     "db:seed": "node --experimental-strip-types scripts/seed.ts",
     "typecheck": "tsc --noEmit && tsc -p apps/web/tsconfig.json --noEmit --incremental false",
-    "physics:build": "cd packages/physics && wasm-pack build --target nodejs --out-dir pkg",
+    "physics:build": "cd packages/physics && wasm-pack build --target nodejs --out-dir pkg && npm run physics:build:web",
     "sim": "node --experimental-strip-types scripts/sim-driver.ts",
     "api": "npm run dev --workspace=apps/api",
     "replay": "node --experimental-strip-types scripts/replay.ts",
@@ -24,6 +24,7 @@
     "models:data": "node --experimental-strip-types packages/models/train/make_dataset.ts",
     "models:train": "python3 packages/models/train/train_all.py",
     "db:expenses": "node --experimental-strip-types scripts/seed-expenses.ts",
-    "test": "cargo test --manifest-path packages/physics/Cargo.toml && npm run typecheck"
+    "test": "cargo test --manifest-path packages/physics/Cargo.toml && npm run typecheck",
+    "physics:build:web": "cd packages/physics && wasm-pack build --target web --out-dir pkg-web && mkdir -p ../../apps/web/public/physics && cp pkg-web/rtz_physics.js pkg-web/rtz_physics_bg.wasm pkg-web/rtz_physics.d.ts ../../apps/web/public/physics/"
   }
 }

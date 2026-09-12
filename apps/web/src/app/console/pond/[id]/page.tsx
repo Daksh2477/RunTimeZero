@@ -17,7 +17,7 @@ export default async function PondPage({ params }: { params: Promise<{ id: strin
   const value = (key: string) => latestCheck?.[key] == null ? null : Number(latestCheck[key]);
   return <main className="wrap">
     <Link className="back" href="/console">← Back to my ponds</Link>
-    <div className="page-heading"><div><p className="eyebrow">POND DETAILS</p><h1>{pond.label}</h1><p>{pond.siteName} · {pond.areaM2.toLocaleString('en-IN')} square metres</p></div><RefreshControls auto /></div>
+    <div className="page-heading"><div><p className="eyebrow">POND DETAILS</p><h1>{pond.label}</h1><p>{pond.siteName} · {pond.areaM2.toLocaleString('en-IN')} square metres</p></div><div className="heading-actions"><Link className="button secondary" href={`/sim?pond=${id}`}>Plan ahead →</Link><RefreshControls auto /></div></div>
     <div className="detail-grid">
       <div><section className="panel"><div className="section-heading"><h2>Carbon check</h2><StatusBadge verdict={verdict} /></div><p className="sub">{status.detail}</p>
         {latestCheck ? <><p className="period-label">{dateLabel(String(latestCheck.window_start))} – {dateLabel(String(latestCheck.window_end))}</p><CarbonComparison claimed={value('claimed_co2_kg')} supported={value('creditable_co2_kg')} />

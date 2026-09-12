@@ -36,3 +36,4 @@ apps/contracts/addresses.json
 # generated training data — regenerate with `npm run models:data`
 packages/models/data/
 deploy/last-deploy.log
+packages/physics/pkg-web/

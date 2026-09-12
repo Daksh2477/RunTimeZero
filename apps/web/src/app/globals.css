@@ -248,3 +248,109 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
 }
 @media (max-width: 360px) { .readings-grid, .preset-grid, .sim-totals { grid-template-columns: 1fr; } .pond-card-head { align-items: flex-start; flex-direction: column; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+/* ============================================ live simulator, phone first */
+
+.sim { display: grid; gap: 16px; }
+
+/*
+ * Sticky on phones so the numbers stay visible while the thumb is on a
+ * slider below. If you have to scroll to see what your change did, the
+ * simulator stops feeling live and becomes a form.
+ */
+.sim-summary {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--panel, #fff);
+  border: 1px solid var(--hairline, #d9e0dc);
+  border-radius: 10px;
+  padding: 14px 14px 10px;
+  box-shadow: 0 6px 18px -12px rgba(0, 0, 0, 0.35);
+}
+
+.sim-context { margin: 0 0 10px; font-size: 13px; color: var(--silt, #77857f); }
+
+.sim-figures {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.sim-figures > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sim-figures strong { font-size: 20px; font-weight: 650; letter-spacing: -0.02em; }
+.sim-figures span { font-size: 11.5px; color: var(--silt, #77857f); line-height: 1.25; }
+
+.sim-trace { display: block; width: 100%; height: 48px; margin-top: 12px; }
+
+.sim-controls { display: grid; gap: 18px; }
+
+.sim-field label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+.sim-field label strong { font-size: 15px; font-weight: 650; }
+
+/*
+ * 44px of vertical hit area and a 28px thumb. The default range input is
+ * about 16px tall, which is genuinely hard to grab on a phone — especially
+ * outdoors, one-handed, with wet or dirty hands.
+ */
+.sim-field input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 44px;
+  background: transparent;
+  margin: 0;
+  cursor: pointer;
+}
+.sim-field input[type='range']::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--culture-wash, #e4f2eb);
+}
+.sim-field input[type='range']::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--culture-wash, #e4f2eb);
+}
+.sim-field input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: var(--culture, #4faf80);
+  border: 3px solid var(--panel, #fff);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+}
+.sim-field input[type='range']::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--culture, #4faf80);
+  border: 3px solid var(--panel, #fff);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+}
+.sim-field input[type='range']:focus-visible::-webkit-slider-thumb {
+  outline: 3px solid var(--ink, #12201d);
+  outline-offset: 2px;
+}
+
+.sim-field .helper { margin: 4px 0 0; font-size: 12.5px; line-height: 1.4; }
+
+.sim-failed { padding: 28px 16px; text-align: center; }
+
+/* Side by side once there is room, but never at the cost of the phone case. */
+@media (min-width: 860px) {
+  .sim { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .sim-summary { position: sticky; top: 20px; }
+  .sim-figures strong { font-size: 24px; }
+}
+
+.heading-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
