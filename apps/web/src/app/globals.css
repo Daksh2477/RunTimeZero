@@ -48,45 +48,51 @@
   color-scheme: light;
 
   /*
-   * Design tokens ported from Chetan's frontend branch (Lovable/shadcn).
-   * Kept in oklch as he wrote them — perceptually uniform lightness means the
-   * status colours stay equally readable against the card background, which
-   * matters when the same three colours carry meaning on every screen.
+   * Design tokens from Chetan's front1.0 export (origin/frontend 196824c).
    *
-   * The older --culture/--silt names below are aliases onto these so the
-   * existing stylesheet keeps working; new work should use the semantic names.
+   * This replaced the earlier navy-primary palette: primary is now green,
+   * the background is near-white rather than grey-green, and the radius went
+   * from 8px to 12px. Taken verbatim so his pages and ours cannot drift into
+   * looking like two different products.
+   *
+   * The older --culture / --silt names below are aliases onto these, so the
+   * hand-written CSS that predates Tailwind keeps working. New work should
+   * use the semantic names.
    */
-  --radius: 0.5rem;
-  --background: oklch(0.968 0.005 247.9);
-  --foreground: oklch(0.21 0.03 258);
+  --radius: 0.75rem;
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.15 0.02 240);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.03 258);
-  --primary: oklch(0.28 0.032 258);
-  --primary-foreground: oklch(0.985 0.002 247.9);
-  --secondary: oklch(0.955 0.008 247.9);
-  --muted: oklch(0.955 0.008 247.9);
-  --muted-foreground: oklch(0.52 0.026 257);
-  --accent: oklch(0.72 0.19 145);
-  --accent-foreground: oklch(0.19 0.03 258);
+  --card-foreground: oklch(0.15 0.02 240);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.15 0.02 240);
+  --primary: oklch(0.55 0.15 145);
+  --primary-foreground: oklch(0.99 0.01 145);
+  --secondary: oklch(0.96 0.02 145);
+  --secondary-foreground: oklch(0.25 0.05 145);
+  --muted: oklch(0.96 0.01 240);
+  --muted-foreground: oklch(0.45 0.02 240);
+  --accent: oklch(0.7 0.15 150);
+  --accent-foreground: oklch(0.2 0.05 150);
   --status-optimal: oklch(0.7 0.19 148);
   --status-warning: oklch(0.79 0.16 75);
   --status-critical: oklch(0.58 0.23 27);
-  /* The dark navy the masthead sits on. */
-  --panel-dark: oklch(0.28 0.03 258);
-  --panel-dark-foreground: oklch(0.96 0.005 247.9);
-  --border: oklch(0.929 0.013 255.508);
-  --card-foreground: oklch(0.21 0.03 258);
-  --secondary-foreground: oklch(0.28 0.032 258);
+  --panel-dark: oklch(0.12 0.02 240);
+  --panel-dark-foreground: oklch(0.98 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.92 0.01 240);
+  --ring: oklch(0.55 0.15 145);
 
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
-  /* Aliases kept so the existing stylesheet does not have to be rewritten. */
+  /* Aliases so the pre-Tailwind stylesheet keeps working unchanged. */
   --surface: var(--background); --panel: var(--card); --ink: var(--foreground);
   --silt: var(--muted-foreground); --hairline: var(--border);
-  --water-deep: #153d2d; --water: #315d4a;
-  --culture: var(--status-optimal); --culture-wash: oklch(0.7 0.19 148 / 0.1);
+  --water-deep: oklch(0.35 0.09 150); --water: oklch(0.45 0.1 150);
+  --culture: var(--status-optimal);
+  --culture-wash: oklch(0.7 0.19 148 / 0.1);
   --culture-dim: oklch(0.7 0.19 148 / 0.35);
   --rust: var(--status-critical); --rust-wash: oklch(0.58 0.23 27 / 0.09);
   --sun: var(--status-warning);
@@ -672,12 +678,14 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
  * read outdoors, in sun, on a phone, often one-handed — so nothing here is
  * below 16px and every tap target clears 44px.
  */
-.farm { padding-block: 20px 48px; }
+/* Wider than the old reading-column width — with a grid there is no reason
+ * to leave two thirds of a desktop screen empty. */
+.wrap.farm { padding-block: 20px 48px; max-width: 1400px; }
 
 .farm-verdict {
   border-radius: var(--radius);
   padding: 22px 20px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   border: 1px solid var(--hairline);
   background: var(--panel);
 }
@@ -692,7 +700,24 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
 .farm-verdict p { margin: 0; font-size: 1rem; color: var(--ink); }
 .farm-verdict.is-bad h1 { color: var(--rust); }
 
-.farm-list { display: grid; gap: 14px; }
+/*
+ * Two to three ponds per row rather than one.
+ *
+ * A farmer with seven ponds was scrolling through seven full-width cards to
+ * find the one that needed them. Same cards, same data, laid out across the
+ * width — the whole farm fits on one or two screens and the eye can compare
+ * ponds instead of remembering them.
+ *
+ * 340px is the narrowest a card can be before the 2x2 reading grid inside it
+ * collapses back to a single column, which is what made it tall in the first
+ * place.
+ */
+.farm-list {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  align-items: start;
+}
 
 .pond-card {
   background: var(--panel);

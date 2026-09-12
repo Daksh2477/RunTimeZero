@@ -108,6 +108,19 @@ export class WasmPond {
 export function co2_from_biomass(biomass_kg: number): number;
 
 /**
+ * Composition at a latitude and day of year, as JSON.
+ *
+ * A convenience for callers outside Rust that only have a location and a
+ * date — a backfill script, or the marketplace grading a harvest whose
+ * nitrogen history was never recorded. Anything with real pond state should
+ * call `composition::composition_at` with the nitrogen it actually measured.
+ *
+ * Nitrogen is assumed mid-range here, so the result is an estimate and every
+ * caller must label it as modelled rather than measured.
+ */
+export function composition_at_json(lat_deg: number, day_of_year: number): string;
+
+/**
  * Physics ceiling for a pond over a window, in kg CO2.
  *
  * Exposed so the API can compute a bound without reimplementing the maths in
@@ -147,6 +160,7 @@ export interface InitOutput {
     readonly __wbg_set_reading_temperature_c: (a: number, b: number) => void;
     readonly __wbg_wasmpond_free: (a: number, b: number) => void;
     readonly co2_from_biomass: (a: number) => number;
+    readonly composition_at_json: (a: number, b: number) => [number, number];
     readonly physics_ceiling_co2_kg: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
     readonly version: () => [number, number];
     readonly wasmpond_ground_truth_co2_kg_offline_scoring_only: (a: number) => number;

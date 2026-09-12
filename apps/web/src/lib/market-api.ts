@@ -77,3 +77,21 @@ export const enquire = (listingId: string, body: {
 }) => json<{ contact: { name: string; email: string; phone: string | null }; note: string }>(
   `/invest/${listingId}/enquire`, { method: 'POST', body: JSON.stringify(body) },
 );
+
+
+export interface Produce {
+  harvestId: string; siteName: string; pondLabel: string; harvestedAt: string;
+  dryMassKg: number; availableKg: number; grade: string; gradeLabel: string;
+  protein: number | null; lipid: number | null; carbohydrate: number | null;
+  compositionSource: string | null;
+  askingInrPerKg: number; suggestedInrPerKg: number;
+  priceLowInr: number; priceHighInr: number;
+}
+
+export const getProduce = () => json<Produce[]>('/market/produce');
+
+export const orderProduce = (harvestId: string, body: {
+  kg: number; buyerName: string; buyerEmail: string;
+}) => json<{ id: string; kg: number; inrPerKg: number; totalInr: number }>(
+  `/market/produce/${harvestId}/order`, { method: 'POST', body: JSON.stringify(body) },
+);

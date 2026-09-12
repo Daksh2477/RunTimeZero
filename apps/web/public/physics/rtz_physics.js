@@ -333,6 +333,33 @@ export function co2_from_biomass(biomass_kg) {
 }
 
 /**
+ * Composition at a latitude and day of year, as JSON.
+ *
+ * A convenience for callers outside Rust that only have a location and a
+ * date — a backfill script, or the marketplace grading a harvest whose
+ * nitrogen history was never recorded. Anything with real pond state should
+ * call `composition::composition_at` with the nitrogen it actually measured.
+ *
+ * Nitrogen is assumed mid-range here, so the result is an estimate and every
+ * caller must label it as modelled rather than measured.
+ * @param {number} lat_deg
+ * @param {number} day_of_year
+ * @returns {string}
+ */
+export function composition_at_json(lat_deg, day_of_year) {
+    let deferred1_0;
+    let deferred1_1;
+    try {
+        const ret = wasm.composition_at_json(lat_deg, day_of_year);
+        deferred1_0 = ret[0];
+        deferred1_1 = ret[1];
+        return getStringFromWasm0(ret[0], ret[1]);
+    } finally {
+        wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+    }
+}
+
+/**
  * Physics ceiling for a pond over a window, in kg CO2.
  *
  * Exposed so the API can compute a bound without reimplementing the maths in

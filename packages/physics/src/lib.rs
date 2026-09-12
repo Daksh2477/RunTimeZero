@@ -57,6 +57,25 @@ pub fn physics_ceiling_co2_kg(
     ceiling::max_biomass_gain(&input, &growth::StrainParams::default()).max_co2_kg
 }
 
+/// Composition at a latitude and day of year, as JSON.
+///
+/// A convenience for callers outside Rust that only have a location and a
+/// date — a backfill script, or the marketplace grading a harvest whose
+/// nitrogen history was never recorded. Anything with real pond state should
+/// call `composition::composition_at` with the nitrogen it actually measured.
+///
+/// Nitrogen is assumed mid-range here, so the result is an estimate and every
+/// caller must label it as modelled rather than measured.
+#[wasm_bindgen]
+pub fn composition_at_json(lat_deg: f64, day_of_year: u32) -> String {
+    let light = solar::daily_mean_par(lat_deg, day_of_year) * 86_400.0 / 1e6;
+    let c = composition::composition_at(8.0, light);
+    format!(
+        "{{\"protein\":{:.4},\"lipid\":{:.4},\"carbohydrate\":{:.4},\"ash\":{:.4}}}",
+        c.protein, c.lipid, c.carbohydrate, c.ash
+    )
+}
+
 /// Paddlewheel draw per square metre of pond, W.
 ///
 /// 0.5 W/m² is the figure used throughout the planning model; keeping one

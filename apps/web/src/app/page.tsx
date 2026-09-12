@@ -1,204 +1,68 @@
 /**
  * Landing page.
  *
- * WHAT THIS PAGE IS FOR
+ * Layout and voice are Codex's; the content was rewritten to say what the
+ * problem actually is and who pays for it. The previous copy described
+ * features ("bring pond readings together") without ever naming the
+ * problem, so a reader could not tell what it was for.
  *
- * A judge or a buyer arrives knowing nothing. In about fifteen seconds they
- * need: what is broken in the world, why that is expensive, what we do about
- * it, and proof it is running. In that order.
- *
- * The previous version argued a thesis with no numbers behind it, so there
- * was no way to tell whether any of it worked. Every figure here is now
- * fetched from /summary and computed from the live database — including the
- * one that matters most, which is how much of what operators claimed did not
- * survive checking. That gap is the product. If it renders as a dash,
- * nothing has been verified and the page says so rather than showing zero.
+ * The live figures come from /summary and are queried, never written down.
+ * If nothing has been verified they render as dashes — a landing page that
+ * invents traction is the same lie as a carbon claim that invents tonnes.
  */
 
 import Link from 'next/link';
-import { REPO_URL } from '@/lib/site';
+import { AudienceExplorer } from '@/components/audience-explorer';
 import { LiveProof } from '@/components/live-proof';
+import { REPO_URL } from '@/lib/site';
+import './home.css';
 
 export const metadata = {
-  title: 'AlgaCarbon — carbon you can check',
-  description:
-    'Algae ponds absorb CO₂ while cleaning wastewater. We check every claim '
-    + 'against evidence the farm does not control, and credit only the lower '
-    + 'of the two.',
+  title: 'Healthier ponds. Clearer carbon claims.',
+  description: 'Algae ponds clean industrial wastewater and absorb CO₂ while doing it. AlgaCarbon checks every carbon claim against evidence the farm does not control, and prices the harvest itself — so the pond pays twice.',
 };
 
-const PROBLEM = [
-  {
-    stat: '~£1 in £5',
-    label: 'of voluntary carbon credits studied were found to represent real reductions',
-    source: 'Repeated academic reviews of forestry offsets, 2023–24',
-  },
-  {
-    stat: '490',
-    label: 'Indian entities come under compliance carbon targets from 31 July 2026',
-    source: 'India Carbon Credit Trading Scheme',
-  },
-  {
-    stat: '0',
-    label: 'of that verification is continuous — most is an annual audit visit',
-    source: 'How MRV is done today',
-  },
-];
-
-const STEPS = [
-  {
-    n: '1',
-    title: 'The pond reports what it captured',
-    body:
-      'A sensor node in the water, or a note from the farmer. Either way it '
-      + 'is a claim and we treat it as one.',
-  },
-  {
-    n: '2',
-    title: 'We check it from outside',
-    body:
-      'Satellite chlorophyll, weighed harvests at the bridge, and the '
-      + 'sunlight that actually fell on that patch of ground. None of these '
-      + 'are things the farm controls.',
-  },
-  {
-    n: '3',
-    title: 'Physics sets a hard ceiling',
-    body:
-      'Photosynthesis needs about eight photons per molecule of CO₂. Past '
-      + 'that limit a claim is not doubtful, it is impossible — and no amount '
-      + 'of paperwork changes it.',
-  },
-  {
-    n: '4',
-    title: 'We credit the lower figure and show our working',
-    body:
-      'Every batch carries a hashed report anyone can recompute. Disagree '
-      + 'with the evidence, not with us.',
-  },
-];
-
-const AUDIENCES = [
-  {
-    href: '/farm',
-    who: 'I run ponds',
-    what:
-      'What needs doing today, in plain words. What your crop is worth this '
-      + 'month, and whether growing would actually pay.',
-    cta: 'Open my ponds',
-  },
-  {
-    href: '/console/investor',
-    who: 'I buy credits, or fund farms',
-    what:
-      'Every listing shows how much of the seller’s own claim was refused. '
-      + 'No other marketplace puts that next to the price.',
-    cta: 'See the market',
-  },
-  {
-    href: '/console/researcher',
-    who: 'I do research',
-    what:
-      'Licence real pond data from consenting farms, or run our physics '
-      + 'model yourself in the browser.',
-    cta: 'Open the lab',
-  },
-];
-
 export default function Landing() {
-  return (
-    <main className="landing-page">
-      <section className="mx-auto max-w-6xl px-4 pt-12 pb-10 sm:px-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Algae ponds · carbon · evidence
-        </p>
-        <h1 className="mt-3 max-w-3xl font-display text-3xl font-semibold leading-tight tracking-tight sm:text-5xl">
-          A carbon claim is only worth what you can check.
-        </h1>
-        <p className="mt-4 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          Algae ponds pull CO₂ out of the air while they clean industrial
-          wastewater. Today the farm reports its own number and nobody can
-          verify it. We compare that number against evidence the farm does not
-          control, and count only the lower of the two.
-        </p>
-
-        <div className="mt-7 flex flex-wrap gap-3">
-          <Link href="/enter"
-            className="rounded-md bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground">
-            Start here
-          </Link>
-          <Link href="/sim"
-            className="rounded-md border border-border px-5 py-3 text-sm font-semibold hover:border-accent">
-            Run a pond yourself
-          </Link>
+  return <main className="home">
+    <section className="home-hero">
+      <div className="home-shell home-hero-grid">
+        <div>
+          <p className="home-kicker">SMALL ALGAE. BIG POSSIBILITIES.</p>
+          <h1>Healthier ponds.<br /><span>Clearer carbon claims.</span></h1>
+          <p className="home-lede">An algae pond on a factory’s effluent cleans the water, absorbs CO₂, and grows a crop worth ₹240 a kilo. The hard part is proving any of it. We check every claim against evidence the farm doesn’t control — and we price the harvest too, because that is where the money actually is.</p>
+          <div className="home-actions"><Link className="button home-primary" href="#who-its-for">Find your view <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="#how-it-works">See how it works</Link></div>
+          <p className="home-caption">Live prototype, real data. No sign-up needed.</p>
         </div>
-      </section>
-
-      {/* The proof, before the pitch. Live from /summary. */}
-      <LiveProof />
-
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <h2 className="font-display text-xl font-semibold tracking-tight">
-          The problem is not that carbon markets lack money
-        </h2>
-        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-          It is that a buyer cannot tell a real tonne from a claimed one, so
-          good projects and worthless ones sell at the same price — and the
-          good ones leave.
-        </p>
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {PROBLEM.map((p) => (
-            <div key={p.label} className="rounded-xl border border-border bg-card p-5">
-              <div className="font-display text-3xl font-semibold">{p.stat}</div>
-              <p className="mt-2 text-sm">{p.label}</p>
-              <p className="mt-2 text-xs text-muted-foreground">{p.source}</p>
-            </div>
-          ))}
+        <div className="home-preview" aria-label="Illustration of pond monitoring and a carbon check">
+          <div className="home-preview-top"><span><span className="home-dot" /> A clearer view of your pond</span><span className="home-demo">Illustration</span></div>
+          <div className="home-pond-scene" aria-hidden="true"><div className="home-raceway"><div className="home-island" /><div className="home-paddle" /></div><span className="home-sensor sensor-one" /><span className="home-sensor sensor-two" /><span className="home-scene-label">ALGAE RACEWAY POND</span></div>
+          <div className="home-preview-readings"><div><span>01 / Monitor</span><strong>Read the water</strong><small>Temperature · pH · oxygen</small></div><div><span>02 / Understand</span><strong>Find the next step</strong><small>Plain-language pond alerts</small></div></div>
+          <div className="home-evidence"><span className="home-check" aria-hidden="true">✓</span><div><strong>Look beyond the claim</strong><p>Compare reported capture with supporting evidence.</p></div><span aria-hidden="true">↗</span></div>
         </div>
-      </section>
-
-      <section className="border-y border-border bg-card/50">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-          <h2 className="font-display text-xl font-semibold tracking-tight">
-            What we do about it
-          </h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map((s) => (
-              <div key={s.n} className="rounded-xl border border-border bg-card p-5">
-                <span className="grid size-7 place-items-center rounded-md bg-accent font-display text-sm font-bold text-accent-foreground">
-                  {s.n}
-                </span>
-                <h3 className="mt-3 font-display text-sm font-semibold">{s.title}</h3>
-                <p className="mt-1.5 text-sm text-muted-foreground">{s.body}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <h2 className="font-display text-xl font-semibold tracking-tight">
-          What it makes easier
-        </h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          {AUDIENCES.map((a) => (
-            <Link key={a.href} href={a.href}
-              className="group rounded-xl border border-border bg-card p-5 transition-colors hover:border-accent">
-              <h3 className="font-display text-base font-semibold">{a.who}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{a.what}</p>
-              <span className="mt-4 inline-block text-sm font-semibold text-accent-foreground group-hover:underline">
-                {a.cta} →
-              </span>
-            </Link>
-          ))}
-        </div>
-
-        <p className="mt-8 text-xs text-muted-foreground">
-          Built by team RunTimeZero for HackOut&rsquo;26. The physics engine,
-          the sensor firmware and the contracts are all open —{' '}
-          <a href={REPO_URL} className="underline">read the source</a>.
-        </p>
-      </section>
-    </main>
-  );
+      </div>
+    </section>
+    <div className="home-principles home-shell"><span>Catch a crash before it costs you</span><span>Evidence anyone can recompute</span><span>Sell the carbon and the crop</span></div>
+    <LiveProof />
+    <section className="home-section home-shell" id="how-it-works">
+      <div className="home-section-heading"><p className="eyebrow">FROM POND TO PROOF</p><h2>The problem isn’t growing algae.<br />It’s proving it.</h2><p>Buyers cannot tell a real tonne from a claimed one, so good projects and worthless ones sell at the same price — and the good ones leave. India’s 490 obligated entities start reporting under the CCTS from 31 July 2026, and none of them want to buy a credit that cannot be defended.</p></div>
+      <div className="home-steps">
+        {[['01', 'Watch the water, cheaply', 'One multiparameter sonde per pond, about ₹26,000, reporting every few seconds. A stopped paddlewheel or a crashing culture shows here hours before it shows in the harvest — and a lost crop is worth far more than the sensor.'], ['02', 'Check the claim from outside', 'Satellite chlorophyll, weighed harvests, and the sunlight that actually fell on that ground. Photosynthesis caps what is physically possible at about eight photons per molecule of CO₂; past that a claim is not doubtful, it is impossible.'], ['03', 'Sell both halves', 'Carbon credits carry a hashed report any buyer can recompute. The biomass itself is graded on protein and lipid and priced at farm gate — feed at ₹240/kg against ₹12/kg as fertiliser. Same pond, twenty times the income.']].map(([n,title,body]) => <article key={n}><span className="home-step-number">{n}</span><h3>{title}</h3><p>{body}</p></article>)}
+      </div>
+    </section>
+    <section className="home-audiences" id="who-its-for"><div className="home-shell home-section"><div className="home-section-heading"><p className="eyebrow">ONE PLATFORM, DIFFERENT NEEDS</p><h2>Find your way in.</h2><p>A smallholder with one pond and a textile mill running four hectares of effluent treatment need different screens. Start with yours.</p></div><AudienceExplorer /></div></section>
+    <section className="home-section home-shell home-trust">
+      <div><p className="eyebrow">WHY A LARGE BUYER WOULD USE THIS</p><h2>An offset you cannot defend<br />is a liability, not an asset.</h2><p>A compliance buyer under the CCTS is not looking for the cheapest tonne — they are looking for one that survives an audit three years from now. Every batch here carries a hashed MRV report that can be recomputed from the underlying readings, and states plainly how much of the seller’s own claim was refused. For a mill running its own effluent ponds, the same evidence works in both directions: proof of treatment, and proof of capture.</p><Link className="home-text-link" href="/console/market">See what is on the market <span aria-hidden="true">→</span></Link></div>
+      <div className="home-trust-list"><article><span aria-hidden="true">↔</span><div><h3>Credit the lower figure, always</h3><p>We take the smaller of what the farm claimed and what the evidence supports. Overstating earns nothing, so there is no number a seller can write down that beats the check.</p></div></article><article><span aria-hidden="true">≈</span><div><h3>Publish the uncertainty</h3><p>Satellite biomass estimates carry roughly ±140% in the literature. We show the band and credit its lower bound rather than hiding the spread inside one confident total.</p></div></article><article><span aria-hidden="true">↗</span><div><h3>Only durable disposal counts</h3><p>Buried, biochar and bioplastic keep the carbon out of the air. Feed and fertiliser return it within a season, so they are worth money but are not removal — and the contract refuses to mint them.</p></div></article></div>
+    </section>
+    <section className="home-section home-shell home-faq"><div><p className="eyebrow">A FEW THINGS TO KNOW</p><h2>Start with the basics.</h2></div><div>
+      <details><summary>What is AlgaCarbon?</summary><p>A hackathon prototype that connects algae pond monitoring, carbon checks and growth simulation. It helps people understand pond conditions and inspect the evidence behind reported carbon capture.</p></details>
+      <details><summary>Is everything shown here live farm data?</summary><p>No. The prototype can include simulated readings and sample evidence. The simulator is a model, and the homepage illustration is not a live pond. Review the data sources in a report before relying on a result.</p></details>
+      <details><summary>Can I buy carbon credits here?</summary><p>Yes — the marketplace issues batches, sells them and retires them against a named beneficiary, and each retirement is permanent. Payment settlement is not wired up in this prototype, and credits are recorded with a reproducible report hash rather than anchored on a public chain until a signing key is configured. Both are stated on the listing rather than implied away.</p></details>
+      <details><summary>Does a pond actually pay for itself?</summary><p>It depends almost entirely on what the biomass is sold as, not on carbon. Aquafeed-grade spirulina runs about ₹180–320/kg at farm gate against ₹8–18/kg for the same dry mass as soil input, and the difference is protein content — which is decided by how nitrogen is managed weeks before harvest. Carbon revenue is real but small beside that. The expansion planner shows both, with running costs and payback.</p></details>
+      <details><summary>What does it cost to instrument a pond?</summary><p>About ₹26,000 for a multiparameter sonde plus ₹6,500 for the node and enclosure, per pond, and one energy meter per site. Below roughly half a hectare we do not recommend sensors at all — weighed harvests are cruder but harder to dispute, and cheaper.</p></details>
+      <details><summary>Do I need sensors to try it?</summary><p>No sensors are needed to explore the browser simulator or existing reports. Monitoring your own pond requires a site and sensors to be configured; that setup is not available through this interface yet.</p></details>
+      <details><summary>Can I inspect how it works?</summary><p>Yes. The project source includes the models, physics engine and application code. <a href={REPO_URL}>Explore the RunTimeZero repository.</a></p></details>
+    </div></section>
+    <section className="home-shell home-final"><p className="home-kicker">SEE IT FOR YOURSELF</p><h2>Your next decision starts<br />with a clearer picture.</h2><div className="home-actions"><Link className="button home-primary" href="#who-its-for">Explore the platform <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="#how-it-works">How it works</Link></div></section>
+  </main>;
 }
