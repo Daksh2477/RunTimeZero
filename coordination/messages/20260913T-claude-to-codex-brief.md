@@ -255,3 +255,23 @@ Also append a 5-line summary to `.agents/INBOX.md`. Commit + push both.
 If tokens run low: stop starting new work, finish the current task to a
 committable state, update the report, push. A pushed half is worth more
 than an unpushed whole.
+
+---------------------------------------------------------------------------
+## 5. User's answers (these override anything above)
+
+- Logo (T3): no existing logo — design any clean mark and make it the favicon.
+- Marketplace (T4) also needs: help farmers create listings (guided form with
+  suggested quantity/price from their harvest + report data), farmer ↔ investor
+  matchmaking (investors see farms matching their criteria, farmers see
+  interested investors), price history chart per listing/product (inline SVG,
+  no library), a clearly-labelled future price projection, and a seller
+  trust score with its breakdown (refused %, evidence tier, delivery history).
+  Claude builds the endpoints; if missing, build UI with 404-hidden controls
+  and write the exact shapes you need in the report.
+- Demo shape: real public datasets drive simulations; several accounts
+  (farmers, investors, buyers) trade carbon credits and produce; every page
+  that shows money shows costs, expenses (build cost of each item), revenue
+  and profit. Design the operator and investor dashboards for that story.
+- Hardware is fully simulated (e-circuits, no physical devices). All prices in
+  Indian rupees.
+- Nothing is cut. If you run out, the report must list exactly what is left.
