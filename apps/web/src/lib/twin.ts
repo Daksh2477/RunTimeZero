@@ -44,6 +44,12 @@ export interface RunConfig {
   harvestFraction: number;
   startDayOfYear: number;
   seed: number;
+  /** Mean air temperature, °C. Water tracks it with damping. */
+  meanAirTempC: number;
+  /** Day-to-night swing, °C. Wide swings cost growth at both ends. */
+  diurnalSwingC: number;
+  /** Nitrogen in the influent, mg/L. On a wastewater site this is free. */
+  influentNitrogenMgL: number;
   /** Optional injected fault, so an operator can ask "what if it crashes?". */
   crashOnDay?: number | null;
 }
@@ -58,19 +64,25 @@ export interface RunResult {
 
 interface PhysicsModule {
   default: (input?: unknown) => Promise<unknown>;
-  WasmPond: new (
-    lat: number, area: number, depth: number, seed: bigint, day: number,
-  ) => {
-    step: () => Reading;
-    harvest: (fraction: number) => number;
-    standing_biomass_kg: () => number;
-    inject_crash: (severity: number, startHour: number, durationHours: number) => void;
-    free?: () => void;
+  WasmPond: {
+    new (lat: number, area: number, depth: number, seed: bigint, day: number): PondHandle;
+    with_conditions(
+      lat: number, area: number, depth: number, seed: bigint, day: number,
+      meanAirTempC: number, diurnalSwingC: number, influentNitrogenMgL: number,
+    ): PondHandle;
   };
   physics_ceiling_co2_kg: (
     lat: number, area: number, depth: number, startDay: number,
     days: number, meanTemp: number,
   ) => number;
+}
+
+interface PondHandle {
+    step: () => Reading;
+    harvest: (fraction: number) => number;
+    standing_biomass_kg: () => number;
+    inject_crash: (severity: number, startHour: number, durationHours: number) => void;
+    free?: () => void;
 }
 
 let modulePromise: Promise<PhysicsModule> | null = null;
@@ -110,12 +122,18 @@ export function dayOfYear(d = new Date()): number {
  */
 export async function runTwin(cfg: RunConfig): Promise<RunResult> {
   const mod = await loadTwin();
-  const pond = new mod.WasmPond(
+  // with_conditions rather than the plain constructor: an operator asking
+  // "what if my water runs colder" needs those inputs to actually reach the
+  // model, not sit at a Gujarat default.
+  const pond = mod.WasmPond.with_conditions(
     cfg.latDeg,
     cfg.areaM2,
     cfg.depthM,
     BigInt(cfg.seed),
     cfg.startDayOfYear,
+    cfg.meanAirTempC,
+    cfg.diurnalSwingC,
+    cfg.influentNitrogenMgL,
   );
 
   if (cfg.crashOnDay != null && cfg.crashOnDay > 0) {
@@ -162,7 +180,8 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
   pond.free?.();
 
   const ceilingCo2Kg = mod.physics_ceiling_co2_kg(
-    cfg.latDeg, cfg.areaM2, cfg.depthM, cfg.startDayOfYear, cfg.days, 30,
+    cfg.latDeg, cfg.areaM2, cfg.depthM, cfg.startDayOfYear, cfg.days,
+    cfg.meanAirTempC,
   );
 
   return {
@@ -184,5 +203,8 @@ export const DEFAULT_CONFIG: RunConfig = {
   harvestFraction: 0.45,
   startDayOfYear: dayOfYear(),
   seed: 42,
+  meanAirTempC: 30,
+  diurnalSwingC: 8,
+  influentNitrogenMgL: 40,
   crashOnDay: null,
 };

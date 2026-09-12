@@ -17,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   DEFAULT_CONFIG, runTwin, type RunConfig, type RunResult,
 } from '@/lib/twin';
+import { ExpansionPanel } from '@/components/expansion-panel';
 
 interface Props {
   /** Seeded from a real pond when opened from the console. */
@@ -127,6 +128,32 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
         />
 
         <details className="technical">
+          <summary>Real-world conditions</summary>
+          <p className="helper">
+            Defaults match a Gujarat summer. Change them to match your site, or
+            to ask what a cold month would cost you.
+          </p>
+          <Slider
+            id="temp" label="Average air temperature" value={cfg.meanAirTempC}
+            min={12} max={44} step={1} display={`${cfg.meanAirTempC} °C`}
+            onChange={set('meanAirTempC')}
+            hint="Algae stop growing below about 20 °C and are damaged above 38 °C."
+          />
+          <Slider
+            id="swing" label="Day to night swing" value={cfg.diurnalSwingC}
+            min={2} max={20} step={1} display={`${cfg.diurnalSwingC} °C`}
+            onChange={set('diurnalSwingC')}
+            hint="A wide swing costs growth at both ends of the day."
+          />
+          <Slider
+            id="nitrogen" label="Nitrogen in the water" value={cfg.influentNitrogenMgL}
+            min={2} max={80} step={1} display={`${cfg.influentNitrogenMgL} mg/L`}
+            onChange={set('influentNitrogenMgL')}
+            hint="Wastewater supplies this free. Drop it low to see growth stall."
+          />
+        </details>
+
+        <details className="technical">
           <summary>What if it goes wrong?</summary>
           <p className="helper">
             Add a culture crash and see what it costs. This is the same failure
@@ -142,6 +169,19 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
           />
         </details>
       </div>
+
+      {result && cfg.days >= 7 && (
+        <div className="sim-expansion">
+          <ExpansionPanel
+            currentAreaM2={cfg.areaM2}
+            // Annualised from what the model just produced, so the expansion
+            // maths and the simulation can never tell different stories.
+            yieldKgPerM2PerYear={
+              (result.totalHarvestKg / cfg.areaM2) * (365 / cfg.days)
+            }
+          />
+        </div>
+      )}
     </div>
   );
 }
