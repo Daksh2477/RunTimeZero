@@ -1323,3 +1323,57 @@ button, a, input, select {
 .land-edit input:focus-visible { outline: 2px solid var(--culture); outline-offset: 1px; }
 .land-edit-note { grid-column: 1 / -1; margin: 0; }
 .land-edit-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* =============================================================== hardware
+ * The sensor page. Plain blocks, tables that scroll sideways rather than
+ * squeezing, and cards that wrap at any width — it is read on a phone in a
+ * field as often as on a laptop.
+ */
+.hardware { padding-block: 20px 48px; }
+.hw-block { margin-bottom: 34px; }
+.hw-block h2 { font-size: 1.25rem; margin: 0 0 8px; }
+.hw-subhead { font-size: 1.02rem; margin: 24px 0 10px; }
+.hw-lede { margin: 0 0 16px; max-width: 68ch; color: var(--silt); }
+
+.hw-channels, .hw-rules {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+.hw-channels article, .hw-rules article {
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--panel); padding: 14px 15px;
+}
+.hw-channels h3, .hw-rules h3 { margin: 0 0 6px; font-size: 0.95rem; }
+.hw-channels p, .hw-rules p { margin: 0; font-size: 0.86rem; line-height: 1.5; color: var(--silt); }
+
+.hw-table-scroll { overflow-x: auto; border: 1px solid var(--hairline); border-radius: var(--radius); }
+.hw-table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 0.86rem; }
+.hw-table th, .hw-table td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+.hw-table thead th { background: var(--culture-wash); font-size: 0.72rem; letter-spacing: 0.05em; text-transform: uppercase; }
+.hw-table tbody tr:last-child td { border-bottom: 0; }
+.hw-table code { font-size: 0.82rem; }
+.hw-why { color: var(--silt); max-width: 34ch; }
+
+.hw-figures {
+  display: grid; gap: 10px; margin: 0 0 16px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+.hw-figures div {
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  background: var(--panel); padding: 12px 14px;
+}
+.hw-figures dt { font-size: 0.68rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--silt); }
+.hw-figures dd { margin: 4px 0 0; font-family: var(--font-display); font-size: 1.3rem; }
+
+.hw-ponds { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.hw-ponds article {
+  border: 1px solid var(--hairline); border-left: 4px solid var(--culture-dim);
+  border-radius: var(--radius); background: var(--panel); padding: 12px 14px;
+}
+.hw-ponds article.is-off { border-left-color: var(--hairline); }
+.hw-ponds header { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.hw-ponds header span { font-size: 0.78rem; color: var(--silt); }
+.hw-ponds p { margin: 6px 0 8px; font-size: 0.82rem; line-height: 1.5; color: var(--silt); }
+.hw-channel-tag { font-size: 0.68rem; padding: 2px 8px; border-radius: 999px; background: var(--culture-wash); border: 1px solid var(--culture-dim); }
+.hw-notes { margin: 14px 0 0; padding-left: 18px; font-size: 0.82rem; color: var(--silt); }
+.hw-notes li { margin-bottom: 5px; }

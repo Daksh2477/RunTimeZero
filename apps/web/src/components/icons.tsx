@@ -51,3 +51,7 @@ export const Cog = () => (
 export const Coins = () => (
   <svg {...base}><circle cx="8" cy="8" r="6" /><path d="M18.09 10.37A6 6 0 1 1 10.34 18" /><path d="M7 6h1v4M16.71 13.88l.7.71-2.82 2.82" /></svg>
 );
+/** The sensor node. A chip, because that is literally what it is. */
+export const Cpu = () => (
+  <svg {...base}><rect x="6" y="6" width="12" height="12" rx="2" /><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" /></svg>
+);

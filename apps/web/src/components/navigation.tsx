@@ -15,8 +15,8 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { usePathname } from 'next/navigation';
-import { Chart, Coins, Cog, Flask, Leaf, Map, Shield, Users } from '@/components/icons';
-import { ROLE_META, canAccess, clearRole, useRole } from '@/lib/session';
+import { Chart, Coins, Cog, Cpu, Flask, Leaf, Map, Shield, Users } from '@/components/icons';
+import { ROLE_META, canAccess, useRole } from '@/lib/session';
 
 /*
  * One distinct icon each. An earlier version reused four icons across eight
@@ -30,6 +30,7 @@ const NAV = [
   { href: '/console/researcher', label: 'Research data', icon: Flask },
   { href: '/verify', label: 'Carbon reports', icon: Shield },
   { href: '/sim', label: 'Simulator', icon: Chart },
+  { href: '/hardware', label: 'The sensor', icon: Cpu },
   { href: '/console', label: 'All ponds', icon: Users },
   { href: '/console/admin', label: 'Admin', icon: Cog },
 ] as const;
@@ -42,12 +43,12 @@ export function Navigation() {
   // Before the role is read, show nothing rather than flashing the full set.
   if (!ready) return <nav className="main-nav" aria-label="Main navigation" />;
 
-  const visible = role ? NAV.filter((n) => canAccess(role, n.href)) : [];
+  const visible = role ? NAV.filter((n) => canAccess(role, n.href)) : NAV.filter(n => ['/console/market','/verify','/sim'].includes(n.href));
   const active = visible.filter(n => path === n.href || path.startsWith(n.href + '/')).sort((a,b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <div className="nav-cluster">
-      {role && <button type="button" className="mobile-nav-toggle" aria-expanded={menuOpen} aria-controls="app-navigation" onClick={() => setMenuOpen(open => !open)}>{visible.find(n=>n.href===active)?.label ?? 'Menu'} <span aria-hidden="true">{menuOpen ? '−' : '☰'}</span></button>}
+      {<button type="button" className="mobile-nav-toggle" aria-expanded={menuOpen} aria-controls="app-navigation" onClick={() => setMenuOpen(open => !open)}>{visible.find(n=>n.href===active)?.label ?? 'Menu'} <span aria-hidden="true">{menuOpen ? '−' : '☰'}</span></button>}
       <nav id="app-navigation" className="main-nav" data-open={menuOpen} aria-label="Main navigation">
       {visible.map(({ href, label, icon: Icon }) => (
         <Link
@@ -65,11 +66,11 @@ export function Navigation() {
 
       </nav>
       {role ? (
-        <Link href="/enter" className="role-pill" onClick={() => clearRole()}>
-          <span className="role-name">{ROLE_META[role].label} · </span>Switch view
+        <Link href="/enter" className="role-pill">
+          <span className="role-name">{ROLE_META[role].label} · </span>My account
         </Link>
       ) : (
-        <Link href="/enter" className="role-pill">Choose your view</Link>
+        <Link href="/enter" className="role-pill">Sign in</Link>
       )}
     </div>
   );
