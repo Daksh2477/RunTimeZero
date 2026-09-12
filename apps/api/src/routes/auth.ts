@@ -49,13 +49,37 @@ authRouter.post('/login', async (req, res) => {
   }
 });
 
-/** Who the current token belongs to, straight from the database. */
+/** Where each role should land after signing in. */
+const HOME: Record<Role, string> = {
+  operator: '/farm',
+  buyer: '/console/market',
+  researcher: '/console/researcher',
+  admin: '/console/admin',
+};
+
+/**
+ * Who the current token belongs to, straight from the database.
+ *
+ * `landingPath` and `scope` are here because the console's session contract
+ * reads them: without `scope` it has to assume an operator can see exactly one
+ * site, which is right today and would be wrong the moment somebody runs two.
+ * The API decides this, not the browser.
+ */
 authRouter.get('/me', async (req: Authenticated, res) => {
   const claims = req.account;
   if (!claims) return res.status(401).json({ error: 'Not signed in.' });
   const account = await getAccount(claims.sub);
   if (!account) return res.status(401).json({ error: 'That account no longer exists.' });
-  return res.json({ account });
+
+  const allSites = account.role === 'admin' || account.role === 'researcher';
+  return res.json({
+    account,
+    landingPath: HOME[account.role],
+    scope: {
+      allSites,
+      siteIds: allSites || !account.siteId ? [] : [account.siteId],
+    },
+  });
 });
 
 /**
