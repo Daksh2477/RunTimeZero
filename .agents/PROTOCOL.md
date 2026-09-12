@@ -76,7 +76,7 @@ other agent, so two agents can both "claim" the same file and only discover it
 at rebase. Push the claim before you start work, not after.
 
 ```
-1. git pull --rebase --autostash
+1. git fetch  (no pull --autostash: stash moves the other agent's edits)
 2. git status --short          ← whose uncommitted work is already here?
 3. read .agents/CLAIMS.md — is anything you need already claimed?
 4. add your row to CLAIMS.md
