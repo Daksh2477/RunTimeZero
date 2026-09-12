@@ -8,7 +8,9 @@
  */
 
 import { Router, type Response } from 'express';
-import { getCertificate, listMarket, retire } from '../services/market-service.ts';
+import { getCertificate, listMarket, retire, setListed } from '../services/market-service.ts';
+import { matchesFor, mine, priceHistory, sellerTrust } from '../services/market-insights.ts';
+import { requireAuth, type Authenticated } from './auth.ts';
 import {
   listForSale, listProduce, orderProduce, sellableHarvests,
 } from '../services/produce-service.ts';
@@ -30,6 +32,66 @@ marketRouter.get('/', async (_req, res) => {
     send(res, err);
   }
 });
+
+/** The signed-in account's listings, retirements and orders. */
+marketRouter.get('/mine', requireAuth, async (req: Authenticated, res) => {
+  try {
+    res.json(await mine(req.account!));
+  } catch (err) {
+    send(res, err);
+  }
+});
+
+/** Traded prices by day, with a labelled projection. ?kind=credit|produce&batchId&harvestId&siteId */
+marketRouter.get('/price-history', async (req, res) => {
+  try {
+    const kind = req.query.kind === 'produce' ? 'produce' : 'credit';
+    const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
+    res.json(await priceHistory(kind, {
+      batchId: str(req.query.batchId), harvestId: str(req.query.harvestId), siteId: str(req.query.siteId),
+    }));
+  } catch (err) {
+    send(res, err);
+  }
+});
+
+/** A seller's trust score and what it is made of. */
+marketRouter.get('/trust/:siteId', async (req, res) => {
+  try {
+    const trust = await sellerTrust(req.params.siteId);
+    if (!trust) return res.status(404).json({ error: 'No such site' });
+    res.json(trust);
+  } catch (err) {
+    send(res, err);
+  }
+});
+
+/** Investors: farms ranked by fit. Operators: who has shown interest in them. */
+marketRouter.get('/matches', requireAuth, async (req: Authenticated, res) => {
+  try {
+    const maxInr = Number(req.query.maxInr);
+    res.json(await matchesFor(req.account!, {
+      maxInr: Number.isFinite(maxInr) && maxInr > 0 ? maxInr : undefined,
+      tier: typeof req.query.tier === 'string' ? req.query.tier : undefined,
+    }));
+  } catch (err) {
+    send(res, err);
+  }
+});
+
+for (const [path, listed] of [['unlist', false], ['relist', true]] as const) {
+  marketRouter.post(`/:batchId/${path}`, async (req: Authenticated, res) => {
+    try {
+      const asking = Number((req.body ?? {}).askingInrPerTonne);
+      res.json(await setListed(
+        req.params.batchId as string, listed, req.account!,
+        listed && Number.isFinite(asking) && asking > 0 ? asking : null,
+      ));
+    } catch (err) {
+      send(res, err);
+    }
+  });
+}
 
 /**
  * Retire part of a batch against a named beneficiary.
@@ -53,7 +115,9 @@ marketRouter.post('/:batchId/retire', async (req, res) => {
       });
     }
 
-    res.status(201).json(await retire({ batchId: req.params.batchId, kg, beneficiary }));
+    res.status(201).json(await retire({
+      batchId: req.params.batchId, kg, beneficiary, accountId: (req as Authenticated).account?.sub ?? null,
+    }));
   } catch (err) {
     send(res, err);
   }
@@ -127,6 +191,7 @@ marketRouter.post('/produce/:harvestId/order', async (req, res) => {
     }
     res.status(201).json(await orderProduce({
       harvestId: req.params.harvestId, buyerName, buyerEmail, kg,
+      accountId: (req as Authenticated).account?.sub ?? null,
     }));
   } catch (err) {
     send(res, err);

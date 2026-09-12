@@ -152,6 +152,7 @@ export async function listForSale(harvestId: string, kg: number, askingInrPerKg:
 /** Place an order. Locked, so two buyers cannot take the same sack. */
 export async function orderProduce(a: {
   harvestId: string; buyerName: string; buyerEmail: string; kg: number;
+  accountId?: string | null;
 }) {
   const client = await pool.connect();
   try {
@@ -181,9 +182,9 @@ export async function orderProduce(a: {
       ? PRICE_INR[grade]!.mid : Number(h.asking_inr_per_kg);
 
     const { rows: orderRows } = await client.query(
-      `INSERT INTO produce_orders (harvest_id, buyer_name, buyer_email, kg, inr_per_kg)
-       VALUES ($1,$2,$3,$4,$5) RETURNING id, placed_at`,
-      [a.harvestId, a.buyerName.trim(), a.buyerEmail.trim(), a.kg, rate],
+      `INSERT INTO produce_orders (harvest_id, buyer_name, buyer_email, kg, inr_per_kg, account_id)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, placed_at`,
+      [a.harvestId, a.buyerName.trim(), a.buyerEmail.trim(), a.kg, rate, a.accountId ?? null],
     );
     await client.query(
       'UPDATE harvest_records SET sold_kg = sold_kg + $2 WHERE id = $1',

@@ -400,6 +400,34 @@ ALTER TABLE ponds ADD COLUMN IF NOT EXISTS paddlewheel_kw DOUBLE PRECISION;
 ALTER TABLE ponds ADD COLUMN IF NOT EXISTS target_od DOUBLE PRECISION;
 ALTER TABLE ponds ADD COLUMN IF NOT EXISTS notes TEXT;
 
+-- Produce sales. Both databases got these by hand before they were written
+-- down here, so a fresh setup had a produce market with nowhere to store it.
+ALTER TABLE harvest_records ADD COLUMN IF NOT EXISTS protein_frac DOUBLE PRECISION;
+ALTER TABLE harvest_records ADD COLUMN IF NOT EXISTS lipid_frac DOUBLE PRECISION;
+ALTER TABLE harvest_records ADD COLUMN IF NOT EXISTS carbohydrate_frac DOUBLE PRECISION;
+ALTER TABLE harvest_records ADD COLUMN IF NOT EXISTS composition_source TEXT
+  CHECK (composition_source IN ('lab', 'nir', 'modelled'));
+ALTER TABLE harvest_records ADD COLUMN IF NOT EXISTS listed_kg DOUBLE PRECISION;
+ALTER TABLE harvest_records ADD COLUMN IF NOT EXISTS asking_inr_per_kg DOUBLE PRECISION;
+ALTER TABLE harvest_records ADD COLUMN IF NOT EXISTS sold_kg DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS produce_orders (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  harvest_id  UUID NOT NULL REFERENCES harvest_records(id) ON DELETE RESTRICT,
+  buyer_name  TEXT NOT NULL CHECK (length(trim(buyer_name)) > 0),
+  buyer_email TEXT NOT NULL,
+  kg          DOUBLE PRECISION NOT NULL CHECK (kg > 0),
+  inr_per_kg  DOUBLE PRECISION NOT NULL CHECK (inr_per_kg > 0),
+  placed_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_orders_harvest ON produce_orders(harvest_id);
+
+-- A seller can pause a credit listing without touching what was issued, and
+-- every sale records its price so the market has a history to show.
+ALTER TABLE batches ADD COLUMN IF NOT EXISTS listed BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE batches ADD COLUMN IF NOT EXISTS asking_inr_per_tonne DOUBLE PRECISION;
+ALTER TABLE retirements ADD COLUMN IF NOT EXISTS inr_per_tonne DOUBLE PRECISION;
+
 -- ------------------------------------------------------------ accounts
 --
 -- Username and password, and nothing else. No email, no reset flow, no
@@ -424,5 +452,9 @@ CREATE TABLE IF NOT EXISTS accounts (
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_login_at TIMESTAMPTZ
 );
+
+-- Who bought, so "my activity" does not depend on a typed-in name.
+ALTER TABLE retirements ADD COLUMN IF NOT EXISTS account_id UUID REFERENCES accounts(id) ON DELETE SET NULL;
+ALTER TABLE produce_orders ADD COLUMN IF NOT EXISTS account_id UUID REFERENCES accounts(id) ON DELETE SET NULL;
 
 COMMIT;
