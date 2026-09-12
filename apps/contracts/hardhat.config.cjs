@@ -19,6 +19,16 @@ module.exports = {
       accounts: process.env.ORACLE_PRIVATE_KEY ? [process.env.ORACLE_PRIVATE_KEY] : [],
       chainId: 80002,
     },
+
+    // Ethereum Sepolia. Slower and its faucets are stingier than Amoy's, but
+    // it is the testnet people already hold ETH on, and block explorers and
+    // wallets support it without anyone adding a custom network by hand —
+    // which matters when a judge wants to click the transaction link.
+    sepolia: {
+      url: process.env.SEPOLIA_RPC_URL || 'https://ethereum-sepolia-rpc.publicnode.com',
+      accounts: process.env.ORACLE_PRIVATE_KEY ? [process.env.ORACLE_PRIVATE_KEY] : [],
+      chainId: 11155111,
+    },
   },
   paths: { sources: './contracts', tests: './test', artifacts: './artifacts' },
 };

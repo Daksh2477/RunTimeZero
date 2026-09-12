@@ -149,9 +149,18 @@ export async function createBatch(args: CreateBatchArgs): Promise<CreatedBatch> 
   const anchor = await attestBatch({
     siteId: args.siteId,
     reportHash,
+    periodStart: args.periodStart,
+    periodEnd: args.periodEnd,
+    claimedCo2Kg: report.totals.claimedCo2Kg,
+    independentCo2Kg: report.totals.independentCo2Kg,
+    independentLowCo2Kg: report.totals.independentLowCo2Kg,
+    ceilingCo2Kg: report.totals.ceilingCo2Kg,
     creditableCo2Kg: report.totals.creditableCo2Kg,
     divergenceBps: report.totals.divergenceBps,
     disposition: args.disposition,
+    // Every check id, so an auditor can pull the same rows we used.
+    evidenceRefs: report.checks.map((c) => c.id).join(','),
+    dispositionEvidenceRef: args.dispositionEvidenceRef ?? '',
   });
 
   const { rows } = await pool.query(

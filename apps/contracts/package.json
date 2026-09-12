@@ -5,7 +5,8 @@
   "scripts": {
     "build": "hardhat compile",
     "test": "hardhat test",
-    "deploy:amoy": "hardhat run scripts/deploy.cjs --network amoy"
+    "deploy:amoy": "hardhat run scripts/deploy.cjs --network amoy",
+    "deploy:sepolia": "hardhat run scripts/deploy.cjs --network sepolia"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.1.2",

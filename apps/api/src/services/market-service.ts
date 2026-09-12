@@ -107,7 +107,8 @@ export async function retire(args: RetireArgs): Promise<Certificate> {
     await client.query('BEGIN');
 
     const { rows: batchRows } = await client.query(
-      `SELECT b.id, b.creditable_co2_kg, b.mrv_report_cid, s.name AS site_name
+      `SELECT b.id, b.creditable_co2_kg, b.mrv_report_cid, b.evidence_token_id,
+              s.name AS site_name
          FROM batches b JOIN sites s ON s.id = b.site_id
         WHERE b.id = $1 FOR UPDATE OF b`,
       [args.batchId],
@@ -131,7 +132,14 @@ export async function retire(args: RetireArgs): Promise<Certificate> {
       );
     }
 
-    const anchor = await retireCredits(args);
+    // The contract knows the evidence token id, not our UUID. A batch that
+    // was never anchored retires locally, which is correct: this ledger is
+    // authoritative either way.
+    const anchor = await retireCredits({
+      onChainBatchId: batch.evidence_token_id ?? null,
+      kg: args.kg,
+      beneficiary: args.beneficiary,
+    });
 
     const { rows } = await client.query(
       `INSERT INTO retirements (batch_id, kg, beneficiary, certificate_id, tx_hash)
