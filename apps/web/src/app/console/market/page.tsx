@@ -24,30 +24,42 @@ import {
   getMarket, getProduce, orderProduce, retireCredits,
   type Listing, type Produce,
 } from '@/lib/market-api';
-import { RetirePanel } from '@/components/retire-panel';
+import { MarketBatchDetail } from '@/components/market-batch-detail';
+import { MarketActivity, MarketMatches, PriceHistory } from '@/components/market-insights';
+import { MarketListingForm } from '@/components/market-listing-form';
+import { ResourceState } from '@/components/detail-sheet';
+import { useRole } from '@/lib/session';
 
 const inr = (v: number) =>
   v >= 10_000_000 ? `₹${(v / 10_000_000).toFixed(2)} Cr`
     : v >= 100_000 ? `₹${(v / 100_000).toFixed(1)} L`
       : `₹${Math.round(v).toLocaleString('en-IN')}`;
 
-type Tab = 'credits' | 'produce';
+type Tab = 'credits' | 'produce' | 'activity' | 'create' | 'matches';
 
 export default function MarketPage() {
+  const {role}=useRole();
+  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);
+  const [tier,setTier]=useState(''),[disposition,setDisposition]=useState(''),[refused,setRefused]=useState(''),[minimum,setMinimum]=useState(''),[sort,setSort]=useState('available');
   const [tab, setTab] = useState<Tab>('credits');
   const [credits, setCredits] = useState<Listing[]>([]);
   const [produce, setProduce] = useState<Produce[]>([]);
   const [selected, setSelected] = useState<Listing | null>(null);
   const [query, setQuery] = useState('');
 
-  const load = () => {
-    getMarket().then((l) => { setCredits(l); setSelected((s) => s ?? l[0] ?? null); }).catch(() => {});
-    getProduce().then(setProduce).catch(() => {});
+  const load = async () => {
+    setLoading(true); setError('');
+    const results=await Promise.allSettled([getMarket(),getProduce()]);
+    const [c,p]=results;
+    if(c.status==='fulfilled'){setCredits(c.value);setSelected(s=>s?c.value.find(l=>l.batchId===s.batchId)??null:null);}
+    if(p.status==='fulfilled')setProduce(p.value);
+    const errors=results.filter(r=>r.status==='rejected').map(r=>String(r.reason instanceof Error?r.reason.message:r.reason));
+    setError(errors.join(' · '));setLoading(false);setRevision(n=>n+1);
   };
-  useEffect(load, []);
+  useEffect(()=>{void load();}, []);
 
   const match = (s: string) => s.toLowerCase().includes(query.toLowerCase());
-  const shownCredits = credits.filter((c) => match(c.siteName));
+  const shownCredits = credits.filter(c => match(c.siteName)&&(!tier||c.tier===tier)&&(!disposition||c.disposition===disposition)&&(!refused||c.divergenceBps/100<=Number(refused))&&(!minimum||c.availableKg>=Number(minimum))).sort((a,b)=>sort==='refused'?a.divergenceBps-b.divergenceBps:sort==='site'?a.siteName.localeCompare(b.siteName):sort==='price'?a.askingInrPerTonne-b.askingInrPerTonne:b.availableKg-a.availableKg);
   const shownProduce = produce.filter((p) => match(`${p.siteName} ${p.gradeLabel} ${p.pondLabel}`));
 
   const creditKg = credits.reduce((s, c) => s + c.availableKg, 0);
@@ -75,7 +87,7 @@ export default function MarketPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search listings…"
+            aria-label="Search listings by farm or product" placeholder="Search listings…"
             className="h-11 w-full rounded-xl border border-border bg-card/60 px-4 text-sm backdrop-blur sm:w-64"
           />
         </div>
@@ -97,8 +109,8 @@ export default function MarketPage() {
           ))}
         </div>
 
-        <div className="flex gap-2 rounded-2xl border border-border/60 bg-card/40 p-2 backdrop-blur-sm">
-          {(['credits', 'produce'] as const).map((t) => (
+        <div className="flex flex-wrap gap-2 rounded-2xl border border-border/60 bg-card/40 p-2 backdrop-blur-sm">
+          {(['credits', 'produce', ...(role?['activity','matches']:[]), ...(['operator','admin'].includes(role??'')?['create']:[])] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -107,14 +119,16 @@ export default function MarketPage() {
                 tab === t ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              {t === 'credits' ? 'Carbon credits' : 'Algae produce'}
+              {{credits:'Carbon credits',produce:'Algae produce',activity:'My activity',create:'Create listing',matches:role==='operator'?'Interested investors':'Find farms'}[t]}
             </button>
           ))}
         </div>
 
-        {tab === 'credits' ? (
-          <div className="grid gap-5 lg:grid-cols-3">
-            <div className="grid gap-4 sm:grid-cols-2 lg:col-span-2">
+        <ResourceState loading={loading} error={error}/>{error&&<button className="button secondary" onClick={()=>void load()}>Retry listings</button>}
+        {tab==='activity'?<MarketActivity revision={revision} onChanged={()=>void load()}/>:tab==='create'?<MarketListingForm onChanged={()=>void load()}/>:tab==='matches'?<MarketMatches/>:tab === 'credits' ? (<>
+          <div className="market-filters"><label>Tier<select value={tier} onChange={e=>setTier(e.target.value)}><option value="">Any tier</option>{[...new Set(credits.map(c=>c.tier))].map(t=><option key={t}>{t}</option>)}</select></label><label>Disposition<select value={disposition} onChange={e=>setDisposition(e.target.value)}><option value="">Any use</option>{[...new Set(credits.map(c=>c.disposition))].map(d=><option key={d}>{d}</option>)}</select></label><label>Maximum refused (%)<input type="number" min="0" max="100" value={refused} onChange={e=>setRefused(e.target.value)}/></label><label>Minimum available (kg)<input type="number" min="0" value={minimum} onChange={e=>setMinimum(e.target.value)}/></label><label>Sort by<select value={sort} onChange={e=>setSort(e.target.value)}><option value="available">Available kg</option><option value="refused">Least refused</option><option value="price">Lowest price</option><option value="site">Farm name</option></select></label></div>
+          <div className="grid gap-5">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {shownCredits.map((c, i) => (
                 <button
                   key={c.batchId}
@@ -149,23 +163,23 @@ export default function MarketPage() {
                       </p>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {c.anchored ? 'on chain' : 'hash verified'}
+                      {c.anchored ? 'on chain' : 'not anchored'}<br/>₹{c.askingInrPerTonne.toLocaleString('en-IN')}/tonne
                     </p>
                   </div>
                 </button>
               ))}
-              {shownCredits.length === 0 && (
+              {!loading && !error && shownCredits.length === 0 && (
                 <p className="text-sm text-muted-foreground">No credits match that search.</p>
               )}
             </div>
-            <RetirePanel listing={selected} onRetired={load} onRetire={retireCredits} />
-          </div>
+
+          </div></>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {shownProduce.map((p, i) => (
               <ProduceCard key={p.harvestId} produce={p} index={i} onOrdered={load} />
             ))}
-            {shownProduce.length === 0 && (
+            {!loading && !error && shownProduce.length === 0 && (
               <p className="text-sm text-muted-foreground">
                 Nothing is listed for sale right now.
               </p>
@@ -173,109 +187,18 @@ export default function MarketPage() {
           </div>
         )}
       </div>
+      {selected&&<MarketBatchDetail listing={selected} onChanged={()=>void load()} onClose={()=>setSelected(null)}/>}
     </div>
   );
 }
 
-function ProduceCard({ produce: p, index, onOrdered }: {
-  produce: Produce; index: number; onOrdered: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ kg: 100, buyerName: '', buyerEmail: '' });
-  const [done, setDone] = useState<{ totalInr: number; kg: number } | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = async () => {
-    setError(null);
-    try {
-      setDone(await orderProduce(p.harvestId, form));
-      onOrdered();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Order failed');
-    }
-  };
-
-  return (
-    <div
-      style={{ animationDelay: `${index * 50}ms` }}
-      className="rise-in flex flex-col rounded-2xl border border-border/60 bg-card/60 p-5 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:shadow-lg"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="font-display text-base font-semibold">{p.gradeLabel}</p>
-          <p className="text-xs text-muted-foreground">
-            {p.siteName} · {p.pondLabel} · cut {p.harvestedAt.slice(0, 10)}
-          </p>
-        </div>
-        <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
-          ₹{p.askingInrPerKg}/kg
-        </span>
-      </div>
-
-      {p.protein !== null && (
-        <dl className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-secondary/60 p-3 text-center text-xs">
-          {[['Protein', p.protein], ['Lipid', p.lipid], ['Carbs', p.carbohydrate]].map(([k, v]) => (
-            <div key={k as string}>
-              <dt className="uppercase tracking-wide text-muted-foreground">{k as string}</dt>
-              <dd className="mt-0.5 font-mono text-sm font-semibold">
-                {v === null ? '—' : `${((v as number) * 100).toFixed(0)}%`}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {/* A modelled figure is worth less trust than an assay, so say which. */}
-      <p className="mt-1.5 text-[0.68rem] text-muted-foreground">
-        {p.compositionSource === 'lab' ? 'Composition from a lab assay.'
-          : p.compositionSource === 'nir' ? 'Composition from an on-farm NIR meter.'
-            : 'Composition estimated from pond conditions, not assayed. '
-              + 'Ask for a lab report before buying on protein spec.'}
-      </p>
-
-      <div className="mt-4 flex items-end justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-wider text-muted-foreground">Available</p>
-          <p className="font-display text-2xl font-bold">
-            {Math.round(p.availableKg).toLocaleString('en-IN')}
-            <span className="ml-1 text-sm font-normal text-muted-foreground">kg</span>
-          </p>
-        </div>
-        <p className="text-right text-xs text-muted-foreground">
-          market ₹{p.priceLowInr}–{p.priceHighInr}
-        </p>
-      </div>
-
-      <div className="mt-4">
-        {done ? (
-          <p className="rounded-xl border border-status-optimal/40 bg-status-optimal/5 p-3 text-sm">
-            Ordered {done.kg} kg · {inr(done.totalInr)}
-          </p>
-        ) : open ? (
-          <div className="space-y-2">
-            <input type="number" min={1} max={Math.floor(p.availableKg)} value={form.kg}
-              onChange={(e) => setForm({ ...form, kg: Number(e.target.value) })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm" />
-            <input value={form.buyerName} placeholder="Your name"
-              onChange={(e) => setForm({ ...form, buyerName: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-            <input value={form.buyerEmail} placeholder="Email"
-              onChange={(e) => setForm({ ...form, buyerEmail: e.target.value })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm" />
-            {error && <p className="text-xs text-destructive">{error}</p>}
-            <button type="button" onClick={submit}
-              disabled={!form.buyerName.trim() || !form.buyerEmail.trim()}
-              className="w-full rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-40">
-              Order {inr(form.kg * p.askingInrPerKg)}
-            </button>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setOpen(true)}
-            className="w-full rounded-xl border border-border px-4 py-2.5 text-sm font-semibold transition-colors hover:border-primary">
-            Buy this
-          </button>
-        )}
-      </div>
-    </div>
-  );
+function ProduceCard({ produce:p, onOrdered }: {produce:Produce;index:number;onOrdered:()=>void}) {
+ const [open,setOpen]=useState(false),[review,setReview]=useState(false),[busy,setBusy]=useState(false);
+ const [form,setForm]=useState({kg:Math.min(100,p.availableKg),buyerName:'',buyerEmail:''});
+ const [done,setDone]=useState<{id:string;kg:number;totalInr:number}|null>(null),[error,setError]=useState('');
+ const valid=Number.isFinite(form.kg)&&form.kg>0&&form.kg<=p.availableKg&&form.buyerName.trim()&&/^\S+@\S+\.\S+$/.test(form.buyerEmail);
+ async function submit(){if(busy||!valid)return;setBusy(true);setError('');try{setDone(await orderProduce(p.harvestId,form));onOrdered();}catch(e){setError(e instanceof Error?e.message:'Could not order.');}finally{setBusy(false);}}
+ return <article className="panel"><h3>{p.gradeLabel}</h3><p>{p.siteName} · {p.pondLabel} · {p.harvestedAt.slice(0,10)}</p><p><strong>{p.availableKg.toLocaleString('en-IN')} kg</strong> available · ₹{p.askingInrPerKg}/kg</p><p>Grade reference range ₹{p.priceLowInr}–{p.priceHighInr}/kg</p><dl className="kv">{[['Protein',p.protein],['Lipid',p.lipid],['Carbohydrate',p.carbohydrate]].map(([k,v])=><div key={String(k)}><dt>{k}</dt><dd>{v===null?'Not measured':`${(Number(v)*100).toFixed(0)}%`}</dd></div>)}</dl><p className="helper">Composition: {p.compositionSource??'not recorded'}. Modelled composition is not a lab assay.</p><details><summary>Price history and projection</summary><PriceHistory kind="produce" id={p.harvestId}/></details>
+ {done?<div role="status"><p>Order confirmed: {done.kg} kg · {inr(done.totalInr)}</p><p className="reference">Order {done.id}</p></div>:open?<form className="market-form" onSubmit={e=>{e.preventDefault();if(review)void submit();else setReview(true);}}><fieldset disabled={busy||review} className="market-form"><label>Quantity (kg)<input required type="number" min="0.01" step="any" max={p.availableKg} value={form.kg} onChange={e=>setForm({...form,kg:Number(e.target.value)})}/></label><label>Your name<input required value={form.buyerName} onChange={e=>setForm({...form,buyerName:e.target.value})}/></label><label>Email<input type="email" required value={form.buyerEmail} onChange={e=>setForm({...form,buyerEmail:e.target.value})}/></label></fieldset>{review&&<><p>Review: {form.kg} kg for {form.buyerName} ({form.buyerEmail}) · {inr(form.kg*p.askingInrPerKg)}.</p><button type="button" className="button secondary" disabled={busy} onClick={()=>setReview(false)}>Edit order</button></>}{error&&<p className="err" role="alert">{error}</p>}<button className="button" disabled={busy||!valid}>{busy?'Ordering…':review?'Confirm order':'Review order →'}</button></form>:<button className="button secondary" onClick={()=>setOpen(true)}>Buy this harvest</button>}
+ </article>;
 }

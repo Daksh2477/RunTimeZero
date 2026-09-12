@@ -172,3 +172,20 @@ main button.rounded-xl {
   body .hw-table, body .verify-table { display: block; max-width: 100%; overflow-x: auto; }
   body .auth-form button[type=submit] { position: sticky; bottom: 8px; z-index: 1; }
 }
+.detail-sheet { position: fixed; inset: 0 0 0 auto; width: min(680px,100%); max-width: 100%; height: 100dvh; max-height: 100dvh; margin: 0; padding: 0; border: 0; background: var(--card); color: var(--foreground); }
+.detail-sheet::backdrop { background: #0b201b88; }
+.detail-sheet-body { padding: 24px; min-width: 0; }
+.detail-sheet-body > header { display: flex; justify-content: space-between; gap: 12px; align-items: center; position: sticky; top: 0; background: var(--card); z-index: 1; padding-block: 10px; }
+.detail-sheet-body > header h2 { margin: 0; }
+.market-form { display: grid; gap: 16px; }
+.market-form label { display: grid; gap: 6px; font-size: .9rem; }
+.market-form input,.market-form select,.market-filters input,.market-filters select { width: 100%; min-width: 0; min-height: 44px; padding: 8px; border: 1px solid var(--border); background: var(--card); border-radius: 8px; color: inherit; }
+.market-filters { display: grid; grid-template-columns: repeat(auto-fit,minmax(145px,1fr)); gap: 10px; }
+.market-filters label { font-size: .8rem; }
+.related-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 16px; }
+.related-chips a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 12px; border: 1px solid var(--border); border-radius: 24px; font-size: .85rem; }
+.resource-loading { color: var(--muted-foreground); }
+.resource-loading div { height: 40px; margin: 8px 0; background: var(--muted); border-radius: 8px; }
+.market-record { padding: 16px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.price-chart { width: 100%; height: 180px; }
+@media(max-width:767px) { .detail-sheet { inset: auto 0 0; height: 88dvh; border-radius: 18px 18px 0 0; }.detail-sheet-body { padding: 16px; } }

@@ -20,6 +20,7 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export interface Listing {
+  siteId: string; listed: boolean; askingInrPerTonne: number;
   batchId: string; siteName: string; tier: string; hostIndustry: string;
   periodStart: string; periodEnd: string; disposition: string;
   dispositionEvidenceRef: string | null;

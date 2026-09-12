@@ -26,7 +26,8 @@ interface Props {
 }
 
 export function RetirePanel({ listing, onRetired, onRetire }: Props) {
-  const [kg, setKg] = useState(50);
+  const [kg, setKg] = useState(Math.min(50, listing?.availableKg ?? 50));
+  const [review, setReview] = useState(false);
   const [beneficiary, setBeneficiary] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +45,7 @@ export function RetirePanel({ listing, onRetired, onRetire }: Props) {
   }
 
   const submit = async () => {
+    if (busy) return;
     setBusy(true); setError(null);
     try {
       const r = await onRetire(listing.batchId, kg, beneficiary);
@@ -91,7 +93,7 @@ export function RetirePanel({ listing, onRetired, onRetire }: Props) {
             <div className="mt-1 flex items-center gap-2">
               <input
                 type="number" min={1} max={Math.floor(listing.availableKg)} value={kg}
-                onChange={(e) => setKg(Number(e.target.value))}
+                disabled={busy || review} onChange={(e) => setKg(Number(e.target.value))}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 font-mono text-sm"
               />
               <span className="text-sm text-muted-foreground">kg</span>
@@ -104,7 +106,7 @@ export function RetirePanel({ listing, onRetired, onRetire }: Props) {
             </span>
             <input
               value={beneficiary}
-              onChange={(e) => setBeneficiary(e.target.value)}
+              disabled={busy || review} onChange={(e) => setBeneficiary(e.target.value)}
               placeholder="Surat Textiles Pvt Ltd"
               className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
             />
@@ -125,13 +127,14 @@ export function RetirePanel({ listing, onRetired, onRetire }: Props) {
             permanently and are claimed against the named party.
           </p>
 
+          {review && <div className="inline-notice"><h3>Review retirement</h3><p>{kg} kg from {listing.siteName}, for {beneficiary}.</p><p>Recorded price: ₹{(kg/1000*listing.askingInrPerTonne).toLocaleString('en-IN')}. Retirement is permanent.</p><button className="button secondary" disabled={busy} onClick={()=>setReview(false)}>Edit details</button></div>}
           <button
             type="button"
             disabled={busy || !beneficiary.trim() || !Number.isFinite(kg) || kg < 1 || kg > listing.availableKg}
-            onClick={submit}
+            onClick={()=>review?void submit():setReview(true)}
             className="w-full rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground disabled:opacity-40"
           >
-            {busy ? 'Retiring…' : `Retire ${kg} kg`}
+            {busy ? 'Retiring…' : review ? `Confirm retirement of ${kg} kg` : 'Review retirement →'}
           </button>
         </div>
       )}
