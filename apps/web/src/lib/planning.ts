@@ -80,37 +80,47 @@ export function planFor(areaM2: number): SitePlan {
 
   if (tier === 'smallholder') {
     sensors.push({
-      name: 'Nothing to buy',
+      name: 'No instruments needed',
       qty: 0,
       unitInr: 0,
       because:
-        'At this size your weighed harvests are the evidence. They are cruder than sensors but harder to dispute.',
+        'At this size your weighed harvests are the evidence. Cruder than sensors, but harder to dispute.',
     });
   } else {
+    /*
+     * ONE UNIT PER POND, NOT FOUR.
+     *
+     * An earlier version listed pH, dissolved oxygen and optical density as
+     * three separate purchases. Nobody buys them that way. A multiparameter
+     * sonde carries all of them on one body, one cable and one calibration
+     * visit, and costs far less than three instruments plus three loggers.
+     * Listing them separately roughly doubled the quoted capex and made
+     * expansion look worse than it is.
+     */
     sensors.push(
       {
-        name: 'pH and temperature probe',
+        name: 'Multiparameter sonde (pH, oxygen, temperature, density)',
         qty: pondCount,
-        unitInr: 9_000,
-        because: 'One per pond. pH falling alongside density is the crash warning.',
+        unitInr: 26_000,
+        because:
+          'One instrument per pond covers every reading the model needs. '
+          + 'One cable, one calibration, one thing to service.',
       },
       {
-        name: 'Dissolved oxygen probe',
+        name: 'Sensor node and enclosure',
         qty: pondCount,
-        unitInr: 12_000,
-        because: 'Low oxygen in daylight almost always means the paddlewheel has stopped.',
-      },
-      {
-        name: 'Optical density flow cell',
-        qty: pondCount,
-        unitInr: 8_000,
-        because: 'Reading density through open water changes with the sun. A fixed cell does not.',
+        unitInr: 6_500,
+        because:
+          'The ESP32 that reads the sonde and publishes it. Needs a weatherproof '
+          + 'box and a solar panel at pond edge.',
       },
       {
         name: 'Energy meter',
         qty: 1,
         unitInr: 4_500,
-        because: 'Pays for itself twice: it tracks your bill, and it evidences the electricity you avoid.',
+        because:
+          'Pays for itself twice: it tracks your bill, and a stopped paddlewheel '
+          + 'shows here before it shows in the water.',
       },
     );
   }
@@ -170,16 +180,42 @@ export function planFor(areaM2: number): SitePlan {
 export interface ExpansionDelta {
   from: SitePlan;
   to: SitePlan;
-  extraCapexInr: number;
-  extraOpexInr: number;
-  /** Extra dry biomass per year, from the simulated yield rate. */
-  extraBiomassKgPerYear: number;
-  extraRevenueInr: number;
+  /**
+   * Whether this is growth or shrinkage. Every figure below is a magnitude —
+   * a positive number — and this flag says which way it points.
+   *
+   * An earlier version returned signed deltas, so shrinking a site produced
+   * "-₹4.2 L extra running cost", which reads as a charge rather than a
+   * saving. Numbers a farmer has to mentally re-sign are numbers they will
+   * misread.
+   */
+  direction: 'grow' | 'shrink' | 'same';
+  /** Equipment to buy. Always ≥ 0. */
+  capexInr: number;
+  /** Change in annual running cost, as a magnitude. See `opexRises`. */
+  opexChangeInr: number;
+  opexRises: boolean;
+  /** Change in dry biomass per year, magnitude, from the simulated rate. */
+  biomassChangeKgPerYear: number;
+  /** Change in gross revenue, magnitude. */
+  revenueChangeInr: number;
+  /** Revenue minus running cost, as a magnitude. See `profitImproves`. */
+  annualProfitChangeInr: number;
+  profitImproves: boolean;
+  /** Profit per year after the expansion, at the current yield and price. */
+  projectedAnnualProfitInr: number;
   /** Years to recover the equipment spend. Null when it never does. */
   paybackYears: number | null;
   tierChanged: boolean;
 }
 
+/**
+ * Fallback price, ₹/kg — the fertiliser floor.
+ *
+ * Deliberately the lowest grade: an expansion that only works at food-grade
+ * prices is an expansion that fails the first time a batch misses spec.
+ * Callers pass the real grade price from lib/pricing.ts.
+ */
 const BIOMASS_INR_PER_KG = 12;
 
 /**
@@ -190,28 +226,39 @@ export function compareExpansion(
   currentAreaM2: number,
   targetAreaM2: number,
   yieldKgPerM2PerYear: number,
+  /** ₹/kg for the grade this pond actually produces. See lib/pricing.ts. */
+  pricePerKgInr: number = BIOMASS_INR_PER_KG,
 ): ExpansionDelta {
   const from = planFor(currentAreaM2);
   const to = planFor(targetAreaM2);
 
-  const extraCapexInr = Math.max(0, to.capexInr - from.capexInr);
-  const extraOpexInr = to.annualOpexInr - from.annualOpexInr;
-  const extraBiomassKgPerYear =
-    Math.max(0, targetAreaM2 - currentAreaM2) * yieldKgPerM2PerYear;
-  const extraRevenueInr = extraBiomassKgPerYear * BIOMASS_INR_PER_KG;
+  const capexInr = Math.max(0, to.capexInr - from.capexInr);
 
-  const annualGain = extraRevenueInr - extraOpexInr;
-  const paybackYears =
-    annualGain > 0 && extraCapexInr > 0 ? extraCapexInr / annualGain : null;
+  const opexDelta = to.annualOpexInr - from.annualOpexInr;
+  const biomassDelta = (targetAreaM2 - currentAreaM2) * yieldKgPerM2PerYear;
+  const revenueDelta = biomassDelta * pricePerKgInr;
+  const profitDelta = revenueDelta - opexDelta;
+
+  // Profit at the new size, not just the change — an operator deciding
+  // whether to borrow needs the absolute figure to service the loan against.
+  const projectedAnnualProfitInr =
+    targetAreaM2 * yieldKgPerM2PerYear * pricePerKgInr - to.annualOpexInr;
 
   return {
     from,
     to,
-    extraCapexInr,
-    extraOpexInr,
-    extraBiomassKgPerYear,
-    extraRevenueInr,
-    paybackYears,
+    direction:
+      targetAreaM2 > currentAreaM2 ? 'grow'
+        : targetAreaM2 < currentAreaM2 ? 'shrink' : 'same',
+    capexInr,
+    opexChangeInr: Math.abs(opexDelta),
+    opexRises: opexDelta > 0,
+    biomassChangeKgPerYear: Math.abs(biomassDelta),
+    revenueChangeInr: Math.abs(revenueDelta),
+    annualProfitChangeInr: Math.abs(profitDelta),
+    profitImproves: profitDelta > 0,
+    projectedAnnualProfitInr,
+    paybackYears: profitDelta > 0 && capexInr > 0 ? capexInr / profitDelta : null,
     tierChanged: from.tier !== to.tier,
   };
 }

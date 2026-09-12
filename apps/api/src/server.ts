@@ -9,6 +9,7 @@ import { startMqttIngest } from './ingest/mqtt.ts';
 import { batchesRouter } from './routes/batches.ts';
 import { fleetRouter } from './routes/fleet.ts';
 import { investRouter } from './routes/invest.ts';
+import { landRouter } from './routes/land.ts';
 import { marketRouter } from './routes/market.ts';
 import { researchRouter } from './routes/research.ts';
 import { summaryRouter } from './routes/summary.ts';
@@ -50,6 +51,7 @@ app.use('/market', marketRouter);
 app.use('/research', researchRouter);
 app.use('/invest', investRouter);
 app.use('/summary', summaryRouter);
+app.use('/land', landRouter);
 
 const port = Number(process.env.API_PORT ?? 4000);
 

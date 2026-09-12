@@ -27,6 +27,13 @@ export class Reading {
     /**
      * @returns {number}
      */
+    get carbohydrate_frac() {
+        const ret = wasm.__wbg_get_reading_carbohydrate_frac(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * @returns {number}
+     */
     get day_of_year() {
         const ret = wasm.__wbg_get_reading_day_of_year(this.__wbg_ptr);
         return ret >>> 0;
@@ -59,6 +66,15 @@ export class Reading {
         return ret;
     }
     /**
+     * Lipid mass fraction. Climbs under nitrogen stress, which is the
+     * operator's main lever on what the crop is worth.
+     * @returns {number}
+     */
+    get lipid_frac() {
+        const ret = wasm.__wbg_get_reading_lipid_frac(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * @returns {number}
      */
     get optical_density() {
@@ -70,6 +86,14 @@ export class Reading {
      */
     get ph() {
         const ret = wasm.__wbg_get_reading_ph(this.__wbg_ptr);
+        return ret;
+    }
+    /**
+     * Protein mass fraction of dry biomass, 0..1.
+     * @returns {number}
+     */
+    get protein_frac() {
+        const ret = wasm.__wbg_get_reading_protein_frac(this.__wbg_ptr);
         return ret;
     }
     /**
@@ -85,6 +109,12 @@ export class Reading {
     get temperature_c() {
         const ret = wasm.__wbg_get_reading_temperature_c(this.__wbg_ptr);
         return ret;
+    }
+    /**
+     * @param {number} arg0
+     */
+    set carbohydrate_frac(arg0) {
+        wasm.__wbg_set_reading_carbohydrate_frac(this.__wbg_ptr, arg0);
     }
     /**
      * @param {number} arg0
@@ -117,6 +147,14 @@ export class Reading {
         wasm.__wbg_set_reading_hour(this.__wbg_ptr, arg0);
     }
     /**
+     * Lipid mass fraction. Climbs under nitrogen stress, which is the
+     * operator's main lever on what the crop is worth.
+     * @param {number} arg0
+     */
+    set lipid_frac(arg0) {
+        wasm.__wbg_set_reading_lipid_frac(this.__wbg_ptr, arg0);
+    }
+    /**
      * @param {number} arg0
      */
     set optical_density(arg0) {
@@ -127,6 +165,13 @@ export class Reading {
      */
     set ph(arg0) {
         wasm.__wbg_set_reading_ph(this.__wbg_ptr, arg0);
+    }
+    /**
+     * Protein mass fraction of dry biomass, 0..1.
+     * @param {number} arg0
+     */
+    set protein_frac(arg0) {
+        wasm.__wbg_set_reading_protein_frac(this.__wbg_ptr, arg0);
     }
     /**
      * @param {number} arg0

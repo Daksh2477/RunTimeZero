@@ -80,7 +80,14 @@ CREATE TABLE IF NOT EXISTS ponds (
   -- site falls back to drone or weighbridge evidence.
   width_m   DOUBLE PRECISION NOT NULL,
   strain    TEXT NOT NULL DEFAULT 'spirulina',
-  active    BOOLEAN NOT NULL DEFAULT true
+  -- Ponds are DISABLED, never deleted. A pond that produced credits in 2025
+  -- must still resolve in 2030 when somebody audits those credits, so the
+  -- row and its telemetry stay. `active` only controls what the operator
+  -- sees and what new checks run against.
+  active        BOOLEAN NOT NULL DEFAULT true,
+  retired_at    TIMESTAMPTZ,
+  retired_reason TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_ponds_site ON ponds(site_id) WHERE active;

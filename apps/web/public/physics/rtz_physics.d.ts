@@ -12,6 +12,7 @@ export class Reading {
     private constructor();
     free(): void;
     [Symbol.dispose](): void;
+    carbohydrate_frac: number;
     day_of_year: number;
     dissolved_oxygen_mg_l: number;
     /**
@@ -24,8 +25,17 @@ export class Reading {
      */
     energy_kwh: number;
     hour: number;
+    /**
+     * Lipid mass fraction. Climbs under nitrogen stress, which is the
+     * operator's main lever on what the crop is worth.
+     */
+    lipid_frac: number;
     optical_density: number;
     ph: number;
+    /**
+     * Protein mass fraction of dry biomass, 0..1.
+     */
+    protein_frac: number;
     reported_co2_kg: number;
     temperature_c: number;
 }
@@ -112,21 +122,27 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly __wbg_get_reading_carbohydrate_frac: (a: number) => number;
     readonly __wbg_get_reading_day_of_year: (a: number) => number;
     readonly __wbg_get_reading_dissolved_oxygen_mg_l: (a: number) => number;
     readonly __wbg_get_reading_energy_kwh: (a: number) => number;
     readonly __wbg_get_reading_hour: (a: number) => number;
+    readonly __wbg_get_reading_lipid_frac: (a: number) => number;
     readonly __wbg_get_reading_optical_density: (a: number) => number;
     readonly __wbg_get_reading_ph: (a: number) => number;
+    readonly __wbg_get_reading_protein_frac: (a: number) => number;
     readonly __wbg_get_reading_reported_co2_kg: (a: number) => number;
     readonly __wbg_get_reading_temperature_c: (a: number) => number;
     readonly __wbg_reading_free: (a: number, b: number) => void;
+    readonly __wbg_set_reading_carbohydrate_frac: (a: number, b: number) => void;
     readonly __wbg_set_reading_day_of_year: (a: number, b: number) => void;
     readonly __wbg_set_reading_dissolved_oxygen_mg_l: (a: number, b: number) => void;
     readonly __wbg_set_reading_energy_kwh: (a: number, b: number) => void;
     readonly __wbg_set_reading_hour: (a: number, b: number) => void;
+    readonly __wbg_set_reading_lipid_frac: (a: number, b: number) => void;
     readonly __wbg_set_reading_optical_density: (a: number, b: number) => void;
     readonly __wbg_set_reading_ph: (a: number, b: number) => void;
+    readonly __wbg_set_reading_protein_frac: (a: number, b: number) => void;
     readonly __wbg_set_reading_reported_co2_kg: (a: number, b: number) => void;
     readonly __wbg_set_reading_temperature_c: (a: number, b: number) => void;
     readonly __wbg_wasmpond_free: (a: number, b: number) => void;

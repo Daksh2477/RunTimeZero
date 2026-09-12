@@ -925,3 +925,7 @@ a.pond-card:hover, .report-card:hover { border-color: #6f957e; box-shadow: 0 5px
   color: var(--panel-dark-foreground);
 }
 .role-pill:hover { background: color-mix(in oklch, var(--panel-dark-foreground) 20%, transparent); }
+
+/* Direction is in the label; colour only reinforces it. */
+.expansion-figures .is-good { color: var(--status-optimal); }
+.expansion-figures .is-bad { color: var(--status-critical); }

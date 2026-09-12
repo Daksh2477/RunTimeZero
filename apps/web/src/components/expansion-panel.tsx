@@ -72,15 +72,37 @@ export function ExpansionPanel({
         </div>
       )}
 
+{/*
+        Every figure is a positive number with its direction in the label.
+        "Extra running cost: -₹4.2 L" for a shrinking site read as a charge
+        rather than a saving, which is exactly the kind of thing an operator
+        misreads once and then distrusts forever.
+      */}
       <dl className="kv expansion-figures">
-        <dt>Extra algae each year</dt>
-        <dd className="num">{Math.round(d.extraBiomassKgPerYear).toLocaleString('en-IN')} kg</dd>
-        <dt>Extra income</dt>
-        <dd className="num">{inr(d.extraRevenueInr)}</dd>
-        <dt>Extra running cost</dt>
-        <dd className="num">{inr(d.extraOpexInr)}</dd>
-        <dt>Equipment to buy</dt>
-        <dd className="num">{inr(d.extraCapexInr)}</dd>
+        <dt>{d.direction === 'shrink' ? 'Algae you would lose each year' : 'Extra algae each year'}</dt>
+        <dd className="num">{Math.round(d.biomassChangeKgPerYear).toLocaleString('en-IN')} kg</dd>
+
+        <dt>{d.direction === 'shrink' ? 'Income given up' : 'Extra income each year'}</dt>
+        <dd className="num">{inr(d.revenueChangeInr)}</dd>
+
+        <dt>{d.opexRises ? 'Added running cost each year' : 'Running cost saved each year'}</dt>
+        <dd className="num">{inr(d.opexChangeInr)}</dd>
+
+        <dt>Equipment to buy, once</dt>
+        <dd className="num">{d.capexInr === 0 ? 'nothing' : inr(d.capexInr)}</dd>
+
+        <dt>{d.profitImproves ? 'Profit gained each year' : 'Profit lost each year'}</dt>
+        <dd className={`num ${d.profitImproves ? 'is-good' : 'is-bad'}`}>
+          {inr(d.annualProfitChangeInr)}
+        </dd>
+
+        <dt>Profit after the change, per year</dt>
+        <dd className={`num ${d.projectedAnnualProfitInr >= 0 ? 'is-good' : 'is-bad'}`}>
+          {d.projectedAnnualProfitInr >= 0
+            ? inr(d.projectedAnnualProfitInr)
+            : `${inr(Math.abs(d.projectedAnnualProfitInr))} loss`}
+        </dd>
+
         <dt>Ponds needed</dt>
         <dd className="num">{d.to.pondCount}</dd>
       </dl>

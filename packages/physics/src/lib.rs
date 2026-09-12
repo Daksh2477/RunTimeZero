@@ -10,6 +10,7 @@
 //! drift apart.
 
 pub mod ceiling;
+pub mod composition;
 pub mod faults;
 pub mod growth;
 pub mod sim;
@@ -75,6 +76,12 @@ pub struct Reading {
     pub temperature_c: f64,
     pub optical_density: f64,
     pub reported_co2_kg: f64,
+    /// Protein mass fraction of dry biomass, 0..1.
+    pub protein_frac: f64,
+    /// Lipid mass fraction. Climbs under nitrogen stress, which is the
+    /// operator's main lever on what the crop is worth.
+    pub lipid_frac: f64,
+    pub carbohydrate_frac: f64,
     /// Paddlewheel draw this hour, kWh.
     ///
     /// Not a biological quantity, which is why it is trustworthy: it comes off
@@ -200,6 +207,15 @@ impl WasmPond {
         };
         faults::apply_physical_effect(&mut self.pond, &self.faults, self.elapsed_hour);
         let co2 = self.pond.step(1.0);
+
+        // Composition responds to what the cells can reach right now, and to
+        // the light they have to build storage lipid with.
+        // daily_mean_par is µmol/m²/s averaged over 24 h; the composition
+        // model wants the day's total dose in mol/m²/day.
+        let daily_light_mol =
+            solar::daily_mean_par(self.pond.cfg.lat_deg, self.pond.state.day_of_year) * 86_400.0
+                / 1e6;
+        let comp = composition::composition_at(self.pond.state.nitrogen_mg_l, daily_light_mol);
         let obs = faults::observe(
             &self.pond.state,
             co2,
@@ -215,6 +231,9 @@ impl WasmPond {
             temperature_c: obs.temperature_c,
             optical_density: obs.optical_density,
             reported_co2_kg: obs.reported_co2_kg,
+            protein_frac: comp.protein,
+            lipid_frac: comp.lipid,
+            carbohydrate_frac: comp.carbohydrate,
             energy_kwh: energy,
             hour: self.pond.state.hour,
             day_of_year: self.pond.state.day_of_year,
