@@ -9,7 +9,19 @@
  */
 
 import Link from 'next/link';
-import { serverApiFetch } from '@/lib/server-api';
+
+/**
+ * Read straight from the API rather than through the session helper.
+ *
+ * This page is public — nothing here is scoped to an account — and depending on
+ * the authenticated helper would have made a deployed build fail on a file that
+ * is still uncommitted in the other agent's working tree.
+ */
+const API = process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+async function apiGet(path: string): Promise<Response> {
+  return fetch(`${API}${path}`, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -86,11 +98,11 @@ export default async function HardwarePage() {
   // illustration. Falls back to prose if the API is unreachable.
   let plan: Plan | null = null;
   try {
-    const fleet = await serverApiFetch('/fleet');
+    const fleet = await apiGet('/fleet');
     const sites = fleet.ok ? ((await fleet.json()) as { siteId?: string; id?: string }[]) : [];
     const siteId = sites[0]?.siteId ?? sites[0]?.id;
     if (siteId) {
-      const res = await serverApiFetch(`/land/site/${siteId}/sensor-plan`);
+      const res = await apiGet(`/land/site/${siteId}/sensor-plan`);
       if (res.ok) plan = (await res.json()) as Plan;
     }
   } catch {
