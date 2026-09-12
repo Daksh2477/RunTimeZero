@@ -62,10 +62,10 @@
 .home-explore-bar nav { display: flex; flex-wrap: wrap; gap: 8px 22px; }
 .home-explore-bar a { display: inline-flex; align-items: center; min-height: 44px; font-size: 1rem; color: #335d40; text-underline-offset: 5px; }
 .home-explore-bar a:hover { text-decoration: underline; }
-.home-trail-toggle { display: inline-flex; align-items: center; gap: 8px; border: 1px solid #b5ccb0; border-radius: 30px; background: #edf5e7; color: #355c34; padding: 9px 16px; font-size: .9rem; }
-.home-trail-toggle[aria-pressed='false'] { background: #fff; }
 .home-algae-trail { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
-.home-algae-trail > span { position: absolute; opacity: 0; width: 10px; height: 15px; border: 1px solid #487c38; border-radius: 70% 35% 65% 40%; background: #a0d978; pointer-events: none; }
+/* A droplet, not a leaf: round-shouldered and pointed at the top, so it reads
+   as something falling rather than something drifting. */
+.home-algae-trail > span { position: absolute; opacity: 0; width: 9px; height: 13px; border: 1px solid #487c38; border-radius: 50% 50% 48% 48% / 62% 62% 38% 38%; background: radial-gradient(circle at 35% 28%, #c4ea9c, #86c95f 62%, #5d9c3f); box-shadow: inset 0 -1px 2px #3d7a2b33; pointer-events: none; will-change: transform, opacity; }
 .home-launch-card { margin-top: 28px; background: #eff5ea; border: 1px solid #cddfc3; border-radius: 16px; padding: 24px; }
 .home-launch-card > p { margin-top: 0; font-size: 1.05rem; font-weight: 600; }
 .home-launch-card a { display: grid; gap: 8px; padding-block: 16px; border-top: 1px solid #d2dfc9; text-decoration: none; }
@@ -91,8 +91,8 @@
   .home-explore-bar a { font-size: .9rem; }
   .home .home-launch-card { padding: 20px; }
 }
-@media(prefers-reduced-motion:reduce) { .home *, .home *::before { transition: none !important; animation: none !important; scroll-behavior: auto !important; }.home-algae-trail,.home-trail-toggle { display: none; } }
-@media(pointer:coarse) { .home-algae-trail,.home-trail-toggle { display: none; } }
-@media print { .home-algae-trail,.home-trail-toggle { display: none; } }
+@media(prefers-reduced-motion:reduce) { .home *, .home *::before { transition: none !important; animation: none !important; scroll-behavior: auto !important; }.home-algae-trail { display: none; } }
+@media(pointer:coarse) { .home-algae-trail { display: none; } }
+@media print { .home-algae-trail { display: none; } }
 html:has(.home) { scroll-behavior: smooth; }
 @media(prefers-reduced-motion:reduce) { html:has(.home) { scroll-behavior: auto; } }

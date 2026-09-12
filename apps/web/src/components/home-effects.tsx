@@ -4,14 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 
 export function HomeEffects() {
   const trail = useRef<HTMLDivElement>(null);
-  const [enabled, setEnabled] = useState(true);
   const [available, setAvailable] = useState(false);
 
   useEffect(() => {
     const media = matchMedia('(pointer: fine) and (hover: hover) and (prefers-reduced-motion: no-preference)');
     const update = () => setAvailable(media.matches);
     update(); media.addEventListener('change', update);
-    try { setEnabled(localStorage.getItem('algacarbon.algae-trail') !== 'off'); } catch { /* Session-only preference. */ }
     return () => media.removeEventListener('change', update);
   }, []);
 
@@ -46,7 +44,7 @@ export function HomeEffects() {
   useEffect(() => {
     const home = document.querySelector<HTMLElement>('.home');
     const dots = Array.from(trail.current?.children ?? []) as HTMLElement[];
-    if (!available || !enabled || !home || !dots.length) return;
+    if (!available || !home || !dots.length) return;
     let last = 0, index = 0;
     const animations = new Map<HTMLElement, Animation>();
     const stop = () => { animations.forEach(animation => animation.cancel()); animations.clear(); };
@@ -60,10 +58,18 @@ export function HomeEffects() {
       animations.get(dot)?.cancel();
       dot.style.left = `${event.clientX + 12}px`;
       dot.style.top = `${event.clientY + 14}px`;
+      /*
+       * It drips. A droplet swells where the cursor was, then falls with a
+       * slight sway and stretches as it accelerates — gravity, not a spark.
+       * `cubic-bezier(.3,0,.7,1)` is the accelerate-then-settle curve; a
+       * linear fall looks like a bug.
+       */
       const animation = dot.animate([
-        { opacity: .6, transform: 'translate(0, 0) scale(.65) rotate(0deg)' },
-        { opacity: 0, transform: `translate(${spread}px, -26px) scale(1.15) rotate(65deg)` },
-      ], { duration: 720, easing: 'ease-out' });
+        { opacity: 0, transform: 'translate(0, -4px) scale(.35, .3)' },
+        { opacity: .75, transform: 'translate(0, 2px) scale(.85, 1)', offset: .22 },
+        { opacity: .55, transform: `translate(${spread / 2}px, 22px) scale(.7, 1.35)`, offset: .7 },
+        { opacity: 0, transform: `translate(${spread}px, 46px) scale(.55, 1.1)` },
+      ], { duration: 980, easing: 'cubic-bezier(.3,0,.7,1)' });
       animations.set(dot, animation);
       animation.onfinish = () => { if (animations.get(dot) === animation) animations.delete(dot); };
     };
@@ -71,10 +77,14 @@ export function HomeEffects() {
     home.addEventListener('pointerleave', stop);
     document.addEventListener('visibilitychange', stop);
     return () => { stop(); home.removeEventListener('pointermove', move); home.removeEventListener('pointerleave', stop); document.removeEventListener('visibilitychange', stop); };
-  }, [available, enabled]);
+  }, [available]);
 
-  return <>
-    {available && <button className="home-trail-toggle" type="button" aria-pressed={enabled} onClick={() => { const next = !enabled; setEnabled(next); try { localStorage.setItem('algacarbon.algae-trail', next ? 'on' : 'off'); } catch { /* Session-only preference. */ } }}><span aria-hidden="true">✳</span> Algae trail {enabled ? 'on' : 'off'}</button>}
-    <div className="home-algae-trail" ref={trail} aria-hidden="true">{Array.from({ length: 8 }, (_, i) => <span key={i} />)}</div>
-  </>;
+  // No toggle. It only runs for a fine pointer that has not asked for reduced
+  // motion, it is inert over anything interactive, and it stops on leave and on
+  // tab change — so there was nothing left for a switch to protect anyone from.
+  return (
+    <div className="home-algae-trail" ref={trail} aria-hidden="true">
+      {Array.from({ length: 8 }, (_, i) => <span key={i} />)}
+    </div>
+  );
 }
