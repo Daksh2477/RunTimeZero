@@ -31,17 +31,27 @@ Read this file first. Then read `CLAIMS.md` before you touch anything.
 
 ---
 
-## Identity
+## Ownership
 
-Pick your identity on your first action and keep it for the whole session:
+Split by directory rather than by negotiation. This replaces most of the
+claim-by-claim dance below: if the work is inside your half, just do it.
 
-| | |
-|---|---|
-| **agent-a** | API port **4000**, web port **3000**, database `algacarbon` |
-| **agent-b** | API port **4001**, web port **3001**, database `algacarbon_b` |
+| | Owns | Ports |
+|---|---|---|
+| **Codex** (agent-b) | `apps/web/**` — all UI, UX, components, styling, client state | web **3001** |
+| **Claude** (agent-a) | Everything else: `apps/api`, `packages/*`, `apps/contracts`, `apps/firmware`, `scripts/`, `docs/`, schema, deploy | API **4000**, web **3000** |
 
-If `CLAIMS.md` already shows a live claim by one identity and you are not sure
-which you are, **take the other one**. Never both be agent-a.
+**The API response shape is the contract between us.** Codex builds against what
+the endpoints return; Claude does not change a response shape without saying so
+in `INBOX.md` first, because that breaks the frontend silently — a missing field
+renders as `undefined`, not as an error.
+
+If Codex needs a field that does not exist, ask in `INBOX.md` rather than
+reaching into `apps/api`. If Claude needs to remove or rename a field, say so
+before doing it.
+
+`CLAIMS.md` is still used for anything that crosses the boundary — a schema
+change the UI depends on, a shared type, `README.md`.
 
 ### Setting up as agent-b
 
