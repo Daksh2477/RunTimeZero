@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { DM_Sans, IBM_Plex_Mono, Space_Grotesk } from 'next/font/google';
-import { Navigation } from '@/components/navigation';
+import { Masthead } from '@/components/masthead';
 import './globals.css';
 
 /*
@@ -43,12 +43,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return <html lang="en" className={`${display.variable} ${sans.variable} ${mono.variable}`}><body>
     <a className="skip-link" href="#main-content">Skip to page content</a>
-    <header className="masthead"><div className="masthead-inner">
-      <Link href="/" className="wordmark" aria-label="AlgaCarbon home">
-        <span className="brand-icon" aria-hidden="true">a</span>Alga<span>Carbon</span>
-      </Link>
-      <Navigation />
-    </div></header>
+    <Masthead />
     <div id="main-content" tabIndex={-1}>{children}</div>
     <footer className="footer"><span>AlgaCarbon · RunTimeZero</span><span>Prototype results may use simulated data. Carbon credits require a separate review.</span></footer>
   </body></html>;

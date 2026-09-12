@@ -139,16 +139,6 @@ small { font-size: .85rem; }
 .skip-link { position: fixed; top: -100px; left: 16px; z-index: 20; padding: 12px 20px; background: white; border: 2px solid var(--culture); }
 .skip-link:focus { top: 12px; }
 #main-content { min-height: 70vh; }
-.masthead { background: #fff; border-bottom: 1px solid var(--hairline); }
-.masthead-inner { max-width: 1224px; margin: auto; min-height: 90px; padding: 16px 28px; display: flex; align-items: center; gap: 32px; }
-.wordmark { display: inline-flex; align-items: center; font-size: 1.35rem; font-weight: 750; letter-spacing: -.055em; white-space: nowrap; }
-.wordmark > span:last-child { color: var(--culture); }
-.brand-icon { display: grid; place-items: center; background: var(--water-deep); color: #e1edbe; width: 37px; height: 39px; margin-right: 10px; border-radius: 13px 13px 13px 2px; font-family: Georgia, serif; font-style: italic; font-size: 2rem; line-height: 1; padding-bottom: 5px; }
-.main-nav { display: flex; gap: 6px; margin-left: auto; }
-.main-nav a { padding: 10px 17px; min-height: 44px; border-radius: 8px; font-size: .93rem; color: var(--silt); font-weight: 600; }
-.main-nav a[aria-current='page'] { background: var(--culture-wash); color: var(--water-deep); }
-.main-nav a:hover { background: #f0f4ee; }
-.prototype-label { font-size: .72rem; color: var(--silt); border-left: 1px solid var(--hairline); padding-left: 22px; }
 .notice-strip { background: #edf2e9; color: #46603e; padding: 8px 24px; font-size: .8rem; text-align: center; }
 /*
  * Full width, not a magazine column.
@@ -328,13 +318,9 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
   .toolbar { align-items: stretch; flex-direction: column; }
   .search-label { width: 100%; }
   .detail-grid { grid-template-columns: minmax(0, 1fr); }
-  .main-nav a { padding: 10px 13px; }
-}
+  }
 @media (max-width: 640px) {
-  .masthead-inner { padding: 16px 20px 8px; gap: 14px; flex-wrap: wrap; }
-  .wordmark { font-size: 1.3rem; }
-  .main-nav { width: 100%; margin: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-  .main-nav a { text-align: center; font-size: .8rem; padding: 10px 4px; }
+  
   .notice-strip { font-size: .7rem; padding: 9px 16px; }
   .wrap { padding: 0 18px 32px; }
   .page-heading { padding: 30px 0 24px; flex-direction: column; gap: 18px; }
@@ -781,52 +767,112 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
 h1, h2, h3, .big-reading-value, .wordmark { font-family: var(--font-display); }
 .num, code, pre { font-family: var(--font-mono); }
 
-/* --- dark masthead ------------------------------------------------------ */
+/* --- masthead, and the capsule it becomes -------------------------------
+ * Full-width bar at the top of the page; once you scroll it lifts off into
+ * a floating, fully-rounded capsule. See components/masthead.tsx for why.
+ */
 .masthead {
-  position: sticky; top: 0; z-index: 20;
+  position: sticky; top: 0; z-index: 40;
   background: var(--panel-dark);
   color: var(--panel-dark-foreground);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid transparent;
+  transition: max-width .28s cubic-bezier(0,0,0.2,1),
+              border-radius .28s cubic-bezier(0,0,0.2,1),
+              margin .28s cubic-bezier(0,0,0.2,1),
+              background-color .28s ease, box-shadow .28s ease;
+  max-width: 100%;
+  margin: 0 auto;
+  border-radius: 0;
 }
+.masthead-spacer { height: 0; }
+
 .masthead-inner {
-  max-width: 80rem; margin: 0 auto;
-  display: flex; flex-wrap: wrap; align-items: center;
-  gap: 12px 24px; padding: 12px 16px;
+  max-width: 1800px; margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px;
+  padding: 10px clamp(14px, 2.2vw, 36px);
+  min-height: 56px;
 }
+
+/* Lifted: inset from the edges, rounded, translucent, only as wide as it
+ * needs to be. `position: fixed` rather than sticky so the inset margins
+ * are measured from the viewport rather than the scroll container. */
+.masthead.is-lifted {
+  position: fixed;
+  top: 10px; left: 10px; right: 10px;
+  width: auto;
+  max-width: min(1160px, calc(100% - 20px));
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--panel-dark) 86%, transparent);
+  backdrop-filter: saturate(160%) blur(14px);
+  box-shadow: 0 10px 30px oklch(0 0 0 / 0.22);
+}
+.masthead.is-lifted .masthead-inner {
+  padding: 6px 10px 6px 14px;
+  min-height: 48px;
+}
+
 .wordmark {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 9px; flex: none;
   font-weight: 600; letter-spacing: -0.01em;
   color: var(--panel-dark-foreground); text-decoration: none;
 }
+.wordmark-text span { color: var(--accent); }
 .brand-icon {
-  display: grid; place-items: center;
-  width: 32px; height: 32px; border-radius: 6px;
+  display: grid; place-items: center; flex: none;
+  width: 30px; height: 30px; border-radius: 9px;
   background: var(--accent); color: var(--accent-foreground);
-  font-weight: 700;
+  font-weight: 700; font-family: var(--font-display);
+}
+
+/* The nav scrolls; the role badge must not, or it slides off the edge on a
+ * phone with every destination visible. So they are siblings, and only the
+ * nav is a scroll container. */
+.nav-cluster {
+  display: flex; align-items: center; gap: 6px;
+  margin-left: auto; min-width: 0;
 }
 .main-nav {
-  display: flex; flex: 1; gap: 2px; margin-left: 0;
-  /* Scrolls sideways rather than wrapping: a second row of tabs pushed the
-   * page content below the fold on a phone. */
-  overflow-x: auto; scrollbar-width: none;
+  display: flex; align-items: center; gap: 2px;
+  min-width: 0; overflow-x: auto; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 .main-nav::-webkit-scrollbar { display: none; }
 .main-nav a {
   display: flex; align-items: center; gap: 6px; flex: none;
-  padding: 9px 11px; min-height: 44px; border-radius: 6px; white-space: nowrap;
-  font-size: 0.875rem; font-weight: 500;
-  color: color-mix(in oklch, var(--panel-dark-foreground) 60%, transparent);
-  text-decoration: none; transition: color .15s, background-color .15s;
+  padding: 8px 11px; min-height: 40px; border-radius: 999px;
+  font-size: 0.85rem; font-weight: 500; white-space: nowrap;
+  color: color-mix(in oklch, var(--panel-dark-foreground) 62%, transparent);
+  text-decoration: none;
+  transition: color .15s ease, background-color .15s ease;
 }
-.main-nav a:hover { color: var(--panel-dark-foreground); background: transparent; }
+.main-nav a:hover { color: var(--panel-dark-foreground); }
 .main-nav a[aria-current='page'] {
-  background: color-mix(in oklch, var(--panel-dark-foreground) 12%, transparent);
+  background: color-mix(in oklch, var(--panel-dark-foreground) 14%, transparent);
   color: var(--panel-dark-foreground);
 }
-.prototype-label {
-  border-radius: 999px; padding: 4px 12px;
-  background: color-mix(in oklch, var(--panel-dark-foreground) 10%, transparent);
-  font-size: 0.75rem; font-weight: 600;
+
+.role-pill {
+  flex: none;
+  border-radius: 999px; padding: 7px 13px; min-height: 40px;
+  display: inline-flex; align-items: center;
+  background: var(--accent); color: var(--accent-foreground);
+  font-size: 0.78rem; font-weight: 600; white-space: nowrap;
+  text-decoration: none;
+}
+.role-pill:hover { filter: brightness(1.06); }
+
+/* Phones: the wordmark text goes, the mark stays. Labels give way to icons
+ * so five destinations still fit one row instead of wrapping. */
+@media (max-width: 640px) {
+  .wordmark-text { display: none; }
+  .main-nav a { padding: 8px 9px; }
+  .nav-label { display: none; }
+  .masthead.is-lifted { top: 8px; left: 8px; right: 8px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .masthead { transition: none; }
 }
 
 /* --- big reading cards -------------------------------------------------- */
@@ -886,7 +932,6 @@ h1, h2, h3, .big-reading-value, .wordmark { font-family: var(--font-display); }
 }
 
 @media (max-width: 560px) {
-  .masthead-inner { gap: 8px 12px; padding: 10px 14px; }
   .prototype-label { display: none; }
   .big-reading-value { font-size: 1.6rem; }
   .big-reading { padding: 12px; }
@@ -908,9 +953,6 @@ h1, h2, h3, .big-reading-value, .wordmark { font-family: var(--font-display); }
 }
 
 /* Readable shared controls and surfaces across monitoring, reports and lab. */
-.main-nav a { color: #cbd8dd; }
-.prototype-label { color: #d6e4e8; }
-.wordmark > span:last-child { color: #a5ed83; }
 .skip-link { z-index: 50; }
 :where(a, button, input, select, summary):focus-visible { outline: 3px solid #2570aa; outline-offset: 4px; }
 .masthead :where(a, button):focus-visible { outline-color: #b5f399; }
@@ -932,9 +974,6 @@ a.pond-card:hover, .report-card:hover { border-color: #6f957e; box-shadow: 0 5px
 .inline-notice { padding: 16px 20px; background: #fff4db; border: 1px solid #dbc695; border-radius: 10px; margin-bottom: 24px; line-height: 1.6; }
 .inline-notice a { text-decoration: underline; }
 @media(max-width:720px) {
-  .masthead-inner { gap: 8px 16px; }
-  .main-nav { flex-basis: 100%; }
-  .main-nav a { flex: 1 1 auto; justify-content: center; padding-inline: 9px; font-size: .82rem; }
   .farm .pond-card { padding: 18px; }
   .reading-grid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
   .big-reading { padding: 12px; }
@@ -957,27 +996,12 @@ a.pond-card:hover, .report-card:hover { border-color: #6f957e; box-shadow: 0 5px
 .farm-verdict.is-watch { background: #fff6e5; border-color: #d8bd83; }
 @media(max-width:720px) {
   .masthead { position: static; }
-  .main-nav { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); overflow: visible; width: 100%; gap: 4px; }
-  .main-nav a { white-space: normal; justify-content: flex-start; font-size: .85rem; }
   .page-heading .refresh-group { align-items: flex-start; flex-direction: row; flex-wrap: wrap; width: 100%; }
   .page-heading .refresh-group .button { white-space: nowrap; }
   .page-heading .refresh-group .helper { align-self: center; }
 }
 
 /* The role badge in the masthead. Doubles as the way back to the picker. */
-.role-pill {
-  margin-left: auto;
-  flex: none;
-  border-radius: 999px;
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  white-space: nowrap;
-  text-decoration: none;
-  background: color-mix(in oklch, var(--panel-dark-foreground) 12%, transparent);
-  color: var(--panel-dark-foreground);
-}
-.role-pill:hover { background: color-mix(in oklch, var(--panel-dark-foreground) 20%, transparent); }
 
 /* Direction is in the label; colour only reinforces it. */
 .expansion-figures .is-good { color: var(--status-optimal); }
@@ -1032,23 +1056,6 @@ a.pond-card:hover, .report-card:hover { border-color: #6f957e; box-shadow: 0 5px
 }
 
 /* Tab and nav changes: the underline moves rather than blinking. */
-.main-nav a {
-  position: relative;
-  transition: color 160ms ease, background-color 160ms ease;
-}
-.main-nav a[aria-current='page']::after {
-  content: '';
-  position: absolute;
-  left: 11px; right: 11px; bottom: 4px;
-  height: 2px;
-  border-radius: 2px;
-  background: var(--accent);
-  animation: underline-in 220ms cubic-bezier(0, 0, 0.2, 1) both;
-}
-@keyframes underline-in {
-  from { transform: scaleX(0); opacity: 0; }
-  to { transform: scaleX(1); opacity: 1; }
-}
 
 button, a, input, select {
   transition: border-color 150ms ease, background-color 150ms ease,

@@ -14,18 +14,23 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Chart, Flask, Leaf, Users } from '@/components/icons';
+import { Chart, Coins, Cog, Flask, Leaf, Map, Shield, Users } from '@/components/icons';
 import { ROLE_META, canAccess, clearRole, useRole } from '@/lib/session';
 
+/*
+ * One distinct icon each. An earlier version reused four icons across eight
+ * destinations, which on a phone — where the labels are hidden — left two
+ * identical leaves, two charts and two flasks in a row.
+ */
 const NAV = [
   { href: '/farm', label: 'My ponds', icon: Leaf },
-  { href: '/farm/land', label: 'My land', icon: Leaf },
-  { href: '/console/investor', label: 'Market', icon: Chart },
+  { href: '/farm/land', label: 'My land', icon: Map },
+  { href: '/console/market', label: 'Market', icon: Coins },
   { href: '/console/researcher', label: 'Data', icon: Flask },
-  { href: '/verify', label: 'Verify', icon: Chart },
-  { href: '/sim', label: 'Simulator', icon: Flask },
+  { href: '/verify', label: 'Verify', icon: Shield },
+  { href: '/sim', label: 'Simulator', icon: Chart },
   { href: '/console', label: 'All ponds', icon: Users },
-  { href: '/console/admin', label: 'Admin', icon: Users },
+  { href: '/console/admin', label: 'Admin', icon: Cog },
 ] as const;
 
 export function Navigation() {
@@ -38,7 +43,8 @@ export function Navigation() {
   const visible = role ? NAV.filter((n) => canAccess(role, n.href)) : [];
 
   return (
-    <nav className="main-nav" aria-label="Main navigation">
+    <div className="nav-cluster">
+      <nav className="main-nav" aria-label="Main navigation">
       {visible.map(({ href, label, icon: Icon }) => (
         <Link
           key={href}
@@ -46,17 +52,20 @@ export function Navigation() {
           aria-current={path.startsWith(href) ? 'page' : undefined}
         >
           <Icon />
-          {label}
+          {/* Wrapped so CSS can drop the label on a phone and leave the
+              icon, which is what lets five destinations share one row. */}
+          <span className="nav-label">{label}</span>
         </Link>
       ))}
 
+      </nav>
       {role ? (
         <Link href="/enter" className="role-pill" onClick={() => clearRole()}>
-          {ROLE_META[role].label} · switch
+          {ROLE_META[role].label}
         </Link>
       ) : (
         <Link href="/enter" className="role-pill">Sign in</Link>
       )}
-    </nav>
+    </div>
   );
 }
