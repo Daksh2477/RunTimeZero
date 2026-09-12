@@ -13,6 +13,7 @@
 
 import Link from 'next/link';
 import { AudienceExplorer } from '@/components/audience-explorer';
+import { HomeEffects } from '@/components/home-effects';
 import { LiveProof } from '@/components/live-proof';
 import { REPO_URL } from '@/lib/site';
 import './home.css';
@@ -41,9 +42,10 @@ export default function Landing() {
         </div>
       </div>
     </section>
+    <div className="home-explore-bar home-shell"><nav aria-label="Explore the homepage"><a href="#how-it-works">How it works</a><a href="#who-its-for">Who it helps</a><a href="#home-questions">Common questions</a></nav><HomeEffects /></div>
     <div className="home-principles home-shell"><span>Catch a crash before it costs you</span><span>Evidence anyone can recompute</span><span>Sell the carbon and the crop</span></div>
     <LiveProof />
-    <section className="home-section home-shell" id="how-it-works">
+    <section className="home-section home-shell home-how" id="how-it-works">
       <div className="home-section-heading"><p className="eyebrow">FROM POND TO PROOF</p><h2>The problem isn’t growing algae.<br />It’s proving it.</h2><p>Buyers cannot tell a real tonne from a claimed one, so good projects and worthless ones sell at the same price — and the good ones leave. India’s 490 obligated entities start reporting under the CCTS from 31 July 2026, and none of them want to buy a credit that cannot be defended.</p></div>
       <div className="home-steps">
         {[['01', 'Watch the water, cheaply', 'One multiparameter sonde per pond, about ₹26,000, reporting every few seconds. A stopped paddlewheel or a crashing culture shows here hours before it shows in the harvest — and a lost crop is worth far more than the sensor.'], ['02', 'Check the claim from outside', 'Satellite chlorophyll, weighed harvests, and the sunlight that actually fell on that ground. Photosynthesis caps what is physically possible at about eight photons per molecule of CO₂; past that a claim is not doubtful, it is impossible.'], ['03', 'Sell both halves', 'Carbon credits carry a hashed report any buyer can recompute. The biomass itself is graded on protein and lipid and priced at farm gate — feed at ₹240/kg against ₹12/kg as fertiliser. Same pond, twenty times the income.']].map(([n,title,body]) => <article key={n}><span className="home-step-number">{n}</span><h3>{title}</h3><p>{body}</p></article>)}
@@ -54,7 +56,7 @@ export default function Landing() {
       <div><p className="eyebrow">WHY A LARGE BUYER WOULD USE THIS</p><h2>An offset you cannot defend<br />is a liability, not an asset.</h2><p>A compliance buyer under the CCTS is not looking for the cheapest tonne — they are looking for one that survives an audit three years from now. Every batch here carries a hashed MRV report that can be recomputed from the underlying readings, and states plainly how much of the seller’s own claim was refused. For a mill running its own effluent ponds, the same evidence works in both directions: proof of treatment, and proof of capture.</p><Link className="home-text-link" href="/console/market">See what is on the market <span aria-hidden="true">→</span></Link></div>
       <div className="home-trust-list"><article><span aria-hidden="true">↔</span><div><h3>Credit the lower figure, always</h3><p>We take the smaller of what the farm claimed and what the evidence supports. Overstating earns nothing, so there is no number a seller can write down that beats the check.</p></div></article><article><span aria-hidden="true">≈</span><div><h3>Publish the uncertainty</h3><p>Satellite biomass estimates carry roughly ±140% in the literature. We show the band and credit its lower bound rather than hiding the spread inside one confident total.</p></div></article><article><span aria-hidden="true">↗</span><div><h3>Only durable disposal counts</h3><p>Buried, biochar and bioplastic keep the carbon out of the air. Feed and fertiliser return it within a season, so they are worth money but are not removal — and the contract refuses to mint them.</p></div></article></div>
     </section>
-    <section className="home-section home-shell home-faq"><div><p className="eyebrow">A FEW THINGS TO KNOW</p><h2>Start with the basics.</h2></div><div>
+    <section className="home-section home-shell home-faq" id="home-questions"><div><p className="eyebrow">A FEW THINGS TO KNOW</p><h2>Start with the basics.</h2><div className="home-launch-card"><p>Want to see it in action?</p><Link href="/sim"><strong>Explore the virtual pond <span aria-hidden="true">↗</span></strong><span>Change the conditions and watch the model respond.</span></Link><Link href="/console/market"><strong>Browse the marketplace <span aria-hidden="true">↗</span></strong><span>Review the available batches and their evidence.</span></Link></div></div><div>
       <details><summary>What is AlgaCarbon?</summary><p>A hackathon prototype that connects algae pond monitoring, carbon checks and growth simulation. It helps people understand pond conditions and inspect the evidence behind reported carbon capture.</p></details>
       <details><summary>Is everything shown here live farm data?</summary><p>No. The prototype can include simulated readings and sample evidence. The simulator is a model, and the homepage illustration is not a live pond. Review the data sources in a report before relying on a result.</p></details>
       <details><summary>Can I buy carbon credits here?</summary><p>Yes — the marketplace issues batches, sells them and retires them against a named beneficiary, and each retirement is permanent. Payment settlement is not wired up in this prototype, and credits are recorded with a reproducible report hash rather than anchored on a public chain until a signing key is configured. Both are stated on the listing rather than implied away.</p></details>
@@ -63,6 +65,6 @@ export default function Landing() {
       <details><summary>Do I need sensors to try it?</summary><p>No sensors are needed to explore the browser simulator or existing reports. Monitoring your own pond requires a site and sensors to be configured; that setup is not available through this interface yet.</p></details>
       <details><summary>Can I inspect how it works?</summary><p>Yes. The project source includes the models, physics engine and application code. <a href={REPO_URL}>Explore the RunTimeZero repository.</a></p></details>
     </div></section>
-    <section className="home-shell home-final"><p className="home-kicker">SEE IT FOR YOURSELF</p><h2>Your next decision starts<br />with a clearer picture.</h2><div className="home-actions"><Link className="button home-primary" href="#who-its-for">Explore the platform <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="#how-it-works">How it works</Link></div></section>
+    <section className="home-shell home-final"><div><p className="home-kicker">SEE IT FOR YOURSELF</p><h2>Your next decision starts<br />with a clearer picture.</h2></div><div className="home-actions"><Link className="button home-primary" href="#who-its-for">Explore the platform <span aria-hidden="true">↗</span></Link><Link className="button home-outline" href="#how-it-works">How it works</Link></div></section>
   </main>;
 }

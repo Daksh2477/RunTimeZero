@@ -34,7 +34,7 @@ export function LiveProof() {
 
   return (
     <section className="border-y border-border bg-panel text-panel-foreground">
-      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <div className="home-shell py-8">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-display text-sm font-semibold uppercase tracking-[0.1em] opacity-70">
             Running right now
