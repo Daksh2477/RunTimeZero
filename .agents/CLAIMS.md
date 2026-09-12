@@ -10,6 +10,8 @@ reformat this table, because a whole-file rewrite conflicts with everything.
 |---|---|---|---|
 2026-09-12T03:15Z |
 
+| agent-a | Copernicus / Sentinel-2 ingestion | `apps/api/src/ingest/sentinel.ts`, `apps/api/src/ingest/ndci.ts` | 2026-09-12T03:18Z |
+
 <!-- Add rows below this line. Format:
 | agent-b | what you are building | `path/one`, `path/two` | YYYY-MM-DDTHH:MMZ |
 -->
