@@ -12,8 +12,48 @@
 import { Router } from 'express';
 
 import { WasmPond, physics_ceiling_co2_kg } from '../../../../packages/physics/pkg/rtz_physics.js';
+import { requireAuth, type Authenticated } from './auth.ts';
+import { RequestError, validatePondId } from '../reconcile/validation.ts';
+import { projectPond } from '../services/projection.ts';
 
 export const simulateRouter = Router();
+
+/**
+ * Project one real pond forward from where it actually is.
+ *
+ * Same twin, but seeded from the pond's own geometry, its site's forecast and
+ * its last density reading, and every day comes back labelled with what held it
+ * back. This is what "plan ahead" needs: not a shape, this pond, next week.
+ *
+ * POST rather than GET because the options change the run, and a cached GET of
+ * a projection is a projection of last week's weather.
+ */
+simulateRouter.post('/pond/:id', requireAuth, async (req: Authenticated, res) => {
+  try {
+    const pondId = String(req.params.id);
+    validatePondId(pondId);
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const projection = await projectPond(pondId, {
+      days: b.days === undefined ? undefined : Number(b.days),
+      harvestEveryDays:
+        b.harvestEveryDays === undefined ? undefined : Number(b.harvestEveryDays),
+      useWeather: b.useWeather === undefined ? undefined : Boolean(b.useWeather),
+      meanTempC: b.meanTempC === undefined ? undefined : Number(b.meanTempC),
+      diurnalSwingC: b.diurnalSwingC === undefined ? undefined : Number(b.diurnalSwingC),
+      influentNitrogenMgL:
+        b.influentNitrogenMgL === undefined ? undefined : Number(b.influentNitrogenMgL),
+      seed: b.seed === undefined ? undefined : Number(b.seed),
+    });
+    if (!projection) return res.status(404).json({ error: 'No such pond' });
+    return res.json(projection);
+  } catch (err) {
+    if (err instanceof RequestError) {
+      return res.status(err.status).json({ error: err.message });
+    }
+    console.error('[simulate/pond]', err);
+    return res.status(500).json({ error: 'Could not project this pond.' });
+  }
+});
 
 /** Guard rails, so a stray request cannot spin the twin for a decade. */
 const LIMITS = {
