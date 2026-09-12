@@ -13,6 +13,9 @@ packages/physics/pkg/
 .env.local
 .env.*.local
 
+# Testnet wallet material. Throwaway keys only — but still never committed.
+.wallet-*.txt
+
 # contracts
 # Anchored: an unanchored "artifacts/" also swallowed packages/models/artifacts,
 # so trained model weights never reached the repo or the server.

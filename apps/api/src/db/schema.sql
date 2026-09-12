@@ -334,4 +334,29 @@ CREATE INDEX IF NOT EXISTS idx_expenses_site_period ON expenses(site_id, period_
 -- Additive migration: old checks remain readable but explicitly lack a snapshot.
 ALTER TABLE divergence_checks ADD COLUMN IF NOT EXISTS evidence_snapshot JSONB;
 
+-- ------------------------------------------------------------ accounts
+--
+-- Username and password, and nothing else. No email, no reset flow, no
+-- profile: this is a prototype login, and every field we do not collect is a
+-- field we cannot leak. Passwords are scrypt-hashed in services/auth.ts.
+--
+-- `role` decides which half of the product you land in. It is not a permission
+-- system — the routes check it where it matters and nowhere else.
+
+DO $$ BEGIN
+  CREATE TYPE account_role AS ENUM ('operator', 'buyer', 'researcher', 'admin');
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  -- Stored lowercase so "Raj" and "raj" cannot both exist.
+  username      TEXT NOT NULL UNIQUE CHECK (username = lower(username)),
+  password_hash TEXT NOT NULL,
+  role          account_role NOT NULL DEFAULT 'operator',
+  -- Which farm this account manages. Null for buyers and researchers.
+  site_id       UUID REFERENCES sites(id) ON DELETE SET NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_login_at TIMESTAMPTZ
+);
+
 COMMIT;
