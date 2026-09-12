@@ -1,3 +1,49 @@
+@import "tailwindcss";
+
+/*
+ * Tailwind is here so the pages Chetan built in Lovable can be brought across
+ * close to verbatim instead of being re-drawn from a screenshot. Those pages
+ * are dense by design — twelve-column pond grids, a trade panel beside a
+ * chart beside a table — and that density is what the product is supposed to
+ * feel like. Rewriting them as hand-authored CSS is how we ended up with
+ * three different half-ports.
+ *
+ * The @theme block below maps the oklch tokens in :root to Tailwind utility
+ * names, so `bg-card`, `text-status-critical` and `font-display` resolve to
+ * exactly the same values the rest of the stylesheet uses. Both systems draw
+ * from one palette; neither wins.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--status-critical);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--muted-foreground);
+  --color-status-optimal: var(--status-optimal);
+  --color-status-warning: var(--status-warning);
+  --color-status-critical: var(--status-critical);
+  --color-panel: var(--panel-dark);
+  --color-panel-foreground: var(--panel-dark-foreground);
+  --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
 :root {
   color-scheme: light;
 
@@ -29,6 +75,8 @@
   --panel-dark: oklch(0.28 0.03 258);
   --panel-dark-foreground: oklch(0.96 0.005 247.9);
   --border: oklch(0.929 0.013 255.508);
+  --card-foreground: oklch(0.21 0.03 258);
+  --secondary-foreground: oklch(0.28 0.032 258);
 
   --font-display: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
@@ -862,3 +910,18 @@ a.pond-card:hover, .report-card:hover { border-color: #6f957e; box-shadow: 0 5px
   .page-heading .refresh-group .button { white-space: nowrap; }
   .page-heading .refresh-group .helper { align-self: center; }
 }
+
+/* The role badge in the masthead. Doubles as the way back to the picker. */
+.role-pill {
+  margin-left: auto;
+  flex: none;
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  text-decoration: none;
+  background: color-mix(in oklch, var(--panel-dark-foreground) 12%, transparent);
+  color: var(--panel-dark-foreground);
+}
+.role-pill:hover { background: color-mix(in oklch, var(--panel-dark-foreground) 20%, transparent); }
