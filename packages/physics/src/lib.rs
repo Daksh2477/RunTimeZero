@@ -103,6 +103,39 @@ impl WasmPond {
         }
     }
 
+    /// Build a pond with the site conditions spelled out.
+    ///
+    /// The plain constructor uses sensible defaults for Gujarat. This one
+    /// exists because an operator planning an expansion genuinely needs to ask
+    /// "what if my water runs colder" or "what if the effluent thins out" —
+    /// and those are the inputs that actually move the answer.
+    #[allow(clippy::too_many_arguments)]
+    pub fn with_conditions(
+        lat_deg: f64,
+        area_m2: f64,
+        depth_m: f64,
+        seed: u64,
+        day_of_year: u32,
+        mean_air_temp_c: f64,
+        diurnal_swing_c: f64,
+        influent_nitrogen_mg_l: f64,
+    ) -> WasmPond {
+        let cfg = sim::PondConfig {
+            lat_deg,
+            area_m2,
+            depth_m,
+            mean_air_temp_c,
+            diurnal_swing_c,
+            influent_nitrogen_mg_l,
+        };
+        WasmPond {
+            pond: sim::Pond::new(cfg, seed, day_of_year),
+            faults: Vec::new(),
+            obs_rng: sim::SimRng::new(seed ^ 0xA1_6A_CA_12),
+            elapsed_hour: 0,
+        }
+    }
+
     /// Schedule an overstatement fault — the operator reports `factor`× what
     /// was actually fixed, for a window of hours.
     pub fn inject_overstatement(&mut self, factor: f64, start_hour: u32, duration_hours: u32) {

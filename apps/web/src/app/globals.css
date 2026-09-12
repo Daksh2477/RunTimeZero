@@ -354,3 +354,76 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
 }
 
 .heading-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* ==================================================== landing, phone first */
+
+.landing { padding-bottom: 48px; }
+
+.hero { padding: 26px 0 8px; max-width: 62ch; }
+.hero h1 {
+  font-size: clamp(26px, 7vw, 42px);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  margin: 8px 0 14px;
+}
+.hero-lede { font-size: clamp(15px, 4vw, 17px); line-height: 1.55; margin: 0 0 22px; }
+
+/*
+ * The rule stated as a comparison rather than as min(a,b). Farmers are the
+ * primary audience and the notation adds nothing they need.
+ */
+.rule-card {
+  border: 1px solid var(--hairline, #d9e0dc);
+  border-left: 3px solid var(--culture, #4faf80);
+  border-radius: 8px;
+  padding: 16px 16px 14px;
+  background: var(--panel, #fff);
+}
+.rule-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: var(--silt, #77857f);
+}
+.rule-line em { font-style: normal; font-weight: 650; color: var(--ink, #12201d); }
+.rule-out { margin: 0 0 6px; font-size: clamp(18px, 5vw, 22px); font-weight: 650; letter-spacing: -0.02em; }
+
+.doors { margin: 34px 0 10px; display: grid; gap: 10px; }
+.doors-title { font-size: 15px; font-weight: 650; margin: 0 0 4px; }
+
+.door {
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  min-height: 44px;
+  background: var(--panel, #fff);
+  border: 1px solid var(--hairline, #d9e0dc);
+  border-radius: 10px;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+.door:hover, .door:focus-visible { border-color: var(--culture, #4faf80); outline: none; }
+.door:focus-visible { box-shadow: 0 0 0 3px var(--culture-wash, #e4f2eb); }
+.door:active { transform: scale(0.995); }
+.door strong { font-size: 16.5px; letter-spacing: -0.01em; }
+.door span { font-size: 14px; color: var(--silt, #77857f); line-height: 1.45; }
+.door em { font-style: normal; font-size: 14px; font-weight: 600; color: var(--culture, #4faf80); }
+
+.how { margin-top: 38px; max-width: 64ch; }
+.how h2 { font-size: 17px; margin: 0 0 12px; }
+.how-list { margin: 0; padding-left: 20px; display: grid; gap: 11px; }
+.how-list li { font-size: 14.5px; line-height: 1.5; }
+.how-list strong { font-weight: 650; }
+
+@media (min-width: 760px) {
+  .doors { grid-template-columns: repeat(3, 1fr); }
+  .doors-title { grid-column: 1 / -1; }
+}
+
+/* ================================================================= 404 */
+
+.notfound { padding: 40px 0 60px; max-width: 54ch; }
+.notfound h1 { font-size: clamp(24px, 6vw, 34px); letter-spacing: -0.02em; margin: 6px 0 12px; }
+.notfound-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
