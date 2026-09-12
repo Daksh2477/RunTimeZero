@@ -16,6 +16,7 @@
 
 import { Router, type Response } from 'express';
 import { pool } from '../db/client.ts';
+import { buildSensorPlan } from '../services/sensor-plan.ts';
 
 export const landRouter = Router();
 
@@ -86,6 +87,22 @@ landRouter.get('/site/:siteId/ponds', async (req, res) => {
     })));
   } catch (err) {
     send(res, err);
+  }
+});
+
+/**
+ * What to install here, where to put it, and what it costs.
+ *
+ * An endpoint rather than a slide, so the number on screen and the number in
+ * the deck are the same number.
+ */
+landRouter.get('/site/:siteId/sensor-plan', async (req, res) => {
+  try {
+    const plan = await buildSensorPlan(req.params.siteId);
+    if (!plan) return res.status(404).json({ error: 'No such site' });
+    return res.json(plan);
+  } catch (err) {
+    return send(res, err);
   }
 });
 
