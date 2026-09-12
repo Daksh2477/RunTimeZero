@@ -21,7 +21,12 @@ const listFrom = (src, marker, close) => {
   const at = src.indexOf(marker);
   if (at === -1) return null;
   const body = src.slice(at + marker.length, src.indexOf(close, at));
-  return [...body.matchAll(/['"]([a-z0-9_]+)['"]/g)].map((m) => m[1]).filter((n) => n !== 'label');
+  // `label` is the answer and `pond_group` is bookkeeping for the grouped split
+  // in train_all.py — neither is a feature, so neither belongs in this contract.
+  const NOT_FEATURES = ['label', 'pond_group'];
+  return [...body.matchAll(/['"]([a-z0-9_]+)['"]/g)]
+    .map((m) => m[1])
+    .filter((n) => !NOT_FEATURES.includes(n));
 };
 
 const synthetic = listFrom(read('packages/models/train/make_dataset.ts'), 'const CRASH_HEADER = [', '];');

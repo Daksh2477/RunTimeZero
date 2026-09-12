@@ -87,7 +87,7 @@ retirement certificates. Deploy instructions in `DEPLOY-CHAIN.md`.
 
 No ONNX runtime; a judge can open `crash_classifier.json` and read the
 weights. 21 features from four probes plus pond geometry, season and energy.
-AUC 0.959 on simulator data — and **0.586 on real ATP3 field data**, which is
+AUC 0.969 on simulator data with whole ponds held out — and **0.586 on real ATP3 field data**, which is
 the number that matters and the one we will quote. Models set severity;
 arithmetic sets the amount. Nothing a model outputs can change a credited
 figure.

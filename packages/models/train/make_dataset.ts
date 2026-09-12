@@ -118,6 +118,9 @@ const CRASH_HEADER = [
   'do_amplitude', 'ph_amplitude', 'od_volatility', 'temp_amplitude',
   'depth_m', 'log_area', 'season_sin', 'season_cos', 'hours_since_harvest',
   'energy_kwh_mean', 'mixing_uptime',
+  // Not a feature. Written so train_all.py can hold entire ponds out of the
+  // training set — see the grouped split there for why that matters.
+  'pond_group',
   'label',
 ];
 
@@ -197,6 +200,7 @@ function buildCrashDataset(): void {
       };
       rows.push([
         ...windowFeatures(window, ctx).map((v) => v.toFixed(6)),
+        i,
         collapsed,
       ]);
     }

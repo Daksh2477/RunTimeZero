@@ -29,7 +29,7 @@ from sklearn.metrics import (
     confusion_matrix,
     roc_auc_score,
 )
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import GroupShuffleSplit, train_test_split
 from sklearn.preprocessing import StandardScaler
 
 HERE = pathlib.Path(__file__).parent
@@ -64,8 +64,20 @@ def train_crash() -> None:
     better and explain nothing.
     """
     cols, m = load(CRASH_SOURCE)
-    X, y = m[:, :-1], m[:, -1].astype(int)
-    names = cols[:-1]
+    y = m[:, -1].astype(int)
+
+    # pond_group says which pond a window came from. It is bookkeeping for the
+    # split below, not an input — training on it would let the model look up
+    # the answer by pond id.
+    if "pond_group" in cols:
+        group_col = cols.index("pond_group")
+        groups = m[:, group_col].astype(int)
+        feature_cols = [i for i in range(len(cols) - 1) if i != group_col]
+    else:
+        groups = None
+        feature_cols = list(range(len(cols) - 1))
+    X = m[:, feature_cols]
+    names = [cols[i] for i in feature_cols]
 
     # Real data will not carry every column the twin can produce — ATP3 has no
     # harvest log, for instance, so hours_since_harvest arrives as a constant.
@@ -78,9 +90,26 @@ def train_crash() -> None:
         X = X[:, varying]
         names = [n for n, keep in zip(names, varying) if keep]
 
-    X_tr, X_te, y_tr, y_te = train_test_split(
-        X, y, test_size=0.25, random_state=SEED, stratify=y
-    )
+    if groups is None:
+        X_tr, X_te, y_tr, y_te = train_test_split(
+            X, y, test_size=0.25, random_state=SEED, stratify=y
+        )
+        held_out = None
+    else:
+        # The windows cut from one pond overlap, so a row-wise split leaves
+        # near-copies of the same pond on both sides and the AUC measures
+        # memorisation. Hold whole ponds out: the only number worth reporting
+        # is performance on a pond the model has never seen. GroupShuffleSplit
+        # cannot stratify, so the test positive rate goes into the metadata.
+        splitter = GroupShuffleSplit(n_splits=1, test_size=0.25, random_state=SEED)
+        tr, te = next(splitter.split(X, y, groups))
+        X_tr, X_te, y_tr, y_te = X[tr], X[te], y[tr], y[te]
+        held_out = int(len(np.unique(groups[te])))
+        if len(np.unique(y_te)) < 2:
+            raise SystemExit(
+                f"the {held_out} held-out pond(s) contain no crashes — raise "
+                "test_size or generate more ponds"
+            )
 
     scaler = StandardScaler().fit(X_tr)
     # Crashes are ~9% of rows, so without class_weight the model learns to
@@ -112,6 +141,12 @@ def train_crash() -> None:
             "confusion_matrix": cm,
             "report": classification_report(y_te, pred, output_dict=True, zero_division=0),
             "source": CRASH_SOURCE,
+            "split": (
+                "row-wise stratified (source has no pond_group column)"
+                if held_out is None
+                else f"grouped by pond, {held_out} ponds held out"
+            ),
+            "test_positive_rate": float(y_te.mean()),
             "note": (
                 "Trained on twin-generated crashes. Transfers as far as the physics "
                 "does, no further. Never used for crediting."
@@ -120,7 +155,11 @@ def train_crash() -> None:
             ),
         },
     )
-    print(f"  crash_classifier      AUC {auc:.3f}   ({len(y)} rows, {y.mean():.1%} positive)")
+    held = "row-wise split" if held_out is None else f"{held_out} ponds held out"
+    print(
+        f"  crash_classifier      AUC {auc:.3f}   "
+        f"({len(y)} rows, {y.mean():.1%} positive, {held})"
+    )
 
 
 def train_divergence() -> None:

@@ -45,7 +45,7 @@ HEADER = [
     "do_amplitude", "ph_amplitude", "od_volatility", "temp_amplitude",
     "depth_m", "log_area", "season_sin", "season_cos", "hours_since_harvest",
     "energy_kwh_mean", "mixing_uptime",
-    "label",
+    "pond_group", "label",
 ]
 
 # ATP3 ponds were ~1000 L raceways. Correct these if the documentation
@@ -206,7 +206,7 @@ def make_rows(combined):
 
     rows, positives, with_swing = [], 0, 0
 
-    for pond in sorted(by_pond):
+    for group, pond in enumerate(sorted(by_pond)):
         points = sorted(by_pond[pond], key=lambda x: x["date"])
 
         for i, now in enumerate(points):
@@ -259,6 +259,7 @@ def make_rows(combined):
                 UNAVAILABLE["hours_since_harvest"],
                 UNAVAILABLE["energy_kwh_mean"],
                 UNAVAILABLE["mixing_uptime"],
+                group,
                 label,
             ])
 

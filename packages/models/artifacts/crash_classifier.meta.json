@@ -1,44 +1,46 @@
 {
   "rows": 6400,
   "positive_rate": 0.03640625,
-  "test_auc": 0.9590657006127287,
+  "test_auc": 0.9691514711976792,
   "confusion_matrix": [
     [
-      1320,
-      222
+      1327,
+      197
     ],
     [
-      3,
-      55
+      5,
+      71
     ]
   ],
   "report": {
     "0": {
-      "precision": 0.9977324263038548,
-      "recall": 0.8560311284046692,
-      "f1-score": 0.9214659685863874,
-      "support": 1542.0
+      "precision": 0.9962462462462462,
+      "recall": 0.8707349081364829,
+      "f1-score": 0.9292717086834734,
+      "support": 1524.0
     },
     "1": {
-      "precision": 0.19855595667870035,
-      "recall": 0.9482758620689655,
-      "f1-score": 0.3283582089552239,
-      "support": 58.0
+      "precision": 0.26492537313432835,
+      "recall": 0.9342105263157895,
+      "f1-score": 0.4127906976744186,
+      "support": 76.0
     },
-    "accuracy": 0.859375,
+    "accuracy": 0.87375,
     "macro avg": {
-      "precision": 0.5981441914912776,
-      "recall": 0.9021534952368173,
-      "f1-score": 0.6249120887708056,
+      "precision": 0.6305858096902873,
+      "recall": 0.9024727172261362,
+      "f1-score": 0.671031203178946,
       "support": 1600.0
     },
     "weighted avg": {
-      "precision": 0.968762279279943,
-      "recall": 0.859375,
-      "f1-score": 0.8999658122997577,
+      "precision": 0.9615085047734301,
+      "recall": 0.87375,
+      "f1-score": 0.9047388606605432,
       "support": 1600.0
     }
   },
   "source": "crash.csv",
+  "split": "grouped by pond, 100 ponds held out",
+  "test_positive_rate": 0.0475,
   "note": "Trained on twin-generated crashes. Transfers as far as the physics does, no further. Never used for crediting."
 }
