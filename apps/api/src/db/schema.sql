@@ -331,8 +331,55 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 CREATE INDEX IF NOT EXISTS idx_expenses_site_period ON expenses(site_id, period_start);
 
--- Additive migration: old checks remain readable but explicitly lack a snapshot.
+-- ------------------------------------------------- additive migrations
+--
+-- `CREATE TABLE IF NOT EXISTS` above is a no-op on a database that already has
+-- the table, so a column added to one of those definitions NEVER REACHES a
+-- database created before it. The deployed API was answering
+-- `column p.retired_at does not exist` on the land screen for exactly that
+-- reason: production's `ponds` predates the disable-instead-of-delete work,
+-- and `npm run db:setup` could not fix it because the CREATE was skipped.
+--
+-- Anything added to a table after it first shipped belongs here as well as in
+-- the definition above. Every statement is idempotent and safe to re-run.
+
+-- Old checks remain readable but explicitly lack a snapshot.
 ALTER TABLE divergence_checks ADD COLUMN IF NOT EXISTS evidence_snapshot JSONB;
+
+-- Ponds are disabled, never deleted — see the table definition.
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS strain TEXT NOT NULL DEFAULT 'spirulina';
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS retired_at TIMESTAMPTZ;
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS retired_reason TEXT;
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT now();
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS length_m DOUBLE PRECISION;
+ALTER TABLE ponds ADD COLUMN IF NOT EXISTS width_m DOUBLE PRECISION;
+
+-- Geometry is arithmetic, not a guess: length × width = area. Where one side
+-- is missing it is derived from the other. A pond with neither is left null
+-- rather than given invented dimensions — the land screen says "unknown" and
+-- asks, which is the honest behaviour.
+UPDATE ponds SET length_m = area_m2 / width_m
+  WHERE length_m IS NULL AND width_m IS NOT NULL AND width_m > 0;
+UPDATE ponds SET width_m = area_m2 / length_m
+  WHERE width_m IS NULL AND length_m IS NOT NULL AND length_m > 0;
+
+-- Cloud fraction arrived with the real Sentinel-2 ingest.
+ALTER TABLE imagery_observations ADD COLUMN IF NOT EXISTS cloud_fraction DOUBLE PRECISION;
+
+-- Energy metering is optional per pond; null means no meter, not a stopped mixer.
+ALTER TABLE telemetry ADD COLUMN IF NOT EXISTS energy_kwh DOUBLE PRECISION;
+
+-- Everything on a batch that came with on-chain anchoring.
+ALTER TABLE batches ADD COLUMN IF NOT EXISTS disposition_evidence_ref TEXT;
+ALTER TABLE batches ADD COLUMN IF NOT EXISTS mrv_report_cid TEXT;
+ALTER TABLE batches ADD COLUMN IF NOT EXISTS evidence_token_id TEXT;
+ALTER TABLE batches ADD COLUMN IF NOT EXISTS minted_tonnes DOUBLE PRECISION;
+ALTER TABLE batches ADD COLUMN IF NOT EXISTS tx_hash TEXT;
+ALTER TABLE batches ADD COLUMN IF NOT EXISTS divergence_check_ids UUID[] NOT NULL DEFAULT '{}';
+
+-- Kept in step with the ponds beneath it by the land routes.
+ALTER TABLE sites ADD COLUMN IF NOT EXISTS total_area_m2 DOUBLE PRECISION;
 
 -- ------------------------------------------------------------ accounts
 --
