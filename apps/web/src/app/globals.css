@@ -91,17 +91,36 @@
   --rust: var(--status-critical); --rust-wash: oklch(0.58 0.23 27 / 0.09);
   --sun: var(--status-warning);
 }
-* { box-sizing: border-box; }
-html { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; background: var(--surface); color: var(--ink); }
-body {
-  font-family: var(--font-sans); margin: 0; line-height: 1.6; -webkit-font-smoothing: antialiased; }
-a { color: inherit; text-decoration: none; }
-button, input, select { font: inherit; }
-button, summary, input, a { -webkit-tap-highlight-color: transparent; }
-button, a, input, summary { touch-action: manipulation; }
-button { cursor: pointer; }
-button:disabled { cursor: wait; opacity: .65; }
-:focus-visible { outline: 3px solid #258049; outline-offset: 4px; }
+/*
+ * THESE RESETS MUST STAY IN @layer base.
+ *
+ * Unlayered CSS beats layered CSS in the cascade, regardless of specificity
+ * or source order. Left unlayered, `a { color: inherit }` silently overrode
+ * every Tailwind text utility — the landing page's primary button rendered
+ * dark text on a dark navy fill and was almost unreadable.
+ *
+ * Tailwind's utilities live in its own layer, which comes after `base`, so
+ * putting the resets here lets a utility win while the resets still apply to
+ * everything that has no utility on it.
+ */
+@layer base {
+  * { box-sizing: border-box; }
+  html {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 16px; background: var(--surface); color: var(--ink);
+  }
+  body {
+    font-family: var(--font-sans); margin: 0; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: inherit; text-decoration: none; }
+  button, input, select { font: inherit; }
+  button, summary, input, a { -webkit-tap-highlight-color: transparent; }
+  button, a, input, summary { touch-action: manipulation; }
+  button { cursor: pointer; }
+  button:disabled { cursor: wait; opacity: .65; }
+  :focus-visible { outline: 3px solid #258049; outline-offset: 4px; }
+}
 h1, h2, h3, h4, p { margin-top: 0; }
 h1 { font-size: clamp(2rem, 3.5vw, 2.8rem); line-height: 1.16; font-weight: 650; letter-spacing: -.045em; margin-bottom: 14px; }
 h2 { font-size: 1.3rem; line-height: 1.35; letter-spacing: -.02em; margin-bottom: 8px; }
@@ -929,3 +948,81 @@ a.pond-card:hover, .report-card:hover { border-color: #6f957e; box-shadow: 0 5px
 /* Direction is in the label; colour only reinforces it. */
 .expansion-figures .is-good { color: var(--status-optimal); }
 .expansion-figures .is-bad { color: var(--status-critical); }
+
+/* ------------------------------------------------------- page transitions
+ * Navigation should feel like moving, not like the page being replaced.
+ *
+ * Done with the View Transitions API where it exists, which is a browser
+ * -level crossfade between the old and new DOM and costs nothing in JS. In
+ * browsers without it the animations below simply never run and navigation
+ * is instant, which is a perfectly good outcome rather than a broken one.
+ *
+ * Durations are short on purpose. 180ms reads as responsive; past ~300ms an
+ * animation starts feeling like latency, and on a rural connection the page
+ * already has enough of that.
+ */
+@view-transition { navigation: auto; }
+
+::view-transition-old(root) {
+  animation: fade-out 140ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+::view-transition-new(root) {
+  animation: slide-up 220ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+@keyframes fade-out {
+  to { opacity: 0; }
+}
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Panels arriving on a freshly loaded page, staggered slightly so a dense
+ * console assembles rather than appearing all at once. */
+.big-reading,
+.pond-card,
+.rounded-xl {
+  animation: panel-in 260ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+@keyframes panel-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Tab and nav changes: the underline moves rather than blinking. */
+.main-nav a {
+  position: relative;
+  transition: color 160ms ease, background-color 160ms ease;
+}
+.main-nav a[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  left: 11px; right: 11px; bottom: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  animation: underline-in 220ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+@keyframes underline-in {
+  from { transform: scaleX(0); opacity: 0; }
+  to { transform: scaleX(1); opacity: 1; }
+}
+
+button, a, input, select {
+  transition: border-color 150ms ease, background-color 150ms ease,
+              color 150ms ease, opacity 150ms ease;
+}
+
+/*
+ * Someone who has asked their system not to animate things means it. This
+ * disables every transition above rather than merely shortening them.
+ */
+@media (prefers-reduced-motion: reduce) {
+  @view-transition { navigation: none; }
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

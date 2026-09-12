@@ -20,6 +20,11 @@ export interface Reading {
   temperature_c: number;
   optical_density: number;
   reported_co2_kg: number;
+  /** Protein mass fraction of dry biomass, 0..1. */
+  protein_frac: number;
+  /** Lipid fraction. Climbs under nitrogen stress — the value lever. */
+  lipid_frac: number;
+  carbohydrate_frac: number;
   /** Paddlewheel draw this hour, kWh. Zero while the mixer is stopped. */
   energy_kwh: number;
   hour: number;
