@@ -1,5 +1,9 @@
 .home { --home-navy: #182b35; --home-green: #a5ed83; }
-.home-shell { width: min(1168px, calc(100% - 56px)); margin-inline: auto; }
+/* Wider than the old 1168px: we carry no advertising, so reserving the
+ * outer thirds of a desktop screen wastes it. Prose still caps its own
+ * measure below, because a 1500px line of body text is unreadable. */
+.home-shell { width: min(1500px, calc(100% - 48px)); margin-inline: auto; }
+.home-lede, .home-section-heading p, .home-trust > div > p { max-width: 62ch; }
 .home-hero { background: var(--home-navy); color: #f6faf7; padding: 76px 0 72px; overflow: hidden; }
 .home-hero-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 64px; align-items: center; }
 .home-kicker { font-size: .75rem; font-weight: 600; letter-spacing: .13em; color: var(--home-green); }

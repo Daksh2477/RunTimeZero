@@ -48,7 +48,7 @@ export default function ResearcherConsole() {
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <main className="mx-auto max-w-[1800px] px-4 py-6 sm:px-6">
       <h1 className="font-display text-2xl font-semibold tracking-tight">Research lab</h1>
       <p className="mt-1 text-sm text-muted-foreground">
         Pond data from consenting farms. Row counts are live, not advertised.

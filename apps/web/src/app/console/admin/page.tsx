@@ -92,7 +92,7 @@ export default function AdminConsole() {
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <main className="mx-auto max-w-[1800px] px-4 py-6 sm:px-6">
       <h1 className="font-display text-2xl font-semibold tracking-tight">Operator console</h1>
 
       <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">

@@ -61,7 +61,7 @@ export default function MarketPage() {
       <div className="pointer-events-none absolute right-0 top-0 size-[420px] rounded-full bg-primary/10 blur-[120px]" />
       <div className="pointer-events-none absolute bottom-0 left-0 size-[420px] rounded-full bg-accent/10 blur-[120px]" />
 
-      <div className="relative z-10 mx-auto max-w-7xl space-y-6">
+      <div className="relative z-10 mx-auto max-w-[1800px] space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">

@@ -52,7 +52,7 @@ export default function InvestorConsole() {
 
   if (error) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+      <main className="mx-auto max-w-[1800px] px-4 py-10 sm:px-6">
         <p className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
           Could not reach the market: {error}
         </p>
@@ -61,7 +61,7 @@ export default function InvestorConsole() {
   }
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+    <main className="mx-auto max-w-[1800px] px-4 py-6 sm:px-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-2xl font-semibold tracking-tight">Investor hub</h1>

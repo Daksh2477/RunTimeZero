@@ -150,7 +150,16 @@ small { font-size: .85rem; }
 .main-nav a:hover { background: #f0f4ee; }
 .prototype-label { font-size: .72rem; color: var(--silt); border-left: 1px solid var(--hairline); padding-left: 22px; }
 .notice-strip { background: #edf2e9; color: #46603e; padding: 8px 24px; font-size: .8rem; text-align: center; }
-.wrap { max-width: 1224px; margin: auto; padding: 0 28px 48px; }
+/*
+ * Full width, not a magazine column.
+ *
+ * 1224px was borrowed from ad-supported layouts, which reserve the outer
+ * thirds for advertising. We have no ads, so on a wide screen that just
+ * threw away half the desk and forced tables and pond grids to scroll
+ * inside a narrow well. Content now runs to 1800px and the gutter is a
+ * gutter, not a margin.
+ */
+.wrap { max-width: 1800px; margin: auto; padding: 0 clamp(14px, 2.2vw, 36px) 48px; }
 .page-heading { display: flex; align-items: center; justify-content: space-between; gap: 28px; padding: 44px 0 30px; }
 .page-heading > div:first-child { max-width: 720px; }
 .page-heading p:not(.eyebrow) { color: var(--silt); margin: 0; max-width: 64ch; }
@@ -680,7 +689,7 @@ input[type='range'] { width: 100%; accent-color: var(--culture); min-height: 36p
  */
 /* Wider than the old reading-column width — with a grid there is no reason
  * to leave two thirds of a desktop screen empty. */
-.wrap.farm { padding-block: 20px 48px; max-width: 1400px; }
+.wrap.farm { padding-block: 20px 48px; }
 
 .farm-verdict {
   border-radius: var(--radius);
@@ -1050,4 +1059,60 @@ button, a, input, select {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ------------------------------------------------------------- land page */
+.land-site-picker { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.land-site-picker select {
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 12px; background: var(--card); min-height: 44px;
+}
+
+.land-grid {
+  display: grid; gap: 18px;
+  grid-template-columns: minmax(280px, 380px) 1fr;
+  align-items: start;
+}
+
+.land-add, .land-list {
+  border: 1px solid var(--border); border-radius: 12px;
+  background: var(--card); padding: 18px;
+}
+.land-add h2, .land-list h2 { margin: 0 0 12px; font-size: 1.05rem; }
+.land-add label { display: block; margin-bottom: 10px; }
+.land-add label span {
+  display: block; font-size: .72rem; letter-spacing: .05em;
+  text-transform: uppercase; color: var(--muted-foreground); margin-bottom: 4px;
+}
+.land-add input {
+  width: 100%; border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; min-height: 44px; background: var(--background);
+}
+.land-dims { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+.land-preview {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin: 12px 0; padding: 10px; border-radius: 8px; background: var(--secondary);
+}
+.land-preview dt {
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--muted-foreground);
+}
+.land-preview dd { margin: 2px 0 0; font-family: var(--font-mono); font-weight: 600; }
+
+.land-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border);
+}
+.land-row:last-of-type { border-bottom: 0; }
+.land-row > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.land-row.is-off strong { color: var(--muted-foreground); }
+.land-meta { font-size: .8rem; color: var(--muted-foreground); }
+.land-reason { font-size: .8rem; color: var(--status-warning); }
+.land-row .button { flex: none; min-height: 44px; }
+
+@media (max-width: 860px) {
+  .land-grid { grid-template-columns: 1fr; }
+  .land-row { flex-direction: column; align-items: stretch; }
+  .land-row .button { width: 100%; }
 }

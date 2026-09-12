@@ -19,6 +19,7 @@ import { ROLE_META, canAccess, clearRole, useRole } from '@/lib/session';
 
 const NAV = [
   { href: '/farm', label: 'My ponds', icon: Leaf },
+  { href: '/farm/land', label: 'My land', icon: Leaf },
   { href: '/console/investor', label: 'Market', icon: Chart },
   { href: '/console/researcher', label: 'Data', icon: Flask },
   { href: '/verify', label: 'Verify', icon: Chart },

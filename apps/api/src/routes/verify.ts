@@ -93,3 +93,133 @@ verifyRouter.get('/', async (_req, res) => {
     res.status(500).json({ error: 'Could not read recent verifications.' });
   }
 });
+
+
+/* ----------------------------------------------------- verifying a trade
+ * The original /verify checked a single pond-fortnight. That is the raw
+ * material, not the thing anyone actually holds — a buyer holds a BATCH, or
+ * a retirement certificate, and wants the chain from that back to the water.
+ *
+ * These two endpoints walk it: certificate -> batch -> report hash -> the
+ * checks that fed it -> the evidence behind each. No account required,
+ * because provenance only the seller can read is not provenance.
+ */
+
+/** Everything behind an issued batch. */
+verifyRouter.get('/batch/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT b.id, b.period_start, b.period_end, b.claimed_co2_kg,
+              b.independent_co2_kg, b.ceiling_co2_kg, b.creditable_co2_kg,
+              b.disposition, b.disposition_evidence_ref, b.mrv_report_cid,
+              b.tx_hash, b.divergence_check_ids, b.created_at,
+              s.name AS site_name, s.tier, s.host_industry
+         FROM batches b JOIN sites s ON s.id = b.site_id
+        WHERE b.id = $1`,
+      [req.params.id],
+    );
+    const b = rows[0];
+    if (!b) return res.status(404).json({ error: 'No such batch' });
+
+    const { rows: checks } = await pool.query(
+      `SELECT d.id, p.label AS pond_label, d.window_start, d.window_end,
+              d.claimed_co2_kg, d.independent_co2_kg, d.independent_low_co2_kg,
+              d.ceiling_co2_kg, d.creditable_co2_kg, d.verdict, d.reason
+         FROM divergence_checks d JOIN ponds p ON p.id = d.pond_id
+        WHERE d.id = ANY($1) ORDER BY d.window_start`,
+      [b.divergence_check_ids],
+    );
+
+    const { rows: retirements } = await pool.query(
+      `SELECT id, kg, beneficiary, retired_at FROM retirements
+        WHERE batch_id = $1 ORDER BY retired_at`,
+      [b.id],
+    );
+
+    const issued = Number(b.creditable_co2_kg);
+    const retired = retirements.reduce((t, r) => t + Number(r.kg), 0);
+
+    res.json({
+      batchId: b.id,
+      siteName: b.site_name,
+      tier: b.tier,
+      hostIndustry: b.host_industry,
+      periodStart: b.period_start.toISOString(),
+      periodEnd: b.period_end.toISOString(),
+      claimedCo2Kg: Number(b.claimed_co2_kg),
+      creditableCo2Kg: issued,
+      refusedCo2Kg: Number(b.claimed_co2_kg) - issued,
+      ceilingCo2Kg: Number(b.ceiling_co2_kg),
+      disposition: b.disposition,
+      dispositionEvidenceRef: b.disposition_evidence_ref,
+      // The hash is over canonical JSON of the whole report, so anyone can
+      // recompute it from these same checks and compare.
+      reportHash: b.mrv_report_cid,
+      anchored: b.tx_hash !== null,
+      txHash: b.tx_hash,
+      issuedAt: b.created_at.toISOString(),
+      retiredKg: retired,
+      outstandingKg: Math.max(0, issued - retired),
+      retirements: retirements.map((r) => ({
+        id: r.id, kg: Number(r.kg), beneficiary: r.beneficiary,
+        retiredAt: r.retired_at.toISOString(),
+      })),
+      checks: checks.map((c) => ({
+        id: c.id,
+        pondLabel: c.pond_label,
+        windowStart: c.window_start.toISOString(),
+        windowEnd: c.window_end.toISOString(),
+        claimedCo2Kg: Number(c.claimed_co2_kg),
+        independentCo2Kg: Number(c.independent_co2_kg),
+        independentLowCo2Kg: Number(c.independent_low_co2_kg),
+        ceilingCo2Kg: Number(c.ceiling_co2_kg),
+        creditableCo2Kg: Number(c.creditable_co2_kg),
+        verdict: c.verdict,
+        reason: c.reason,
+      })),
+    });
+  } catch (err) {
+    console.error('[verify/batch]', err);
+    res.status(500).json({ error: 'Could not load that batch' });
+  }
+});
+
+/** A retirement certificate, and the batch it came from. */
+verifyRouter.get('/certificate/:id', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT r.id, r.kg, r.beneficiary, r.retired_at, r.tx_hash,
+              b.id AS batch_id, b.mrv_report_cid, b.disposition,
+              b.period_start, b.period_end, s.name AS site_name
+         FROM retirements r
+         JOIN batches b ON b.id = r.batch_id
+         JOIN sites s ON s.id = b.site_id
+        WHERE r.id = $1`,
+      [req.params.id],
+    );
+    const c = rows[0];
+    if (!c) return res.status(404).json({ error: 'No such certificate' });
+
+    res.json({
+      certificateId: c.id,
+      kg: Number(c.kg),
+      beneficiary: c.beneficiary,
+      retiredAt: c.retired_at.toISOString(),
+      siteName: c.site_name,
+      disposition: c.disposition,
+      periodStart: c.period_start.toISOString(),
+      periodEnd: c.period_end.toISOString(),
+      batchId: c.batch_id,
+      reportHash: c.mrv_report_cid,
+      anchored: c.tx_hash !== null,
+      txHash: c.tx_hash,
+      note:
+        'This tonnage is retired permanently and claimed by the named '
+        + 'beneficiary. It cannot be resold. Follow the batch link to see '
+        + 'the evidence it was issued against.',
+    });
+  } catch (err) {
+    console.error('[verify/certificate]', err);
+    res.status(500).json({ error: 'Could not load that certificate' });
+  }
+});
