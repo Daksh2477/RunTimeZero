@@ -101,6 +101,17 @@ pub struct Reading {
     /// operator's main lever on what the crop is worth.
     pub lipid_frac: f64,
     pub carbohydrate_frac: f64,
+    /// Sun's angle above the horizon, degrees. Negative means night.
+    ///
+    /// Exposed so the simulator can draw the sky honestly rather than
+    /// guessing from the clock: at 23°N in December the sun is up for ten
+    /// hours, in June for thirteen and a half, and the pond's behaviour
+    /// follows that rather than a fixed 6am-to-6pm.
+    pub solar_elevation_deg: f64,
+    /// PAR reaching the water right now, µmol/m²/s. Zero at night.
+    pub par_umol: f64,
+    /// Hours between sunrise and sunset today, from the sunrise equation.
+    pub daylight_hours: f64,
     /// Paddlewheel draw this hour, kWh.
     ///
     /// Not a biological quantity, which is why it is trustworthy: it comes off
@@ -253,6 +264,20 @@ impl WasmPond {
             protein_frac: comp.protein,
             lipid_frac: comp.lipid,
             carbohydrate_frac: comp.carbohydrate,
+            solar_elevation_deg: solar::solar_elevation_deg(
+                self.pond.cfg.lat_deg,
+                self.pond.state.day_of_year,
+                self.pond.state.hour,
+            ),
+            par_umol: solar::clear_sky_par(
+                self.pond.cfg.lat_deg,
+                self.pond.state.day_of_year,
+                self.pond.state.hour,
+            ),
+            daylight_hours: solar::daylight_hours(
+                self.pond.cfg.lat_deg,
+                self.pond.state.day_of_year,
+            ),
             energy_kwh: energy,
             hour: self.pond.state.hour,
             day_of_year: self.pond.state.day_of_year,

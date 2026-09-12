@@ -25,6 +25,12 @@ export interface Reading {
   /** Lipid fraction. Climbs under nitrogen stress — the value lever. */
   lipid_frac: number;
   carbohydrate_frac: number;
+  /** Sun's angle above the horizon, degrees. Negative means night. */
+  solar_elevation_deg: number;
+  /** PAR reaching the water now, µmol/m²/s. Zero at night. */
+  par_umol: number;
+  /** Hours between sunrise and sunset today. */
+  daylight_hours: number;
   /** Paddlewheel draw this hour, kWh. Zero while the mixer is stopped. */
   energy_kwh: number;
   hour: number;
@@ -40,6 +46,15 @@ export interface DayPoint {
   ph: number;
   dissolvedOxygenMgL: number;
   harvested: boolean;
+  /** Midday sun angle for the day, degrees. Drives the sky in the scene. */
+  solarElevationDeg: number;
+  /** Peak PAR for the day, µmol/m²/s. */
+  parUmol: number;
+  /** Hours of daylight, from the sunrise equation rather than an estimate. */
+  daylightHours: number;
+  /** Mean lipid fraction — what the crop is worth per kg. */
+  lipidFrac: number;
+  proteinFrac: number;
 }
 
 export interface RunConfig {
@@ -186,9 +201,15 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
   for (let d = 0; d < cfg.days; d += 1) {
     let dayCo2 = 0;
     let last: Reading | null = null;
+    // Peak rather than mean: the scene shows midday, and a daily average sun
+    // angle across a night would always read as dusk.
+    let peakSun = -90;
+    let peakPar = 0;
     for (let h = 0; h < 24; h += 1) {
       last = pond.step();
       dayCo2 += last.reported_co2_kg;
+      if (last.solar_elevation_deg > peakSun) peakSun = last.solar_elevation_deg;
+      if (last.par_umol > peakPar) peakPar = last.par_umol;
     }
     totalCo2 += dayCo2;
 
@@ -210,6 +231,11 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
       ph: last?.ph ?? 0,
       dissolvedOxygenMgL: last?.dissolved_oxygen_mg_l ?? 0,
       harvested,
+      solarElevationDeg: peakSun,
+      parUmol: peakPar,
+      daylightHours: last?.daylight_hours ?? 0,
+      lipidFrac: last?.lipid_frac ?? 0,
+      proteinFrac: last?.protein_frac ?? 0,
     });
   }
 

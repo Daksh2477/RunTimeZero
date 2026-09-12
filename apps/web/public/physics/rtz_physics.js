@@ -39,6 +39,14 @@ export class Reading {
         return ret >>> 0;
     }
     /**
+     * Hours between sunrise and sunset today, from the sunrise equation.
+     * @returns {number}
+     */
+    get daylight_hours() {
+        const ret = wasm.__wbg_get_reading_daylight_hours(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * @returns {number}
      */
     get dissolved_oxygen_mg_l() {
@@ -82,6 +90,14 @@ export class Reading {
         return ret;
     }
     /**
+     * PAR reaching the water right now, µmol/m²/s. Zero at night.
+     * @returns {number}
+     */
+    get par_umol() {
+        const ret = wasm.__wbg_get_reading_par_umol(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * @returns {number}
      */
     get ph() {
@@ -104,6 +120,19 @@ export class Reading {
         return ret;
     }
     /**
+     * Sun's angle above the horizon, degrees. Negative means night.
+     *
+     * Exposed so the simulator can draw the sky honestly rather than
+     * guessing from the clock: at 23°N in December the sun is up for ten
+     * hours, in June for thirteen and a half, and the pond's behaviour
+     * follows that rather than a fixed 6am-to-6pm.
+     * @returns {number}
+     */
+    get solar_elevation_deg() {
+        const ret = wasm.__wbg_get_reading_solar_elevation_deg(this.__wbg_ptr);
+        return ret;
+    }
+    /**
      * @returns {number}
      */
     get temperature_c() {
@@ -121,6 +150,13 @@ export class Reading {
      */
     set day_of_year(arg0) {
         wasm.__wbg_set_reading_day_of_year(this.__wbg_ptr, arg0);
+    }
+    /**
+     * Hours between sunrise and sunset today, from the sunrise equation.
+     * @param {number} arg0
+     */
+    set daylight_hours(arg0) {
+        wasm.__wbg_set_reading_daylight_hours(this.__wbg_ptr, arg0);
     }
     /**
      * @param {number} arg0
@@ -161,6 +197,13 @@ export class Reading {
         wasm.__wbg_set_reading_optical_density(this.__wbg_ptr, arg0);
     }
     /**
+     * PAR reaching the water right now, µmol/m²/s. Zero at night.
+     * @param {number} arg0
+     */
+    set par_umol(arg0) {
+        wasm.__wbg_set_reading_par_umol(this.__wbg_ptr, arg0);
+    }
+    /**
      * @param {number} arg0
      */
     set ph(arg0) {
@@ -178,6 +221,18 @@ export class Reading {
      */
     set reported_co2_kg(arg0) {
         wasm.__wbg_set_reading_reported_co2_kg(this.__wbg_ptr, arg0);
+    }
+    /**
+     * Sun's angle above the horizon, degrees. Negative means night.
+     *
+     * Exposed so the simulator can draw the sky honestly rather than
+     * guessing from the clock: at 23°N in December the sun is up for ten
+     * hours, in June for thirteen and a half, and the pond's behaviour
+     * follows that rather than a fixed 6am-to-6pm.
+     * @param {number} arg0
+     */
+    set solar_elevation_deg(arg0) {
+        wasm.__wbg_set_reading_solar_elevation_deg(this.__wbg_ptr, arg0);
     }
     /**
      * @param {number} arg0

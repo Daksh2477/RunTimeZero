@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_CONFIG, runTwin, type RunConfig, type RunResult } from '@/lib/twin';
 import { ExpansionPanel } from '@/components/expansion-panel';
 import { PondView } from '@/components/pond-view';
+import { SkyStrip } from '@/components/sky-strip';
 import './simulation-workspace.css';
 
 interface Props { initial?: Partial<RunConfig>; pondLabel?: string; siteName?: string; }
@@ -84,6 +85,10 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
     <div className="scenario-toolbar"><div><span className="workspace-step">01 / TRY A SCENARIO</span><div className="scenario-options" role="group" aria-label="Environmental scenarios">{scenarios.map(s => <button key={s.id} aria-pressed={selectedScenario?.id === s.id} onClick={() => { setCfg(c => ({ ...c, meanAirTempC: s.temperature, diurnalSwingC: s.swing, mixerRunning: s.mixing, crashOnDay: null })); setPlayDay(0); setPlaying(false); }}>{s.label}</button>)}</div></div><button className="button secondary reset-simulation" onClick={reset}>Reset simulation</button></div>
     <div className="simulation-grid">
       <section className="simulation-stage" aria-label="Pond simulation scene">
+        {/* Sky sits directly above the water so the two read as one picture,
+            and so day length — the biggest seasonal driver of yield — is
+            visible rather than buried in the conditions panel. */}
+        <SkyStrip point={point} airTempC={cfg.meanAirTempC} />
         <div className="stage-header"><div><span className="workspace-step">02 / EXPLORE YOUR POND</span><h2>{pondLabel ?? 'Your virtual pond'}</h2><p>{siteName ? `${siteName} · ` : ''}{selectedScenario?.label ?? 'Custom conditions'} · model simulation</p></div><span className={`mixing-indicator ${cfg.mixerRunning ? '' : 'is-stopped'}`}>{cfg.mixerRunning ? 'Water mixing' : 'Mixer stopped'}</span></div>
         <div className="scene-dimensions"><span><strong>{Math.sqrt(cfg.areaM2 * 3).toFixed(1)} m</strong> length</span><span><strong>{Math.sqrt(cfg.areaM2 / 3).toFixed(1)} m</strong> width</span><span><strong>{Math.round(cfg.depthM * 100)} cm</strong> depth</span></div>
         <PondView daily={result?.daily ?? []} areaM2={cfg.areaM2} depthM={cfg.depthM} mixing={cfg.mixerRunning} sensors={sensors} onMoveSensor={moveSensor} day={playDay} airTemperature={cfg.meanAirTempC} selectedSensor={selectedSensor} onSelectSensor={setSelectedSensor} />

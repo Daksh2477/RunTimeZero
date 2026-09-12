@@ -46,3 +46,68 @@
 .scene-weather > span { transition: transform .5s; }
 .landscape-hot .scene-weather > span { transform: rotate(30deg); }
 @media(max-width:560px) { .scene-weather { padding: 10px 12px; }.probe-dot { width: 16px; height: 16px; border-width: 2px; }.probe-name { top: 33px; font-size: .58rem; padding: 1px 4px; }.simulation-page .page-heading h1 { font-size: 1.65rem; }.simulation-page .page-heading { padding-block: 18px; }.simulation-page .page-heading p:not(.eyebrow) { font-size: .85rem; }.scenario-toolbar { margin-bottom: 14px; } }
+
+
+/* The actual reason, not just "unavailable". */
+.sim-failure-detail {
+  margin: 6px 0 10px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--status-critical);
+  word-break: break-word;
+}
+
+/* ---------------------------------------------------------------- sky strip
+ * Sun position, day length and conditions above the pond. Sits directly on
+ * top of the scene so the sky and the water read as one picture.
+ */
+.sky-strip {
+  position: relative;
+  border-radius: 12px 12px 0 0;
+  padding: 10px 12px 8px;
+  background: linear-gradient(180deg, #bfe0f5 0%, #e8f2e2 100%);
+  overflow: hidden;
+}
+.sky-strip.is-night {
+  background: linear-gradient(180deg, #1b2a3d 0%, #2b3a44 100%);
+  color: #e8eef4;
+}
+
+.sky-arc { position: relative; height: 46px; }
+.sky-body {
+  position: absolute;
+  width: 20px; height: 20px; border-radius: 999px;
+  transform: translate(-50%, 50%);
+  transition: left .5s ease, bottom .5s ease;
+}
+.sky-body.is-sun {
+  background: radial-gradient(circle at 35% 35%, #ffe9a8, #f5b731 70%);
+  box-shadow: 0 0 18px 6px #f5b73155;
+}
+.sky-body.is-moon {
+  background: radial-gradient(circle at 65% 35%, #f4f7fb, #c6cfda 70%);
+  box-shadow: 0 0 14px 4px #c6cfda33;
+}
+
+.sky-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 6px 10px;
+  margin: 6px 0 0;
+}
+.sky-facts div { min-width: 0; }
+.sky-facts dt {
+  font-size: .62rem; letter-spacing: .06em; text-transform: uppercase;
+  opacity: .7;
+}
+.sky-facts dd {
+  margin: 1px 0 0; font-family: var(--font-mono);
+  font-size: .82rem; font-weight: 600; white-space: nowrap;
+}
+.sky-note { margin: 6px 0 0; font-size: .7rem; opacity: .75; }
+
+@media (max-width: 480px) {
+  .sky-arc { height: 34px; }
+  .sky-facts { grid-template-columns: repeat(auto-fit, minmax(62px, 1fr)); }
+  .sky-facts dd { font-size: .76rem; }
+}

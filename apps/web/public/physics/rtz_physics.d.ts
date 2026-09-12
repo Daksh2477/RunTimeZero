@@ -14,6 +14,10 @@ export class Reading {
     [Symbol.dispose](): void;
     carbohydrate_frac: number;
     day_of_year: number;
+    /**
+     * Hours between sunrise and sunset today, from the sunrise equation.
+     */
+    daylight_hours: number;
     dissolved_oxygen_mg_l: number;
     /**
      * Paddlewheel draw this hour, kWh.
@@ -31,12 +35,25 @@ export class Reading {
      */
     lipid_frac: number;
     optical_density: number;
+    /**
+     * PAR reaching the water right now, µmol/m²/s. Zero at night.
+     */
+    par_umol: number;
     ph: number;
     /**
      * Protein mass fraction of dry biomass, 0..1.
      */
     protein_frac: number;
     reported_co2_kg: number;
+    /**
+     * Sun's angle above the horizon, degrees. Negative means night.
+     *
+     * Exposed so the simulator can draw the sky honestly rather than
+     * guessing from the clock: at 23°N in December the sun is up for ten
+     * hours, in June for thirteen and a half, and the pond's behaviour
+     * follows that rather than a fixed 6am-to-6pm.
+     */
+    solar_elevation_deg: number;
     temperature_c: number;
 }
 
@@ -137,26 +154,32 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_get_reading_carbohydrate_frac: (a: number) => number;
     readonly __wbg_get_reading_day_of_year: (a: number) => number;
+    readonly __wbg_get_reading_daylight_hours: (a: number) => number;
     readonly __wbg_get_reading_dissolved_oxygen_mg_l: (a: number) => number;
     readonly __wbg_get_reading_energy_kwh: (a: number) => number;
     readonly __wbg_get_reading_hour: (a: number) => number;
     readonly __wbg_get_reading_lipid_frac: (a: number) => number;
     readonly __wbg_get_reading_optical_density: (a: number) => number;
+    readonly __wbg_get_reading_par_umol: (a: number) => number;
     readonly __wbg_get_reading_ph: (a: number) => number;
     readonly __wbg_get_reading_protein_frac: (a: number) => number;
     readonly __wbg_get_reading_reported_co2_kg: (a: number) => number;
+    readonly __wbg_get_reading_solar_elevation_deg: (a: number) => number;
     readonly __wbg_get_reading_temperature_c: (a: number) => number;
     readonly __wbg_reading_free: (a: number, b: number) => void;
     readonly __wbg_set_reading_carbohydrate_frac: (a: number, b: number) => void;
     readonly __wbg_set_reading_day_of_year: (a: number, b: number) => void;
+    readonly __wbg_set_reading_daylight_hours: (a: number, b: number) => void;
     readonly __wbg_set_reading_dissolved_oxygen_mg_l: (a: number, b: number) => void;
     readonly __wbg_set_reading_energy_kwh: (a: number, b: number) => void;
     readonly __wbg_set_reading_hour: (a: number, b: number) => void;
     readonly __wbg_set_reading_lipid_frac: (a: number, b: number) => void;
     readonly __wbg_set_reading_optical_density: (a: number, b: number) => void;
+    readonly __wbg_set_reading_par_umol: (a: number, b: number) => void;
     readonly __wbg_set_reading_ph: (a: number, b: number) => void;
     readonly __wbg_set_reading_protein_frac: (a: number, b: number) => void;
     readonly __wbg_set_reading_reported_co2_kg: (a: number, b: number) => void;
+    readonly __wbg_set_reading_solar_elevation_deg: (a: number, b: number) => void;
     readonly __wbg_set_reading_temperature_c: (a: number, b: number) => void;
     readonly __wbg_wasmpond_free: (a: number, b: number) => void;
     readonly co2_from_biomass: (a: number) => number;

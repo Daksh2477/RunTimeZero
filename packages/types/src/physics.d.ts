@@ -34,6 +34,12 @@ declare module '*rtz_physics.js' {
     /** Lipid fraction. Climbs under nitrogen stress — the value lever. */
     lipid_frac: number;
     carbohydrate_frac: number;
+    /** Sun's angle above the horizon, degrees. Negative means night. */
+    solar_elevation_deg: number;
+    /** PAR reaching the water now, µmol/m²/s. Zero at night. */
+    par_umol: number;
+    /** Hours between sunrise and sunset today. */
+    daylight_hours: number;
     /** Paddlewheel draw this hour, kWh. Zero while the mixer is stopped. */
     energy_kwh: number;
     hour: number;

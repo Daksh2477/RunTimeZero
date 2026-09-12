@@ -141,8 +141,58 @@ pub fn daily_mean_par(lat_deg: f64, day_of_year: u32) -> f64 {
     total / (STEPS as f64)
 }
 
+/// Hours between sunrise and sunset.
+///
+/// From the sunrise equation: cos(H) = -tan(latitude) * tan(declination),
+/// where H is the hour angle at sunrise. Day length is 2H, converted from
+/// degrees at 15°/hour.
+///
+/// An earlier version of the UI approximated this from the noon sun angle
+/// and reported 17.6 hours of daylight for Gujarat in September, which is
+/// about four hours too many — the real figure is near 12.2. Day length is
+/// the main reason winter yields fall, so a wrong number here sends an
+/// operator looking for a culture problem that does not exist.
+pub fn daylight_hours(lat_deg: f64, day_of_year: u32) -> f64 {
+    let lat = to_radians(lat_deg);
+    let decl = to_radians(declination_deg(day_of_year));
+    let cos_h = -lat.tan() * decl.tan();
+
+    // Beyond the polar circles the sun never sets or never rises.
+    if cos_h <= -1.0 {
+        return 24.0;
+    }
+    if cos_h >= 1.0 {
+        return 0.0;
+    }
+    2.0 * cos_h.acos().to_degrees() / 15.0
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn daylight_matches_published_figures() {
+        use super::daylight_hours;
+        // Ahmedabad, 23.03 N. Published day lengths: ~10.4 h at the
+        // December solstice, ~13.6 h at the June solstice, ~12 h at equinox.
+        let dec = daylight_hours(23.03, 355);
+        let jun = daylight_hours(23.03, 172);
+        let mar = daylight_hours(23.03, 80);
+
+        assert!((10.0..=10.9).contains(&dec), "december was {dec}");
+        assert!((13.2..=14.0).contains(&jun), "june was {jun}");
+        assert!((11.8..=12.3).contains(&mar), "equinox was {mar}");
+    }
+
+    #[test]
+    fn the_equator_is_always_near_twelve_hours() {
+        use super::daylight_hours;
+        for doy in [1, 90, 180, 270] {
+            let h = super::daylight_hours(0.0, doy);
+            assert!((11.9..=12.1).contains(&h), "doy {doy} gave {h}");
+        }
+        let _ = daylight_hours(0.0, 1);
+    }
+
     use super::*;
 
     // Ahmedabad, roughly. The team is here, so these are numbers we can sanity
