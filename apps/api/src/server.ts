@@ -6,7 +6,9 @@
 import express from 'express';
 import { healthcheck } from './db/client.ts';
 import { startMqttIngest } from './ingest/mqtt.ts';
+import { batchesRouter } from './routes/batches.ts';
 import { fleetRouter } from './routes/fleet.ts';
+import { marketRouter } from './routes/market.ts';
 import { pondsRouter } from './routes/ponds.ts';
 import { simulateRouter } from './routes/simulate.ts';
 import { verifyRouter } from './routes/verify.ts';
@@ -40,6 +42,8 @@ app.use('/fleet', fleetRouter);
 app.use('/ponds', pondsRouter);
 app.use('/verify', verifyRouter);
 app.use('/simulate', simulateRouter);
+app.use('/batches', batchesRouter);
+app.use('/market', marketRouter);
 
 const port = Number(process.env.API_PORT ?? 4000);
 

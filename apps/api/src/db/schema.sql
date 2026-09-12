@@ -207,6 +207,29 @@ CREATE TABLE IF NOT EXISTS batches (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_batches_token ON batches(evidence_token_id)
   WHERE evidence_token_id IS NOT NULL;
 
+-- --------------------------------------------------------- retirements
+
+-- A retirement is the end of a credit's life: someone claims it against their
+-- own emissions and it can never be sold again. This table is the ledger of
+-- that, and `batches.creditable_co2_kg` minus the sum of retirements here is
+-- what remains available.
+--
+-- `beneficiary` is who the claim belongs to, which is not necessarily who
+-- paid. That distinction matters: a broker retiring on behalf of a mill must
+-- name the mill, or the same tonne can be claimed twice in two ledgers.
+CREATE TABLE IF NOT EXISTS retirements (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  batch_id         UUID NOT NULL REFERENCES batches(id) ON DELETE RESTRICT,
+  kg               DOUBLE PRECISION NOT NULL CHECK (kg > 0),
+  beneficiary      TEXT NOT NULL CHECK (length(trim(beneficiary)) > 0),
+  -- Set once the burn lands on chain. Null means recorded here only.
+  certificate_id   TEXT,
+  tx_hash          TEXT,
+  retired_at       TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_retirements_batch ON retirements(batch_id);
+
 -- ------------------------------------------------------------ expenses
 
 CREATE TABLE IF NOT EXISTS expenses (

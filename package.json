@@ -26,6 +26,7 @@
     "db:expenses": "node --experimental-strip-types scripts/seed-expenses.ts",
     "test": "cargo test --manifest-path packages/physics/Cargo.toml && npm run typecheck",
     "physics:build:web": "cd packages/physics && wasm-pack build --target web --out-dir pkg-web && mkdir -p ../../apps/web/public/physics && cp pkg-web/rtz_physics.js pkg-web/rtz_physics_bg.wasm pkg-web/rtz_physics.d.ts ../../apps/web/public/physics/",
-    "check:features": "node scripts/check-feature-contract.mjs"
+    "check:features": "node scripts/check-feature-contract.mjs",
+    "test:api": "node --experimental-strip-types --test apps/api/test/*.test.ts"
   }
 }
