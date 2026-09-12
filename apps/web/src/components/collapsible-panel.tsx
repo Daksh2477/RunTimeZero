@@ -12,12 +12,9 @@
  * that produced it. Scrolling between a cause and its effect defeats the
  * point of a live model.
  *
- * So everything except the scene collapses to a header you can tap, and the
- * scene stays pinned. When a `group` is given the panels behave as an
- * accordion — opening one closes the rest — at EVERY size, because the point
- * of the page is that the pond and the control you are turning are on screen
- * together. Desktop used to force all of them open, which put the totals below
- * the fold on a laptop.
+ * So on a phone everything except the scene collapses to a header you can
+ * tap, and the scene stays pinned. Above 900px nothing collapses at all —
+ * a desktop user should never have to open anything.
  *
  * Built on <details>, which means it works before hydration, is keyboard
  * and screen-reader correct for free, and needs no JavaScript to toggle.
@@ -36,26 +33,15 @@ interface Props {
   children: React.ReactNode;
   /** Sections that must never fold, like the pond scene itself. */
   alwaysOpen?: boolean;
-  /**
-   * Accordion membership. When `openId` is supplied this panel is open only
-   * while it matches `id`, and opening it asks the parent to close the others.
-   */
-  id?: string;
-  openId?: string | null;
-  onOpen?: (id: string | null) => void;
 }
 
 const WIDE = '(min-width: 900px)';
 
-export function CollapsiblePanel(
-  { step, title, summary, children, alwaysOpen, id, openId, onOpen }: Props,
-) {
+export function CollapsiblePanel({ step, title, summary, children, alwaysOpen }: Props) {
   const ref = useRef<HTMLDetailsElement>(null);
   const [wide, setWide] = useState(true);
-  const accordion = Boolean(id && onOpen);
 
   useEffect(() => {
-    if (accordion) return;
     const mq = window.matchMedia(WIDE);
     const apply = () => {
       setWide(mq.matches);
@@ -65,25 +51,15 @@ export function CollapsiblePanel(
     apply();
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
-  }, [accordion]);
+  }, []);
 
-  const open = accordion ? openId === id : (wide || alwaysOpen);
-  const forcedOpen = !accordion && (wide || alwaysOpen);
+  const forcedOpen = wide || alwaysOpen;
 
   return (
     <details
       ref={ref}
-      className={`panel-fold${forcedOpen ? ' is-static' : ''}${accordion ? ' is-accordion' : ''}`}
-      open={open || undefined}
-      // The parent owns the state, so the browser's own toggle is redirected
-      // rather than fought with — clicking an open panel closes it.
-      onToggle={accordion
-        ? (e) => {
-          const next = (e.currentTarget as HTMLDetailsElement).open;
-          if (next && openId !== id) onOpen?.(id ?? null);
-          if (!next && openId === id) onOpen?.(null);
-        }
-        : undefined}
+      className={`panel-fold${forcedOpen ? ' is-static' : ''}`}
+      open={forcedOpen ? true : undefined}
     >
       <summary>
         <span className="workspace-step">{step}</span>
