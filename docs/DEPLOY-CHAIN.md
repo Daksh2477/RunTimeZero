@@ -48,8 +48,12 @@ key drops straight into `SEPOLIA_RPC_URL`.
 
 ```bash
 set -a; . ./.env; set +a
-npm run deploy:sepolia --workspace=apps/contracts
+cd apps/contracts && npx hardhat run scripts/deploy.cjs --network sepolia
 ```
+
+`apps/contracts` is deliberately NOT a root workspace — it carries its own
+hardhat toolchain and lockfile — so `npm run --workspace=apps/contracts` fails
+with "No workspaces found". Run hardhat from that directory instead.
 
 It deploys `RetirementCertificate`, then `BatchEvidence`, then
 `CarbonCredit`, and grants `CarbonCredit` the certificate's `ISSUER_ROLE` —
@@ -58,7 +62,10 @@ that order matters, and the script enforces it. Addresses land in
 
 ## 4. Point the API at them
 
-Add to `.env`, from that file:
+Add to `.env`, from that file. Note the names differ from the deploy
+variables on purpose — `ORACLE_PRIVATE_KEY` deploys, `CHAIN_KEY` signs
+attestations — so filling one in without the other leaves every batch
+un-anchored with nothing in the response to say why:
 
 ```
 CHAIN_RPC_URL=https://ethereum-sepolia-rpc.publicnode.com
