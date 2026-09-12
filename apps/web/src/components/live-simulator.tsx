@@ -25,6 +25,9 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   const [cfg, setCfg] = useState<RunConfig>({ ...DEFAULT_CONFIG, ...initial });
   const [result, setResult] = useState<RunResult | null>(null);
   const [status, setStatus] = useState<'loading' | 'ready' | 'failed'>('loading');
+  /* Swallowing this made a broken simulator indistinguishable from a slow
+   * one, twice. Whatever went wrong is now shown to the user and logged. */
+  const [failure, setFailure] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   const [playDay, setPlayDay] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -38,9 +41,23 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   useEffect(() => {
     let cancelled = false;
     setStatus('loading');
-    const timeout = setTimeout(() => { if (!cancelled) { cancelled = true; setStatus('failed'); } }, 15000);
+    setFailure(null);
+    const timeout = setTimeout(() => {
+      if (!cancelled) {
+        cancelled = true;
+        setFailure('The model did not finish within 15 seconds.');
+        setStatus('failed');
+      }
+    }, 15000);
     runTwin(cfg).then(r => { if (!cancelled) { setResult(r); setStatus('ready'); } })
-      .catch(() => { if (!cancelled) setStatus('failed'); }).finally(() => clearTimeout(timeout));
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err);
+        console.error('[simulator]', err);
+        setFailure(message);
+        setStatus('failed');
+      })
+      .finally(() => clearTimeout(timeout));
     return () => { cancelled = true; clearTimeout(timeout); };
   }, [cfg, retry]);
 
@@ -71,7 +88,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
         <div className="scene-dimensions"><span><strong>{Math.sqrt(cfg.areaM2 * 3).toFixed(1)} m</strong> length</span><span><strong>{Math.sqrt(cfg.areaM2 / 3).toFixed(1)} m</strong> width</span><span><strong>{Math.round(cfg.depthM * 100)} cm</strong> depth</span></div>
         <PondView daily={result?.daily ?? []} areaM2={cfg.areaM2} depthM={cfg.depthM} mixing={cfg.mixerRunning} sensors={sensors} onMoveSensor={moveSensor} day={playDay} airTemperature={cfg.meanAirTempC} selectedSensor={selectedSensor} onSelectSensor={setSelectedSensor} />
         <div className="simulation-playback"><div className="playback-top"><button className="button" disabled={!result || status !== 'ready'} onClick={() => setPlaying(p => !p)} aria-pressed={playing}>{playing ? 'Pause' : 'Play days'} <span aria-hidden="true">{playing ? 'Ⅱ' : '▷'}</span></button><strong>Day {point?.day ?? 1} <span>of {cfg.days}</span></strong><button className="button secondary" onClick={() => setCfg(c => ({ ...c, mixerRunning: !c.mixerRunning }))}>{cfg.mixerRunning ? 'Stop mixer' : 'Start mixer'}</button></div><input type="range" aria-label="Simulation day" aria-valuetext={`Day ${point?.day ?? 1} of ${cfg.days}`} min={0} max={Math.max(0, (result?.daily.length ?? 1) - 1)} value={Math.min(playDay, Math.max(0, (result?.daily.length ?? 1) - 1))} disabled={!result} onChange={e => { setPlaying(false); setPlayDay(Number(e.target.value)); }} /><div className="timeline-labels"><span>Day 1</span><span>Scrub to see readings for any day</span><span>Day {cfg.days}</span></div></div>
-        <div className="simulation-totals" aria-busy={status === 'loading'}><div className="totals-heading"><h3>Over the full {cfg.days} days</h3><span role="status">{status === 'loading' ? 'Updating estimate…' : status === 'failed' ? 'Calculation unavailable' : 'Model estimate'}</span></div>{status === 'failed' ? <div role="alert"><p>The model could not finish. Your settings are still here.</p><button className="button secondary" onClick={() => setRetry(n => n+1)}>Try again</button></div> : <div className="sim-figures"><div><strong>{result ? kg(result.totalHarvestKg) : '—'}</strong><span>algae harvested</span></div><div><strong>{result ? kg(result.totalCo2Kg) : '—'}</strong><span>CO₂ absorbed</span></div><div><strong>{result ? kg(result.peakBiomassKg) : '—'}</strong><span>peak algae biomass</span></div></div>}{result && <Trace daily={result.daily} day={playDay} />}</div>
+        <div className="simulation-totals" aria-busy={status === 'loading'}><div className="totals-heading"><h3>Over the full {cfg.days} days</h3><span role="status">{status === 'loading' ? 'Updating estimate…' : status === 'failed' ? 'Calculation unavailable' : 'Model estimate'}</span></div>{status === 'failed' ? <div role="alert"><p>The model could not finish. Your settings are still here.</p>{failure && <p className="sim-failure-detail">{failure}</p>}<button className="button secondary" onClick={() => setRetry(n => n+1)}>Try again</button></div> : <div className="sim-figures"><div><strong>{result ? kg(result.totalHarvestKg) : '—'}</strong><span>algae harvested</span></div><div><strong>{result ? kg(result.totalCo2Kg) : '—'}</strong><span>CO₂ absorbed</span></div><div><strong>{result ? kg(result.peakBiomassKg) : '—'}</strong><span>peak algae biomass</span></div></div>}{result && <Trace daily={result.daily} day={playDay} />}</div>
       </section>
       <aside className="simulation-sidebar" aria-label="Measurements and simulation settings">
         <section className="sensor-panel" aria-busy={status === 'loading'}><span className="workspace-step">03 / READ THE RESPONSE</span><div className="sensor-panel-heading"><h2>Sensor readings</h2><span>Day {point?.day ?? 1}</span></div><div className="sensor-readings">{measurements.map(m => <button key={m.id} className="sensor-reading" aria-pressed={selectedSensor === m.id} onClick={() => setSelectedSensor(m.id)}><span>{m.name}</span><strong>{m.value}<small>{m.unit}</small></strong></button>)}</div><div className="sensor-explanation"><strong>{selected.name} sensor</strong><p>{selected.description}</p></div><p className="sensor-note">Select a sensor on the plan or a reading here. Marker positions are illustrative; readings describe the whole pond.</p></section>

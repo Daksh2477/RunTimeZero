@@ -42,3 +42,6 @@ packages/physics/pkg-web/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Production build output, kept apart from the dev server .next
+.next-build/

@@ -104,14 +104,38 @@ let modulePromise: Promise<PhysicsModule> | null = null;
  * mount would refetch and recompile the binary, which is the one genuinely
  * slow part of this.
  */
+/**
+ * Import a URL at runtime, in a way no bundler can rewrite.
+ *
+ * `import(/* webpackIgnore *\/ '...')` is supposed to leave the request
+ * alone, but the comment is fragile — it is lost the moment the specifier
+ * stops being a plain literal, and the failure is silent: the promise never
+ * settles and the simulator sits on "—" forever with no error anywhere.
+ *
+ * Building the import inside `new Function` makes the specifier invisible to
+ * static analysis, so webpack, Turbopack and anything else must leave it to
+ * the browser. The file is a plain ES module in `public/`, served as-is.
+ */
+const runtimeImport = (url: string): Promise<unknown> =>
+  (new Function('u', 'return import(u)') as (u: string) => Promise<unknown>)(url);
+
 export function loadTwin(): Promise<PhysicsModule> {
   if (!modulePromise) {
     modulePromise = (async () => {
-      const mod = (await import(
-        /* webpackIgnore: true */ '/physics/rtz_physics.js' as string
-      )) as unknown as PhysicsModule;
-      await mod.default('/physics/rtz_physics_bg.wasm');
-      return mod;
+      try {
+        const mod = (await runtimeImport('/physics/rtz_physics.js')) as PhysicsModule;
+        await mod.default('/physics/rtz_physics_bg.wasm');
+        return mod;
+      } catch (cause) {
+        // Clear the cache so a retry can actually retry, rather than
+        // re-awaiting a promise that already rejected.
+        modulePromise = null;
+        throw new Error(
+          'Could not load the pond physics module. It is served from '
+          + '/physics/ — check that `npm run physics:build` has run.',
+          { cause },
+        );
+      }
     })();
   }
   return modulePromise;

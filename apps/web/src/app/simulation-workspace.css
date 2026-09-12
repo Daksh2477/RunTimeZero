@@ -1,0 +1,9 @@
+
+/* The actual reason, not just "unavailable". */
+.sim-failure-detail {
+  margin: 6px 0 10px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--status-critical);
+  word-break: break-word;
+}
