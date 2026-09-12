@@ -7,6 +7,7 @@
 
 import { Router } from 'express';
 import { pool } from '../db/client.ts';
+import { RequestError, validatePondId } from '../reconcile/validation.ts';
 
 export const verifyRouter = Router();
 
@@ -16,11 +17,12 @@ export const verifyRouter = Router();
  */
 verifyRouter.get('/:checkId', async (req, res) => {
   try {
+    validatePondId(req.params.checkId);
     const { rows } = await pool.query(
       `SELECT d.id, d.window_start, d.window_end, d.claimed_co2_kg,
               d.independent_co2_kg, d.independent_low_co2_kg,
               d.independent_high_co2_kg, d.ceiling_co2_kg, d.divergence,
-              d.verdict, d.creditable_co2_kg, d.reason, d.computed_at,
+              d.verdict, d.creditable_co2_kg, d.reason, d.computed_at, d.evidence_snapshot,
               p.label AS pond_label, p.area_m2, p.width_m,
               s.name AS site_name, s.tier, s.host_industry
          FROM divergence_checks d
@@ -32,28 +34,14 @@ verifyRouter.get('/:checkId', async (req, res) => {
     const r = rows[0];
     if (!r) return res.status(404).json({ error: 'not found' });
 
-    const { rows: sources } = await pool.query(
-      `SELECT observed_at, channel, source_ref, cloud_fraction
-         FROM imagery_observations
-        WHERE pond_id = (SELECT pond_id FROM divergence_checks WHERE id = $1)
-          AND observed_at >= $2 AND observed_at < $3
-        ORDER BY observed_at`,
-      [req.params.checkId, r.window_start, r.window_end],
-    );
-
-    const { rows: harvests } = await pool.query(
-      `SELECT harvested_at, dry_mass_kg, weighbridge_ref
-         FROM harvest_records
-        WHERE pond_id = (SELECT pond_id FROM divergence_checks WHERE id = $1)
-          AND harvested_at >= $2 AND harvested_at < $3
-        ORDER BY harvested_at`,
-      [req.params.checkId, r.window_start, r.window_end],
-    );
+    const snapshot = r.evidence_snapshot;
+    const sources = snapshot?.observations ?? [];
+    const harvests = snapshot?.harvests ?? [];
 
     return res.json({
       checkId: r.id,
       site: { name: r.site_name, tier: r.tier, hostIndustry: r.host_industry },
-      pond: { label: r.pond_label, areaM2: Number(r.area_m2), widthM: Number(r.width_m) },
+      pond: snapshot?.pond ?? { label: r.pond_label, areaM2: Number(r.area_m2), widthM: Number(r.width_m) },
       window: { start: r.window_start.toISOString(), end: r.window_end.toISOString() },
       claimedCo2Kg: Number(r.claimed_co2_kg),
       independentCo2Kg: Number(r.independent_co2_kg),
@@ -65,25 +53,23 @@ verifyRouter.get('/:checkId', async (req, res) => {
       verdict: r.verdict,
       reason: r.reason,
       computedAt: r.computed_at.toISOString(),
-      sources: sources.map((s) => ({
-        observedAt: s.observed_at.toISOString(),
-        channel: s.channel,
-        ref: s.source_ref,
-        cloudFraction: s.cloud_fraction === null ? null : Number(s.cloud_fraction),
+      evidenceStatus: snapshot ? 'recorded_snapshot' : 'legacy_no_snapshot',
+      method: snapshot?.method ?? 'legacy',
+      inputs: snapshot ?? null,
+      provenance: snapshot?.provenance ?? 'Legacy check has no immutable evidence snapshot.',
+      sources: sources.map((s: { observedAt: string; channel: string; sourceRef: string; cloudFraction: number | null }) => ({
+        observedAt: s.observedAt, channel: s.channel, ref: s.sourceRef, cloudFraction: s.cloudFraction,
       })),
-      harvests: harvests.map((h) => ({
-        harvestedAt: h.harvested_at.toISOString(),
-        dryMassKg: Number(h.dry_mass_kg),
-        ref: h.weighbridge_ref,
-      })),
+      harvests,
     });
   } catch (err) {
-    return res.status(500).json({ error: err instanceof Error ? err.message : 'failed' });
+    return res.status(err instanceof RequestError ? err.status : 500).json({ error: err instanceof RequestError ? err.message : 'Could not read verification.' });
   }
 });
 
 /** Recent checks, so someone landing on /verify has something to open. */
 verifyRouter.get('/', async (_req, res) => {
+  try {
   const { rows } = await pool.query(
     `SELECT d.id, d.verdict, d.claimed_co2_kg, d.creditable_co2_kg, d.computed_at,
             p.label AS pond_label, s.name AS site_name
@@ -103,4 +89,7 @@ verifyRouter.get('/', async (_req, res) => {
       computedAt: r.computed_at.toISOString(),
     })),
   );
+  } catch {
+    res.status(500).json({ error: 'Could not read recent verifications.' });
+  }
 });

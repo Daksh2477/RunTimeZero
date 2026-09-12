@@ -14,6 +14,7 @@ import type {
 } from '@rtz/types';
 
 const { Pool } = pg;
+export type Database = pg.Pool | pg.PoolClient;
 
 export const pool = new Pool({
   connectionString:
@@ -22,8 +23,8 @@ export const pool = new Pool({
   max: 10,
 });
 
-export async function healthcheck(): Promise<boolean> {
-  const { rows } = await pool.query<{ ok: number }>('SELECT 1 AS ok');
+export async function healthcheck(db: Database = pool): Promise<boolean> {
+  const { rows } = await db.query<{ ok: number }>('SELECT 1 AS ok');
   return rows[0]?.ok === 1;
 }
 
@@ -39,8 +40,8 @@ export interface PondRow {
   lonDeg: number;
 }
 
-export async function getPond(pondId: string): Promise<PondRow | null> {
-  const { rows } = await pool.query(
+export async function getPond(pondId: string, db: Database = pool): Promise<PondRow | null> {
+  const { rows } = await db.query(
     `SELECT p.id, p.site_id, p.label, p.area_m2, p.depth_m, p.width_m,
             s.lat, s.lon
        FROM ponds p
@@ -71,8 +72,9 @@ export async function getPond(pondId: string): Promise<PondRow | null> {
  */
 export async function insertTelemetry(
   t: Omit<TelemetryPoint, 'id'>,
+  db: Database = pool,
 ): Promise<string> {
-  const { rows } = await pool.query<{ id: string }>(
+  const { rows } = await db.query<{ id: string }>(
     `INSERT INTO telemetry
        (pond_id, observed_at, source, co2_uptake_kg, ph,
         dissolved_oxygen_mgl, temperature_c, optical_density, energy_kwh)
@@ -98,8 +100,9 @@ export async function sumClaimedCo2Kg(
   pondId: string,
   windowStart: string,
   windowEnd: string,
+  db: Database = pool,
 ): Promise<number> {
-  const { rows } = await pool.query<{ total: string | null }>(
+  const { rows } = await db.query<{ total: string | null }>(
     `SELECT COALESCE(SUM(co2_uptake_kg), 0) AS total
        FROM telemetry
       WHERE pond_id = $1
@@ -115,8 +118,9 @@ export async function meanTemperatureC(
   pondId: string,
   windowStart: string,
   windowEnd: string,
+  db: Database = pool,
 ): Promise<number | null> {
-  const { rows } = await pool.query<{ avg: string | null }>(
+  const { rows } = await db.query<{ avg: string | null }>(
     `SELECT AVG(temperature_c) AS avg
        FROM telemetry
       WHERE pond_id = $1
@@ -132,8 +136,9 @@ export async function meanTemperatureC(
 /** APPEND-ONLY, same rule as telemetry. */
 export async function insertObservation(
   o: Omit<IndependentObservation, 'id'>,
+  db: Database = pool,
 ): Promise<string> {
-  const { rows } = await pool.query<{ id: string }>(
+  const { rows } = await db.query<{ id: string }>(
     `INSERT INTO imagery_observations
        (pond_id, observed_at, channel, chlorophyll_index,
         measured_dry_mass_kg, source_ref, cloud_fraction)
@@ -166,8 +171,9 @@ export async function getObservations(
   pondId: string,
   windowStart: string,
   windowEnd: string,
+  db: Database = pool,
 ): Promise<ObservationRow[]> {
-  const { rows } = await pool.query(
+  const { rows } = await db.query(
     `SELECT id, observed_at, channel, chlorophyll_index,
             measured_dry_mass_kg, source_ref, cloud_fraction
        FROM imagery_observations
@@ -201,8 +207,9 @@ export async function sumHarvestedDryKg(
   pondId: string,
   windowStart: string,
   windowEnd: string,
+  db: Database = pool,
 ): Promise<{ totalDryKg: number; count: number }> {
-  const { rows } = await pool.query<{ total: string | null; n: string }>(
+  const { rows } = await db.query<{ total: string | null; n: string }>(
     `SELECT COALESCE(SUM(dry_mass_kg), 0) AS total, COUNT(*) AS n
        FROM harvest_records
       WHERE pond_id = $1
@@ -230,46 +237,22 @@ export async function insertDivergenceCheck(c: {
   verdict: string;
   creditableCo2Kg: number;
   reason: string;
-}): Promise<string> {
-  const { rows } = await pool.query<{ id: string }>(
+  evidenceSnapshot?: unknown;
+}, db: Database = pool): Promise<string> {
+  const { rows } = await db.query<{ id: string }>(
     `INSERT INTO divergence_checks
        (pond_id, window_start, window_end, claimed_co2_kg, independent_co2_kg,
         independent_low_co2_kg, independent_high_co2_kg, ceiling_co2_kg,
-        divergence, consecutive_same_direction, verdict, creditable_co2_kg, reason)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        divergence, consecutive_same_direction, verdict, creditable_co2_kg, reason, evidence_snapshot)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
      RETURNING id`,
     [
       c.pondId, c.windowStart, c.windowEnd, c.claimedCo2Kg, c.independentCo2Kg,
       c.independentLowCo2Kg, c.independentHighCo2Kg, c.ceilingCo2Kg,
       c.divergence, c.consecutiveSameDirection, c.verdict, c.creditableCo2Kg, c.reason,
+      c.evidenceSnapshot ? JSON.stringify(c.evidenceSnapshot) : null,
     ],
   );
   return rows[0]!.id;
 }
 
-/**
- * How many consecutive prior windows diverged in the same direction.
- *
- * This is what separates noise from a systematic pattern — a fraudster who
- * overstates 8% every single window looks fine in any one check.
- */
-export async function consecutiveSameDirection(
-  pondId: string,
-  sign: number,
-): Promise<number> {
-  const { rows } = await pool.query<{ divergence: string }>(
-    `SELECT divergence
-       FROM divergence_checks
-      WHERE pond_id = $1
-      ORDER BY window_end DESC
-      LIMIT 12`,
-    [pondId],
-  );
-  let run = 0;
-  for (const r of rows) {
-    const d = Number(r.divergence);
-    if (Math.sign(d) === sign && Math.abs(d) > 0.02) run += 1;
-    else break;
-  }
-  return run;
-}

@@ -64,7 +64,7 @@ export interface PondDetail {
 /** `no-store` because the whole point is showing what the pond is doing now. */
 async function get<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(`${BASE}${path}`, { cache: 'no-store' });
+    const res = await fetch(`${BASE}${path}`, { cache: 'no-store', signal: AbortSignal.timeout(8000) });
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
@@ -76,3 +76,22 @@ async function get<T>(path: string): Promise<T | null> {
 
 export const getFleet = () => get<FleetSite[]>('/fleet');
 export const getPond = (id: string) => get<PondDetail>(`/fleet/pond/${id}`);
+
+
+export interface ReportRow {
+  checkId: string; verdict: string; pondLabel: string; siteName: string;
+  claimedCo2Kg: number; creditableCo2Kg: number; computedAt: string;
+}
+export interface CarbonReport {
+  checkId: string; site: { name: string; tier: string; hostIndustry: string };
+  pond: { label: string; areaM2: number; widthM: number };
+  window: { start: string; end: string }; claimedCo2Kg: number;
+  independentCo2Kg: number; independentLowCo2Kg: number; independentHighCo2Kg: number;
+  ceilingCo2Kg: number; creditableCo2Kg: number; divergence: number;
+  verdict: string; reason: string; computedAt: string;
+  evidenceStatus?: string; method?: string; inputs?: unknown;
+  sources: { observedAt: string; channel: string; ref: string; cloudFraction: number | null }[];
+  harvests: { harvestedAt: string; dryMassKg: number; ref: string | null }[];
+}
+export const getReports = () => get<ReportRow[]>('/verify');
+export const getReport = (id: string) => get<CarbonReport>(`/verify/${encodeURIComponent(id)}`);

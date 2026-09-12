@@ -223,4 +223,7 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 CREATE INDEX IF NOT EXISTS idx_expenses_site_period ON expenses(site_id, period_start);
 
+-- Additive migration: old checks remain readable but explicitly lack a snapshot.
+ALTER TABLE divergence_checks ADD COLUMN IF NOT EXISTS evidence_snapshot JSONB;
+
 COMMIT;

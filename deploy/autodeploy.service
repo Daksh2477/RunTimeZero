@@ -1,0 +1,9 @@
+[Unit]
+Description=AlgaCarbon auto-deploy (poll origin/main)
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ubuntu
+WorkingDirectory=/home/ubuntu/algacarbon
+ExecStart=/home/ubuntu/algacarbon/deploy/deploy.sh

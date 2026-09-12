@@ -1,93 +1,19 @@
-/**
- * Landing page for public verification.
- *
- * Someone arriving here has usually been handed a credit and wants to know
- * whether it means anything. So the page leads with what we do to a claim,
- * then lists real checks they can open — including the ones that failed,
- * because a verifier that only shows its successes verifies nothing.
- */
-
+import Link from 'next/link';
+import { getReports } from '@/lib/api';
+import { dateLabel, mass } from '@/lib/display';
+import { EmptyState, StatusBadge } from '@/components/ui';
+import { ReportLookup } from '@/components/report-lookup';
+import { RefreshControls } from '@/components/refresh-controls';
 export const dynamic = 'force-dynamic';
 
-const BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
-
-interface Row {
-  checkId: string;
-  verdict: string;
-  pondLabel: string;
-  siteName: string;
-  claimedCo2Kg: number;
-  creditableCo2Kg: number;
-  computedAt: string;
-}
-
-async function recent(): Promise<Row[] | null> {
-  try {
-    const r = await fetch(`${BASE}/verify`, { cache: 'no-store' });
-    if (!r.ok) return null;
-    return (await r.json()) as Row[];
-  } catch {
-    return null;
-  }
-}
-
-const t = (kg: number) => (kg >= 1000 ? `${(kg / 1000).toFixed(1)}t` : `${Math.round(kg)}kg`);
-
 export default async function VerifyIndex() {
-  const rows = await recent();
-
-  return (
-    <main className="wrap">
-      <div className="lede">
-        <h1>Check a carbon claim</h1>
-        <p>
-          Every credit here was checked against evidence the operator does not control
-          — satellite imagery, weighed harvests, and the sunlight that actually fell on
-          the pond. We credit the lower of what was claimed and what that evidence
-          supports, so overstating earns nothing.
-        </p>
-      </div>
-
-      {!rows ? (
-        <div className="empty">
-          The API isn&rsquo;t running. Start it with <code>npm run api</code>.
-        </div>
-      ) : rows.length === 0 ? (
-        <div className="empty">
-          Nothing verified yet. Run <code>npm run replay</code> to generate history.
-        </div>
-      ) : (
-        <section className="site">
-          <div className="site-head">
-            <div className="site-name">Recent verifications</div>
-            <span className="site-meta">{rows.length} checks</span>
-          </div>
-          {rows.map((r) => {
-            const ratio = r.claimedCo2Kg > 0 ? r.creditableCo2Kg / r.claimedCo2Kg : 0;
-            const short = 1 - ratio > 0.1;
-            return (
-              <a className="pond" key={r.checkId} href={`/verify/${r.checkId}`}>
-                <div className="pond-top">
-                  <span className="pond-label">{r.pondLabel}</span>
-                  <span className={`verdict ${r.verdict}`}>{r.verdict}</span>
-                  <span className="pond-figures num">
-                    <strong>{t(r.creditableCo2Kg)}</strong> verified
-                  </span>
-                </div>
-                <div className={`bar${short ? ' is-short' : ''}`}>
-                  <div className="bar-fill" style={{ width: `${ratio * 100}%` }} />
-                </div>
-                <div className="bar-caption">
-                  <span>{r.siteName}</span>
-                  <span className="num">
-                    {short ? `${Math.round((1 - ratio) * 100)}% unsupported` : 'fully supported'}
-                  </span>
-                </div>
-              </a>
-            );
-          })}
-        </section>
-      )}
-    </main>
-  );
+  const rows = await getReports();
+  return <main className="wrap"><div className="page-heading"><div><p className="eyebrow">CARBON REPORTS</p><h1>See what the evidence says.</h1><p>Compare the farm’s reported carbon capture with the amount supported by its records.</p></div></div>
+    <ReportLookup />
+    <div className="section-heading"><div><h2>Recent reports</h2><p>Open any report to see the result and the records behind it.</p></div><RefreshControls /></div>
+    {!rows ? <EmptyState title="Reports are temporarily unavailable"><p>We couldn’t reach the records. Please refresh to try again.</p></EmptyState>
+      : rows.length === 0 ? <EmptyState title="No carbon reports yet"><p>Open a pond and choose a period to create its first report.</p><Link className="button" href="/console">Go to my ponds →</Link></EmptyState>
+      : <div className="report-list">{rows.map((r) => <Link className="report-card" href={`/verify/${r.checkId}`} key={r.checkId}><div><StatusBadge verdict={r.verdict} /><h3>{r.pondLabel}</h3><p>{r.siteName}</p><small>Checked {dateLabel(r.computedAt)}</small></div><div className="report-amount"><span>Supported by this check</span><strong className="num">{mass(r.creditableCo2Kg)}</strong><span>Farm reported {mass(r.claimedCo2Kg)}</span><b>Read report →</b></div></Link>)}</div>}
+    <p className="helper page-note">These reports describe evidence-supported carbon capture. They do not establish that carbon credits have been issued or that carbon has been permanently stored.</p>
+  </main>;
 }

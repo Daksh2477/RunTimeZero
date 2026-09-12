@@ -15,7 +15,7 @@
     "dev": "npm run dev --workspace=apps/api & npm run dev --workspace=apps/web",
     "db:setup": "psql \"$DATABASE_URL\" -f apps/api/src/db/schema.sql",
     "db:seed": "node --experimental-strip-types scripts/seed.ts",
-    "typecheck": "tsc --build",
+    "typecheck": "tsc --noEmit && tsc -p apps/web/tsconfig.json --noEmit --incremental false",
     "physics:build": "cd packages/physics && wasm-pack build --target nodejs --out-dir pkg",
     "sim": "node --experimental-strip-types scripts/sim-driver.ts",
     "api": "npm run dev --workspace=apps/api",
@@ -23,6 +23,7 @@
     "ingest:sentinel": "node --experimental-strip-types scripts/ingest-sentinel.ts",
     "models:data": "node --experimental-strip-types packages/models/train/make_dataset.ts",
     "models:train": "python3 packages/models/train/train_all.py",
-    "db:expenses": "node --experimental-strip-types scripts/seed-expenses.ts"
+    "db:expenses": "node --experimental-strip-types scripts/seed-expenses.ts",
+    "test": "cargo test --manifest-path packages/physics/Cargo.toml && npm run typecheck"
   }
 }

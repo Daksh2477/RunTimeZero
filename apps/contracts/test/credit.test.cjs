@@ -20,11 +20,12 @@ function evidence(overrides = {}) {
     independentCo2Kg: 7359,
     independentLowCo2Kg: 3066,
     ceilingCo2Kg: 39_904,
-    creditableCo2Kg: 7359,
+    creditableCo2Kg: 3066,
     divergenceBps: 2180,
     disposition: DISPOSITION_BURIED,
     mrvReportCid: 'bafyMrvReportCid',
     evidenceRefs: 'S2A_MSIL2A_2026-04-16',
+    dispositionEvidenceRef: 'ipfs://disposition-proof',
     attestedAt: 0,
     ...overrides,
   };
@@ -67,20 +68,20 @@ describe('AlgaCarbon credits', () => {
     ).to.be.revertedWithCustomError(ev, 'CreditExceedsEvidence');
   });
 
-  it('credits the lower of claim and evidence, so overstating gains nothing', async () => {
+  it('caps credits at the independent lower bound', async () => {
     const { admin, ev, credit } = await deploy();
     await ev.attest(admin.address, evidence());
-    await credit.issue(1, admin.address, 7359);
+    await credit.issue(1, admin.address, 3066);
 
-    // The operator asked for 8966 and received 7359 — the evidence figure.
-    expect(await credit.balanceOf(admin.address, 1)).to.equal(7359n);
+    // The operator asked for 8966 and received 3066 — the evidence floor.
+    expect(await credit.balanceOf(admin.address, 1)).to.equal(3066n);
     expect((await ev.evidenceOf(1)).claimedCo2Kg).to.equal(8966n);
   });
 
   it('will not issue twice against one batch', async () => {
     const { admin, ev, credit } = await deploy();
     await ev.attest(admin.address, evidence());
-    await credit.issue(1, admin.address, 7359);
+    await credit.issue(1, admin.address, 3066);
     await expect(credit.issue(1, admin.address, 1)).to.be.revertedWithCustomError(
       credit,
       'AlreadyIssued',
@@ -90,14 +91,14 @@ describe('AlgaCarbon credits', () => {
   it('burns on retirement so the same tonne cannot be sold twice', async () => {
     const { admin, buyer, ev, credit } = await deploy();
     await ev.attest(admin.address, evidence());
-    await credit.issue(1, admin.address, 7359);
+    await credit.issue(1, admin.address, 3066);
 
     await credit.safeTransferFrom(admin.address, buyer.address, 1, 2000, '0x');
     await credit.connect(buyer).retire(1, 2000, 'Surat Textiles Pvt Ltd');
 
     expect(await credit.balanceOf(buyer.address, 1)).to.equal(0n);
     expect(await credit.retiredKg(1)).to.equal(2000n);
-    expect(await credit.outstandingKg(1)).to.equal(5359n);
+    expect(await credit.outstandingKg(1)).to.equal(1066n);
 
     // Retiring again must fail — the tokens are gone.
     await expect(credit.connect(buyer).retire(1, 1, 'Surat Textiles Pvt Ltd')).to.be
@@ -107,7 +108,7 @@ describe('AlgaCarbon credits', () => {
   it('issues a certificate naming the beneficiary', async () => {
     const { admin, buyer, ev, credit, cert } = await deploy();
     await ev.attest(admin.address, evidence());
-    await credit.issue(1, admin.address, 7359);
+    await credit.issue(1, admin.address, 3066);
     await credit.safeTransferFrom(admin.address, buyer.address, 1, 500, '0x');
     await credit.connect(buyer).retire(1, 500, 'Anand Dairy Co-op');
 
@@ -120,7 +121,7 @@ describe('AlgaCarbon credits', () => {
   it('makes retirement certificates non-transferable', async () => {
     const { admin, buyer, ev, credit, cert } = await deploy();
     await ev.attest(admin.address, evidence());
-    await credit.issue(1, admin.address, 7359);
+    await credit.issue(1, admin.address, 3066);
     await credit.safeTransferFrom(admin.address, buyer.address, 1, 500, '0x');
     await credit.connect(buyer).retire(1, 500, 'Anand Dairy Co-op');
 
@@ -153,5 +154,52 @@ describe('AlgaCarbon credits', () => {
   it('lets only the oracle attest', async () => {
     const { buyer, ev } = await deploy();
     await expect(ev.connect(buyer).attest(buyer.address, evidence())).to.be.reverted;
+  });
+});
+
+
+describe('Evidence replay and validation', () => {
+  it('rejects a second attestation for an overlapping site period', async () => {
+    const { admin, ev } = await deploy();
+    await ev.attest(admin.address, evidence());
+    await expect(ev.attest(admin.address, evidence({ mrvReportCid: 'another-report' })))
+      .to.be.revertedWithCustomError(ev, 'OverlappingPeriod');
+  });
+  it('rejects reusing a report for a different site', async () => {
+    const { admin, ev } = await deploy();
+    await ev.attest(admin.address, evidence());
+    await expect(ev.attest(admin.address, evidence({ siteId: ethers.encodeBytes32String('other') })))
+      .to.be.revertedWithCustomError(ev, 'DuplicateReport');
+  });
+  it('accepts the next adjacent site period with new evidence', async () => {
+    const { admin, ev } = await deploy();
+    await ev.attest(admin.address, evidence());
+    await ev.attest(admin.address, evidence({ periodStart: 1_701_209_600,
+      periodEnd: 1_702_419_200, mrvReportCid: 'next-report' }));
+    expect(await ev.totalBatches()).to.equal(2n);
+  });
+  it('requires disposition evidence as well as the enum', async () => {
+    const { admin, ev } = await deploy();
+    await expect(ev.attest(admin.address, evidence({ dispositionEvidenceRef: '' })))
+      .to.be.revertedWithCustomError(ev, 'MissingDispositionProof');
+  });
+  it('rejects reversed periods and inverted uncertainty bounds', async () => {
+    const { admin, ev } = await deploy();
+    await expect(ev.attest(admin.address, evidence({ periodEnd: 1 })))
+      .to.be.revertedWithCustomError(ev, 'InvalidEvidence');
+    await expect(ev.attest(admin.address, evidence({ independentLowCo2Kg: 99999 })))
+      .to.be.revertedWithCustomError(ev, 'InvalidEvidence');
+  });
+  it('rejects the central estimate when it exceeds the evidence floor', async () => {
+    const { admin, ev } = await deploy();
+    await expect(ev.attest(admin.address, evidence({ creditableCo2Kg: 7359 })))
+      .to.be.revertedWithCustomError(ev, 'CreditExceedsEvidence');
+  });
+  it('rejects zero issuance without consuming a valid batch', async () => {
+    const { admin, ev, credit } = await deploy();
+    await ev.attest(admin.address, evidence());
+    await expect(credit.issue(1, admin.address, 0)).to.be.revertedWithCustomError(credit, 'NothingToIssue');
+    await credit.issue(1, admin.address, 3066);
+    expect(await credit.issuedKg(1)).to.equal(3066n);
   });
 });

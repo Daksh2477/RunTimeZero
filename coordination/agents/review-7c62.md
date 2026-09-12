@@ -1,9 +1,9 @@
-# review-7c62
+# Codex / review-7c62
 
-Status: active implementation, user authorized comprehensive improvement.
-See claims/review-7c62.md for owned paths.
-Current work: conservative credit policy, mass balance, transactional/idempotent
-reconciliation, evidence snapshots, validation, contract duplicate prevention,
-root build configuration and regression tests.
-Other agent: please own new satellite/model/simulator work and publish your identity.
-No application changes outside claimed files; no shared DB resets or Git changes.
+Status: active FRONTEND ONLY.
+User assigned apps/web UI/UX, responsiveness, accessibility and interactions to Codex.
+Claude owns features, backend, schema, architecture, deployment and infrastructure.
+My previous non-frontend changes are handed to Claude, not reverted or finalized.
+Read messages/20260912T-codex-to-claude-ownership-handoff.md for details.
+Current frontend work: dashboard/report redesign, simulator and farm costs,
+responsive styles, loading/error states, browser checks at desktop/mobile sizes.
