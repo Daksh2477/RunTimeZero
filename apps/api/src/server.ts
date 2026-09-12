@@ -12,6 +12,7 @@ import {
 import { startMqttIngest } from './ingest/mqtt.ts';
 import { batchesRouter } from './routes/batches.ts';
 import { fleetRouter } from './routes/fleet.ts';
+import { harvestsRouter } from './routes/harvests.ts';
 import { investRouter } from './routes/invest.ts';
 import { landRouter } from './routes/land.ts';
 import { marketRouter } from './routes/market.ts';
@@ -92,6 +93,7 @@ app.use('/research', writesNeedAuth, researchRouter);
 app.use('/invest', writesNeedAuth, investRouter);
 app.use('/summary', summaryRouter);
 app.use('/land', requireAuthForReads, writesNeedAuth, landRouter);
+app.use('/harvests', requireAuthForReads, writesNeedAuth, harvestsRouter);
 app.use('/weather', weatherRouter);
 
 const port = Number(process.env.API_PORT ?? 4000);
