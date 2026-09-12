@@ -40,7 +40,7 @@ export default async function SimPage({
     : undefined;
 
   return (
-    <main className="wrap">
+    <main className="wrap simulation-page">
       {p && (
         <Link className="back" href={`/console/pond/${p.id}`}>
           ← Back to {p.label}
@@ -50,11 +50,11 @@ export default async function SimPage({
       <div className="page-heading">
         <div>
           <p className="eyebrow">PLAN AHEAD</p>
-          <h1>{p ? `What could ${p.label} do?` : 'Try a pond'}</h1>
+          <h1>{p ? `What could ${p.label} do?` : 'Explore a virtual pond'}</h1>
           <p>
             {p
               ? 'Using this pond’s size and depth with sample starting conditions. Adjust the controls to explore the model; your real records stay unchanged.'
-              : 'Move the controls and watch the pond respond. Nothing is saved.'}
+              : 'Choose a scenario, explore the pond, and read the response. Adjust the conditions alongside it.'}
           </p>
         </div>
       </div>

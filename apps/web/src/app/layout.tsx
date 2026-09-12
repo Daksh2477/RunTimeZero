@@ -48,7 +48,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <span className="brand-icon" aria-hidden="true">a</span>Alga<span>Carbon</span>
       </Link>
       <Navigation />
-      <span className="prototype-label">Hackathon prototype</span>
     </div></header>
     <div id="main-content" tabIndex={-1}>{children}</div>
     <footer className="footer"><span>AlgaCarbon · RunTimeZero</span><span>Prototype results may use simulated data. Carbon credits require a separate review.</span></footer>
