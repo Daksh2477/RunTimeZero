@@ -44,7 +44,7 @@ contract BatchEvidence is ERC721, AccessControl {
         uint256 independentLowCo2Kg;
         /// @notice Maximum physically possible for this pond, area and period.
         uint256 ceilingCo2Kg;
-        /// @notice Amount actually creditable: min(claimed, independent, ceiling).
+        /// @notice Amount actually creditable: min(claimed, independent lower bound, ceiling).
         uint256 creditableCo2Kg;
         /// @notice Signed divergence in basis points. Positive means overstated.
         int32 divergenceBps;
@@ -53,11 +53,15 @@ contract BatchEvidence is ERC721, AccessControl {
         string mrvReportCid;
         /// @notice Identifiers of the satellite scenes or weighbridge tickets used.
         string evidenceRefs;
+        /// @notice Reference to an independently reviewed disposition record.
+        string dispositionEvidenceRef;
         uint64 attestedAt;
     }
 
     mapping(uint256 => Evidence) private _evidence;
     uint256 private _nextId = 1;
+    mapping(bytes32 => uint64) public lastPeriodEnd;
+    mapping(bytes32 => bool) public usedReports;
 
     event BatchAttested(
         uint256 indexed tokenId,
@@ -70,6 +74,10 @@ contract BatchEvidence is ERC721, AccessControl {
     error ClaimExceedsCeiling(uint256 claimed, uint256 ceiling);
     error CreditExceedsEvidence(uint256 creditable, uint256 permitted);
     error EmptyReport();
+    error InvalidEvidence();
+    error OverlappingPeriod();
+    error DuplicateReport();
+    error MissingDispositionProof();
 
     constructor(address oracle) ERC721("AlgaCarbon Batch Evidence", "ACBE") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
@@ -90,6 +98,16 @@ contract BatchEvidence is ERC721, AccessControl {
         returns (uint256 tokenId)
     {
         if (bytes(e.mrvReportCid).length == 0) revert EmptyReport();
+        if (e.siteId == bytes32(0) || e.periodEnd <= e.periodStart ||
+            e.independentLowCo2Kg > e.independentCo2Kg || bytes(e.evidenceRefs).length == 0) {
+            revert InvalidEvidence();
+        }
+        if (bytes(e.dispositionEvidenceRef).length == 0) revert MissingDispositionProof();
+        // Settlement is chronological per site. A new token ID must not make
+        // a previously attested period available for issuance again.
+        if (e.periodStart < lastPeriodEnd[e.siteId]) revert OverlappingPeriod();
+        bytes32 reportHash = keccak256(bytes(e.mrvReportCid));
+        if (usedReports[reportHash]) revert DuplicateReport();
 
         // A claim above the physics ceiling is not suspicious, it is impossible:
         // no cultivation system can exceed the sunlight that fell on the pond.
@@ -100,14 +118,16 @@ contract BatchEvidence is ERC721, AccessControl {
         // Credit the LOWER of what was claimed and what the evidence supports.
         // This is what makes overstating pointless rather than merely risky:
         // inflating a claim cannot increase what gets minted.
-        uint256 permitted = e.claimedCo2Kg < e.independentCo2Kg
+        uint256 permitted = e.claimedCo2Kg < e.independentLowCo2Kg
             ? e.claimedCo2Kg
-            : e.independentCo2Kg;
+            : e.independentLowCo2Kg;
         if (permitted > e.ceilingCo2Kg) permitted = e.ceilingCo2Kg;
         if (e.creditableCo2Kg > permitted) {
             revert CreditExceedsEvidence(e.creditableCo2Kg, permitted);
         }
 
+        lastPeriodEnd[e.siteId] = e.periodEnd;
+        usedReports[reportHash] = true;
         tokenId = _nextId++;
         _evidence[tokenId] = e;
         _evidence[tokenId].attestedAt = uint64(block.timestamp);

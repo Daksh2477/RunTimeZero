@@ -17,12 +17,12 @@
 
 import { creditableAmount, type Verdict } from '@rtz/types';
 import type { ObservationRow, PondRow } from '../db/client.ts';
-import { estimateFromObservations } from './estimate.ts';
+import { estimateFromObservations, type HarvestEvidence } from './estimate.ts';
 
 /*
  * There is deliberately NO fixed divergence threshold here.
  *
- * An earlier version flagged any claim more than 15% from the central estimate.
+ * An earlier version flagged any claim more than 15% from the evidence lower bound.
  * That was incoherent: with a satellite band of +/-2.4x we are admitting we
  * cannot measure better than about +/-140%, so objecting at 15% asserts a
  * precision we do not have. It produced false positives on honest ponds, which
@@ -34,6 +34,8 @@ import { estimateFromObservations } from './estimate.ts';
  * Better instrumentation narrows the band, which is exactly the incentive the
  * tier system is built on.
  */
+
+import { RequestError, validateWindow } from './validation.ts';
 
 /** Same-direction runs at or above this length are systematic, not noise. */
 const SYSTEMATIC_RUN_LENGTH = 4;
@@ -54,6 +56,7 @@ export interface ReconcileInput {
   ceilingCo2Kg: number;
   /** Dry mass harvested during the window, kg. Part of production, not a loss. */
   harvestedDryKg: number;
+  harvestRecords?: HarvestEvidence[];
 }
 
 export interface ReconcileResult {
@@ -77,10 +80,15 @@ export interface ReconcileResult {
  * state and no I/O.
  */
 export function reconcile(input: ReconcileInput): ReconcileResult {
+  validateWindow(input.windowStart, input.windowEnd);
+  if (![input.claimedCo2Kg, input.ceilingCo2Kg, input.harvestedDryKg].every(
+    (n) => Number.isFinite(n) && n >= 0) || !Number.isInteger(input.priorRun) || input.priorRun < 0) {
+    throw new RequestError('Claim, ceiling, harvest and prior history must be finite and nonnegative.');
+  }
   const estimate = estimateFromObservations(
     input.observations,
     input.pond,
-    input.harvestedDryKg,
+    input.harvestRecords ?? input.harvestedDryKg,
   );
 
   const base = {
@@ -118,13 +126,14 @@ export function reconcile(input: ReconcileInput): ReconcileResult {
       reason:
         `Claim of ${fmt(input.claimedCo2Kg)} kg exceeds the physical maximum of ` +
         `${fmt(input.ceilingCo2Kg)} kg for this pond, area and period. ` +
-        `No cultivation system can exceed this bound.`,
+        `This exceeds the configured sunlight-only model bound.`,
     };
   }
 
   const divergence = relativeDivergence(input.claimedCo2Kg, estimate.co2Kg);
   const overstating = divergence > 0;
-  const run = overstating ? input.priorRun + 1 : 0;
+  const contradicted = input.claimedCo2Kg > estimate.co2HighKg;
+  const run = contradicted ? input.priorRun + 1 : 0;
 
   // 3. A sustained one-directional overstatement.
   //
@@ -133,7 +142,7 @@ export function reconcile(input: ReconcileInput): ReconcileResult {
   //    so if we tested agreement first this branch would be unreachable — and
   //    it covers exactly the fraud the physics ceiling cannot catch, because a
   //    careful operator never goes near the ceiling. See DECISIONS.md #9.
-  if (overstating && run >= SYSTEMATIC_RUN_LENGTH) {
+  if (contradicted && run >= SYSTEMATIC_RUN_LENGTH) {
     return {
       ...base,
       verdict: 'flagged',
@@ -143,7 +152,7 @@ export function reconcile(input: ReconcileInput): ReconcileResult {
       reason:
         `Claim has exceeded independent evidence for ${run} consecutive windows ` +
         `(currently +${pct(divergence)}). A one-directional run of this length is ` +
-        `not measurement noise.`,
+        `outside the assumed evidence band; review the claim and measurement calibration.`,
     };
   }
 
@@ -168,7 +177,7 @@ export function reconcile(input: ReconcileInput): ReconcileResult {
       reason:
         `Claim of ${fmt(input.claimedCo2Kg)} kg is not contradicted by independent ` +
         `evidence (${fmt(estimate.co2LowKg)}–${fmt(estimate.co2HighKg)} kg, ` +
-        `${estimate.channel}). Credited at the lower of claim and central estimate.`,
+        `${estimate.channel}). Credited at the lower of claim and evidence lower bound.`,
     };
   }
 

@@ -83,8 +83,7 @@ pub fn temperature_limitation(temp_c: f64, p: &StrainParams) -> f64 {
         return 0.0;
     }
     let numerator = (temp_c - p.temp_min_c) * (temp_c - p.temp_max_c);
-    let denominator = numerator
-        - (temp_c - p.temp_opt_c).powi(2);
+    let denominator = numerator - (temp_c - p.temp_opt_c).powi(2);
     if denominator.abs() < f64::EPSILON {
         return 0.0;
     }
@@ -160,11 +159,7 @@ pub fn specific_growth_rate(
 }
 
 /// Biomass after one timestep, g/L. Never returns negative.
-pub fn step_biomass(
-    biomass_g_per_l: f64,
-    mu_per_hour: f64,
-    dt_hours: f64,
-) -> f64 {
+pub fn step_biomass(biomass_g_per_l: f64, mu_per_hour: f64, dt_hours: f64) -> f64 {
     let next = biomass_g_per_l * (mu_per_hour * dt_hours).exp();
     next.max(0.0)
 }
@@ -251,6 +246,9 @@ mod tests {
         let g = |x: f64| specific_growth_rate(1200.0, 35.0, 50.0, x, 0.3, &params) * x;
         let low = g(0.2);
         let high = g(2.0);
-        assert!(high < low * 10.0, "productivity scaled too close to linearly");
+        assert!(
+            high < low * 10.0,
+            "productivity scaled too close to linearly"
+        );
     }
 }

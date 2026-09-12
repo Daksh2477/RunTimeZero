@@ -11,7 +11,7 @@
 import type { Disposition } from './site.ts';
 
 export type Verdict =
-  /** Claim and independent estimate agree within the band. Mint at the claim. */
+  /** Claim is inside the band. Supported quantity remains capped at its lower bound. */
   | 'ok'
   /** Outside the band but below the ceiling. Mint at the lower figure, flag it. */
   | 'watch'
@@ -75,23 +75,12 @@ export function creditableAmount(input: {
     return 0;
   }
 
-  // Which independent figure we cap against depends on whether the claim and
-  // the evidence agree.
-  //
-  // An earlier version always used the band FLOOR. That punished honest
-  // operators severely: with satellite's ±2.4x band, a perfectly accurate claim
-  // was credited at 42% of its true value, and nobody would have adopted the
-  // platform. Being conservative about fraud is not a reason to be wrong about
-  // honesty.
-  //
-  // So: a claim that agrees with the evidence is capped at the central
-  // estimate. A claim that does not agree is pushed down to the floor. The
-  // penalty lands on disagreement, which is exactly where we want it — and
-  // overstating still cannot pay, because the cap only ever moves downward.
-  const cap =
-    input.verdict === 'ok' ? input.independentCo2Kg : input.independentLowCo2Kg;
+  const values = [input.claimedCo2Kg, input.independentCo2Kg,
+    input.independentLowCo2Kg, input.ceilingCo2Kg];
+  if (values.some((v) => !Number.isFinite(v) || v < 0) ||
+      input.independentLowCo2Kg > input.independentCo2Kg) return 0;
 
-  return Math.max(0, Math.min(input.claimedCo2Kg, cap, input.ceilingCo2Kg));
+  return Math.min(input.claimedCo2Kg, input.independentLowCo2Kg, input.ceilingCo2Kg);
 }
 
 /** A verified production batch — the unit that becomes a token. */

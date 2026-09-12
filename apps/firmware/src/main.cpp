@@ -48,6 +48,21 @@ static const uint8_t PIN_OD = 32;
 static const uint8_t PIN_TEMP = 4;
 static const uint8_t PIN_LED_TX = 13;
 
+// Paddlewheel contactor feedback. A real installation takes this off an
+// auxiliary contact or a current clamp; on the canvas it is a slide switch so
+// an evaluator can stop the mixer and watch the alert appear.
+//
+// This is the only input here that is not a probe in the water, which is what
+// makes it worth having: a stopped paddlewheel reads zero outright, where
+// "dissolved oxygen is low" has half a dozen explanations.
+static const uint8_t PIN_MIXER_RUN = 27;
+
+// Pond area this node serves, m2, and the paddlewheel load per m2. Together
+// they turn the contactor state into the kWh figure the API expects. 0.5 W/m2
+// matches packages/physics and the expansion planner — one number, one place.
+static const float POND_AREA_M2 = 1200.0f;
+static const float PADDLEWHEEL_W_PER_M2 = 0.5f;
+
 // ESP32 ADC is 12-bit over a 3.3 V reference.
 static const float ADC_MAX = 4095.0f;
 static const float V_REF = 3.3f;
@@ -131,19 +146,27 @@ static void publishReading() {
   tempSensor.requestTemperatures();
   const float tempC = tempSensor.getTempCByIndex(0);
 
+  // kWh accrued since the previous publish, from contactor state and load.
+  const bool mixerRunning = digitalRead(PIN_MIXER_RUN) == HIGH;
+  const float energyKwh =
+      mixerRunning
+          ? (PADDLEWHEEL_W_PER_M2 * POND_AREA_M2 / 1000.0f) *
+                (PUBLISH_INTERVAL_MS / 3600000.0f)
+          : 0.0f;
+
   const float vPh = readVolts(PIN_PH);
   const float vDo = readVolts(PIN_DO);
   const float vOd = readVolts(PIN_OD);
 
-  char payload[320];
+  char payload[384];
   snprintf(payload, sizeof(payload),
            "{\"pondId\":\"%s\",\"seq\":%lu,\"uptimeMs\":%lu,"
            "\"ph\":%.2f,\"dissolvedOxygenMgL\":%.2f,\"opticalDensity\":%.3f,"
-           "\"temperatureC\":%.2f,"
+           "\"temperatureC\":%.2f,\"energyKwh\":%.6f,\"mixerRunning\":%s,"
            "\"raw\":{\"vPh\":%.4f,\"vDo\":%.4f,\"vOd\":%.4f}}",
            POND_ID, (unsigned long)seq, (unsigned long)millis(),
            voltsToPh(vPh), voltsToDissolvedOxygen(vDo), voltsToOpticalDensity(vOd),
-           tempC, vPh, vDo, vOd);
+           tempC, energyKwh, mixerRunning ? "true" : "false", vPh, vDo, vOd);
 
   char topic[96];
   snprintf(topic, sizeof(topic), "%s/%s/telemetry", TOPIC_PREFIX, POND_ID);
@@ -162,6 +185,9 @@ static void publishReading() {
 void setup() {
   Serial.begin(115200);
   pinMode(PIN_LED_TX, OUTPUT);
+  // Pulled down, so an unwired or failed contactor reads "stopped" rather
+  // than floating into a false "running".
+  pinMode(PIN_MIXER_RUN, INPUT_PULLDOWN);
   digitalWrite(PIN_LED_TX, LOW);
 
   analogReadResolution(12);

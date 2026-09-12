@@ -14,9 +14,11 @@ packages/physics/pkg/
 .env.*.local
 
 # contracts
-artifacts/
-cache/
-typechain-types/
+# Anchored: an unanchored "artifacts/" also swallowed packages/models/artifacts,
+# so trained model weights never reached the repo or the server.
+apps/contracts/artifacts/
+apps/contracts/cache/
+apps/contracts/typechain-types/
 
 # editor / os
 .DS_Store
@@ -35,3 +37,5 @@ apps/contracts/addresses.json
 
 # generated training data — regenerate with `npm run models:data`
 packages/models/data/
+deploy/last-deploy.log
+packages/physics/pkg-web/

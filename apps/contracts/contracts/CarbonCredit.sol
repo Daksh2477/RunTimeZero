@@ -43,6 +43,7 @@ contract CarbonCredit is ERC1155, AccessControl {
     error AlreadyIssued(uint256 batchId);
     error ExceedsEvidence(uint256 requested, uint256 permitted);
     error NothingToRetire();
+    error NothingToIssue();
     error EmptyBeneficiary();
 
     constructor(address oracle, BatchEvidence evidence_, RetirementCertificate certificates_)
@@ -66,6 +67,7 @@ contract CarbonCredit is ERC1155, AccessControl {
         external
         onlyRole(ORACLE_ROLE)
     {
+        if (kg == 0) revert NothingToIssue();
         if (issuedKg[batchId] != 0) revert AlreadyIssued(batchId);
 
         uint256 permitted = evidence.creditableCo2Kg(batchId);

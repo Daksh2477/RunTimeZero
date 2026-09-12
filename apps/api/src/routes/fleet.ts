@@ -55,10 +55,8 @@ fleetRouter.get('/site/:id/economics', async (req, res) => {
     );
 
     const { rows: prod } = await pool.query(
-      `SELECT COALESCE(SUM(d.creditable_co2_kg), 0) AS credited_kg
-         FROM divergence_checks d
-         JOIN ponds p ON p.id = d.pond_id
-        WHERE p.site_id = $1`,
+      `SELECT COALESCE(SUM(b.minted_tonnes) * 1000, 0) AS credited_kg
+         FROM batches b WHERE b.site_id = $1 AND b.tx_hash IS NOT NULL`,
       [req.params.id],
     );
 

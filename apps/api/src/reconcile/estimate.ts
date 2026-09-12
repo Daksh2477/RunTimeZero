@@ -1,14 +1,13 @@
-/**
- * Turning independent observations into a biomass estimate — always with a band.
- *
- * The band is not a nicety. Validated NDCI carries a mean absolute error factor
- * near 2.4, so a point estimate would be dishonest. We compare intervals, and a
- * wide interval simply means we credit less. That is the correct incentive: an
- * operator who wants a tighter band installs better instrumentation.
- */
-
+/** Evidence-supported biomass, with explicit uncertainty and inventory balance. */
 import { CO2_PER_KG_BIOMASS, type ObservationChannel } from '@rtz/types';
 import type { ObservationRow, PondRow } from '../db/client.ts';
+
+export interface HarvestEvidence {
+  id: string;
+  harvestedAt: string;
+  dryMassKg: number;
+  ref: string | null;
+}
 
 export interface Estimate {
   biomassKg: number;
@@ -21,147 +20,82 @@ export interface Estimate {
   observationIds: string[];
 }
 
-/**
- * Band width by channel, as a multiplicative factor.
- *
- * These encode how much we trust each independent channel, and they are the
- * honest reason a smallholder with no instruments still gets credits — just
- * fewer of them.
- */
-const BAND_FACTOR: Record<ObservationChannel, number> = {
-  // A mass on a public weighbridge is the strongest evidence we accept:
-  // crude in frequency, very hard to forge quietly. ±10%.
-  weighbridge: 1.1,
-  // A physical sample, measured in a lab. ±20%.
-  field_sample: 1.2,
-  // Close-range imagery, controlled distance and lighting. ±60%.
-  drone: 1.6,
-  // Sentinel-2 NDCI. Published error factor ~2.4 — we use it as-is rather than
-  // pretending our pipeline is better than the literature.
-  sentinel2: 2.4,
+// Provisional uncertainty assumptions, not calibrated confidence intervals.
+const FACTOR: Record<ObservationChannel, number> = {
+  weighbridge: 1.1, field_sample: 1.2, drone: 1.6, sentinel2: 2.4,
 };
+const CHANNELS: ObservationChannel[] = ['weighbridge', 'field_sample', 'drone', 'sentinel2'];
+const finiteMass = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n) && n >= 0;
 
-/** Cloud cover above this makes a satellite observation unusable. */
-const MAX_CLOUD_FRACTION = 0.3;
-
-/**
- * Empirical NDCI → biomass density mapping, g/L.
- *
- * A placeholder linear fit until `packages/models/ndci_biomass` is trained on a
- * dilution series. Deliberately kept crude and obviously provisional: an
- * over-confident curve here would be worse than an honest straight line,
- * because the band is doing the real work.
- */
-function ndciToBiomassGPerL(ndci: number): number {
-  const clamped = Math.max(0, Math.min(1, ndci));
-  return clamped * 2.5;
-}
-
-/**
- * Build an estimate from whatever independent evidence exists in the window.
- *
- * Returns null when there is nothing usable — the caller must then refuse to
- * credit rather than fall back to the operator's own number.
- */
 export function estimateFromObservations(
   observations: ObservationRow[],
   pond: PondRow,
-  harvestedDryKg = 0,
+  harvests: number | HarvestEvidence[] = [],
 ): Estimate | null {
-  const usable = observations.filter(isUsable);
-  if (usable.length === 0) return null;
+  if (![pond.areaM2, pond.depthM].every((n) => Number.isFinite(n) && n > 0)) return null;
+  const usable = observations.filter((o) => {
+    if (!o.sourceRef.trim() || !Number.isFinite(Date.parse(o.observedAt))) return false;
+    if (o.channel === 'weighbridge' || o.channel === 'field_sample') return finiteMass(o.measuredDryMassKg);
+    if (!(o.channel === 'drone' || o.channel === 'sentinel2')) return false;
+    if (o.channel === 'sentinel2' && pond.widthM < 40) return false;
+    return typeof o.chlorophyllIndex === 'number' && Number.isFinite(o.chlorophyllIndex)
+      && Math.abs(o.chlorophyllIndex) <= 1 && o.cloudFraction !== null
+      && Number.isFinite(o.cloudFraction) && o.cloudFraction >= 0 && o.cloudFraction <= 0.3;
+  });
 
-  // Prefer the strongest channel present. A weighbridge ticket beats a
-  // satellite pass for the same window, every time.
-  const channel = strongestChannel(usable);
-  const relevant = usable.filter((o) => o.channel === channel);
-
-  const standingGainKg =
-    channel === 'weighbridge' || channel === 'field_sample'
-      ? sumDirectMass(relevant)
-      : inferFromImagery(relevant, pond);
-
-  // Production = growth still in the water + everything already taken out.
-  //
-  // Without the harvest term, a pond harvested weekly appears to have produced
-  // almost nothing: standing biomass ends roughly where it began, because the
-  // evidence was carted away. This is a real limitation of imagery, not a
-  // simulation artifact — and it is why weighbridge records are mandatory for
-  // any harvesting pond rather than being a smallholder fallback.
-  const biomassKg = standingGainKg + harvestedDryKg;
-
-  if (!Number.isFinite(biomassKg) || biomassKg < 0) return null;
-
-  const factor = BAND_FACTOR[channel];
-  const biomassLowKg = biomassKg / factor;
-  const biomassHighKg = biomassKg * factor;
-
-  return {
-    biomassKg,
-    biomassLowKg,
-    biomassHighKg,
-    co2Kg: biomassKg * CO2_PER_KG_BIOMASS,
-    co2LowKg: biomassLowKg * CO2_PER_KG_BIOMASS,
-    co2HighKg: biomassHighKg * CO2_PER_KG_BIOMASS,
-    channel,
-    observationIds: relevant.map((o) => o.id),
-  };
-}
-
-function isUsable(o: ObservationRow): boolean {
-  if (o.channel === 'weighbridge' || o.channel === 'field_sample') {
-    return o.measuredDryMassKg !== null && o.measuredDryMassKg >= 0;
+  for (const channel of CHANNELS) {
+    const unique = new Map<string, ObservationRow>();
+    for (const o of usable.filter((item) => item.channel === channel)) {
+      const previous = unique.get(o.sourceRef);
+      // A source cannot support conflicting quantities. Do not choose a favourable revision.
+      if (previous && (previous.measuredDryMassKg !== o.measuredDryMassKg ||
+          previous.chlorophyllIndex !== o.chlorophyllIndex)) return null;
+      unique.set(o.sourceRef, o);
+    }
+    const selected = [...unique.values()].sort((a, b) => Date.parse(a.observedAt) - Date.parse(b.observedAt));
+    if (!selected.length) continue;
+    const factor = FACTOR[channel];
+    let mass: number, low: number, high: number;
+    if (channel === 'weighbridge') {
+      // Tickets already measure harvested mass. Never add the harvest ledger again.
+      mass = selected.reduce((sum, o) => sum + o.measuredDryMassKg!, 0);
+      low = mass / factor; high = mass * factor;
+    } else {
+      if (selected.length < 2) continue;
+      const first = selected[0]!, last = selected[selected.length - 1]!;
+      if (Date.parse(last.observedAt) <= Date.parse(first.observedAt)) continue;
+      const standing = (o: ObservationRow) => channel === 'field_sample'
+        ? o.measuredDryMassKg!
+        // Placeholder calibration. g/L equals kg/m³, multiplied by pond volume.
+        : Math.max(0, o.chlorophyllIndex!) * 2.5 * pond.areaM2 * pond.depthM;
+      const start = standing(first), end = standing(last);
+      let harvested = 0;
+      if (typeof harvests === 'number') {
+        if (!finiteMass(harvests)) return null;
+        harvested = harvests; // Legacy caller must supply the same observation interval.
+      } else {
+        const tickets = new Map<string, number>();
+        for (const h of harvests) {
+          const time = Date.parse(h.harvestedAt);
+          if (!Number.isFinite(time) || time <= Date.parse(first.observedAt) || time > Date.parse(last.observedAt)) continue;
+          // Unreferenced harvest assertions cannot raise independent evidence.
+          if (!h.ref?.trim()) continue;
+          if (!finiteMass(h.dryMassKg)) return null;
+          if (tickets.has(h.ref) && tickets.get(h.ref) !== h.dryMassKg) return null;
+          tickets.set(h.ref, h.dryMassKg);
+        }
+        harvested = [...tickets.values()].reduce((sum, n) => sum + n, 0);
+      }
+      // Preserve losses until after accounting for harvests. Propagate endpoint
+      // uncertainty separately: a small difference of uncertain stocks is not precise.
+      mass = Math.max(0, end - start + harvested);
+      low = Math.max(0, end / factor - start * factor + harvested / FACTOR.weighbridge);
+      high = Math.max(0, end * factor - start / factor + harvested * FACTOR.weighbridge);
+    }
+    if (![mass, low, high].every(finiteMass)) return null;
+    return { biomassKg: mass, biomassLowKg: low, biomassHighKg: high,
+      co2Kg: mass * CO2_PER_KG_BIOMASS, co2LowKg: low * CO2_PER_KG_BIOMASS,
+      co2HighKg: high * CO2_PER_KG_BIOMASS, channel, observationIds: selected.map((o) => o.id) };
   }
-  if (o.chlorophyllIndex === null) return false;
-  // A cloudy scene tells us about the cloud, not the pond.
-  if (o.cloudFraction !== null && o.cloudFraction > MAX_CLOUD_FRACTION) return false;
-  return true;
-}
-
-const CHANNEL_RANK: ObservationChannel[] = [
-  'weighbridge',
-  'field_sample',
-  'drone',
-  'sentinel2',
-];
-
-function strongestChannel(observations: ObservationRow[]): ObservationChannel {
-  for (const c of CHANNEL_RANK) {
-    if (observations.some((o) => o.channel === c)) return c;
-  }
-  return 'sentinel2';
-}
-
-/** Directly weighed mass needs no inference — just add it up. */
-function sumDirectMass(observations: ObservationRow[]): number {
-  return observations.reduce((sum, o) => sum + (o.measuredDryMassKg ?? 0), 0);
-}
-
-/**
- * Growth implied by imagery: the change in standing biomass across the window.
- *
- * We use first-to-last rather than averaging, because what we need is the
- * *gain* over the window, not the level. A pond that sat at a constant density
- * grew nothing, however dense it was.
- */
-function inferFromImagery(observations: ObservationRow[], pond: PondRow): number {
-  if (observations.length < 2) {
-    // A single scene gives a level, not a gain. Treating one observation as
-    // growth would manufacture carbon out of a photograph.
-    return 0;
-  }
-
-  const sorted = [...observations].sort(
-    (a, b) => Date.parse(a.observedAt) - Date.parse(b.observedAt),
-  );
-  const first = sorted[0]!;
-  const last = sorted[sorted.length - 1]!;
-
-  const startGPerL = ndciToBiomassGPerL(first.chlorophyllIndex ?? 0);
-  const endGPerL = ndciToBiomassGPerL(last.chlorophyllIndex ?? 0);
-  const deltaGPerL = Math.max(0, endGPerL - startGPerL);
-
-  // g/L × litres → g → kg. Pond volume is area × depth × 1000 L/m³.
-  const volumeL = pond.areaM2 * pond.depthM * 1000;
-  return (deltaGPerL * volumeL) / 1000;
+  return null;
 }

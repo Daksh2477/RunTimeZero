@@ -63,6 +63,19 @@ const FEATURE_LABELS: Record<string, string> = {
   temp_trend: 'temperature change',
   ph_mean: 'average pH',
   od_mean: 'average density',
+  // A pond whose oxygen stops swinging day to night has stopped
+  // photosynthesising — the earliest signal the probes can give.
+  do_amplitude: 'oxygen no longer swinging day to night',
+  ph_amplitude: 'pH no longer swinging day to night',
+  od_volatility: 'unstable density readings',
+  temp_amplitude: 'wide temperature swing',
+  depth_m: 'pond depth',
+  log_area: 'pond size',
+  season_sin: 'time of year',
+  season_cos: 'time of year',
+  hours_since_harvest: 'time since last harvest',
+  energy_kwh_mean: 'paddlewheel power draw',
+  mixing_uptime: 'paddlewheel stopped',
 };
 
 /**

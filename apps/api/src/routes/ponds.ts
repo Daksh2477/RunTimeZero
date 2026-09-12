@@ -3,15 +3,23 @@
  */
 
 import { Router } from 'express';
+import { RequestError, validatePondId } from '../reconcile/validation.ts';
 import { getPond } from '../db/client.ts';
 import { runReconciliation } from '../services/reconcile-service.ts';
 
 export const pondsRouter = Router();
 
 pondsRouter.get('/:id', async (req, res) => {
-  const pond = await getPond(req.params.id);
-  if (!pond) return res.status(404).json({ error: 'pond not found' });
-  return res.json(pond);
+  try {
+    validatePondId(req.params.id);
+    const pond = await getPond(req.params.id);
+    if (!pond) return res.status(404).json({ error: 'pond not found' });
+    return res.json(pond);
+  } catch (err) {
+    return res.status(err instanceof RequestError ? err.status : 500).json({
+      error: err instanceof RequestError ? err.message : 'Could not read pond.',
+    });
+  }
 });
 
 /**
@@ -37,8 +45,8 @@ pondsRouter.post('/:id/reconcile', async (req, res) => {
     if (!result) return res.status(404).json({ error: 'pond not found' });
     return res.json(result);
   } catch (err) {
-    return res.status(500).json({
-      error: err instanceof Error ? err.message : 'reconciliation failed',
+    return res.status(err instanceof RequestError ? err.status : 500).json({
+      error: err instanceof RequestError ? err.message : 'Reconciliation failed. Check server logs and schema setup.',
     });
   }
 });

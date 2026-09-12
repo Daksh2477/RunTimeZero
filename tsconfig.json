@@ -1,7 +1,10 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022", "DOM"],
+    "lib": [
+      "ES2022",
+      "DOM"
+    ],
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
@@ -12,8 +15,23 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "noEmit": true,
-    "paths": { "@rtz/types": ["./packages/types/src/index.ts"] }
+    "paths": {
+      "@rtz/types": [
+        "./packages/types/src/index.ts"
+      ]
+    },
+    "allowImportingTsExtensions": true
   },
-  "include": ["packages/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx", "scripts/**/*.ts"],
-  "exclude": ["node_modules", "**/dist", "**/.next", "**/pkg"]
+  "include": [
+    "packages/**/*.ts",
+    "apps/api/**/*.ts",
+    "scripts/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "**/node_modules",
+    "**/dist",
+    "**/.next",
+    "**/pkg"
+  ]
 }
