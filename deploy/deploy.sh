@@ -16,6 +16,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 LOG="$ROOT/deploy/last-deploy.log"
+# The last commit that deployed AND passed health. Comparing against HEAD was a
+# trap: a failed deploy has already reset HEAD, so every later poll saw
+# "unchanged" and never retried.
+DEPLOYED="$ROOT/deploy/.deployed-sha"
 
 export NVM_DIR="$HOME/.nvm"
 # shellcheck disable=SC1091
@@ -24,7 +28,7 @@ export NVM_DIR="$HOME/.nvm"
 log() { echo "[$(date -u +%H:%M:%S)] $*" | tee -a "$LOG"; }
 
 git fetch --quiet origin main
-LOCAL=$(git rev-parse HEAD)
+LOCAL=$(cat "$DEPLOYED" 2>/dev/null || git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/main)
 
 if [ "$LOCAL" = "$REMOTE" ] && [ "${1:-}" != "--force" ]; then
@@ -58,6 +62,7 @@ pm2 restart algacarbon-api algacarbon-web --update-env >>"$LOG" 2>&1
 
 sleep 4
 if curl -sf --max-time 10 "http://127.0.0.1:${API_PORT:-4300}/health" >/dev/null; then
+  echo "$REMOTE" > "$DEPLOYED"
   log "deployed ${REMOTE:0:7} — health OK"
 else
   # Loud, because a silent failed deploy is worse than no deploy.

@@ -41,6 +41,7 @@ apps/contracts/addresses.json
 # generated training data — regenerate with `npm run models:data`
 packages/models/data/
 deploy/last-deploy.log
+deploy/.deployed-sha
 packages/physics/pkg-web/
 
 # TypeScript incremental build cache
