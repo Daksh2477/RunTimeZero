@@ -23,7 +23,7 @@ verifyRouter.get('/:checkId', async (req, res) => {
               d.independent_co2_kg, d.independent_low_co2_kg,
               d.independent_high_co2_kg, d.ceiling_co2_kg, d.divergence,
               d.verdict, d.creditable_co2_kg, d.reason, d.computed_at, d.evidence_snapshot,
-              p.label AS pond_label, p.area_m2, p.width_m,
+              p.id AS pond_id, p.site_id, p.label AS pond_label, p.area_m2, p.width_m,
               s.name AS site_name, s.tier, s.host_industry
          FROM divergence_checks d
          JOIN ponds p ON p.id = d.pond_id
@@ -40,8 +40,18 @@ verifyRouter.get('/:checkId', async (req, res) => {
 
     return res.json({
       checkId: r.id,
-      site: { name: r.site_name, tier: r.tier, hostIndustry: r.host_industry },
-      pond: snapshot?.pond ?? { label: r.pond_label, areaM2: Number(r.area_m2), widthM: Number(r.width_m) },
+      site: { id: r.site_id, name: r.site_name, tier: r.tier, hostIndustry: r.host_industry },
+      // Geometry comes from the snapshot when there is one — that is the evidence
+      // and it must not drift if the pond is later resized. The ids come from the
+      // live join regardless, so a report can link to its pond and to issuance
+      // even for legacy checks that carry no snapshot.
+      pond: {
+        ...(snapshot?.pond ?? {
+          label: r.pond_label, areaM2: Number(r.area_m2), widthM: Number(r.width_m),
+        }),
+        id: r.pond_id,
+        siteId: r.site_id,
+      },
       window: { start: r.window_start.toISOString(), end: r.window_end.toISOString() },
       claimedCo2Kg: Number(r.claimed_co2_kg),
       independentCo2Kg: Number(r.independent_co2_kg),
