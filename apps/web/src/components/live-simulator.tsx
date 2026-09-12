@@ -5,6 +5,7 @@ import { DEFAULT_CONFIG, runTwin, type RunConfig, type RunResult } from '@/lib/t
 import { ExpansionPanel } from '@/components/expansion-panel';
 import { PondView } from '@/components/pond-view';
 import { SkyStrip } from '@/components/sky-strip';
+import { CollapsiblePanel } from '@/components/collapsible-panel';
 import './simulation-workspace.css';
 
 interface Props { initial?: Partial<RunConfig>; pondLabel?: string; siteName?: string; }
@@ -96,8 +97,9 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
         <div className="simulation-totals" aria-busy={status === 'loading'}><div className="totals-heading"><h3>Over the full {cfg.days} days</h3><span role="status">{status === 'loading' ? 'Updating estimate…' : status === 'failed' ? 'Calculation unavailable' : 'Model estimate'}</span></div>{status === 'failed' ? <div role="alert"><p>The model could not finish. Your settings are still here.</p>{failure && <p className="sim-failure-detail">{failure}</p>}<button className="button secondary" onClick={() => setRetry(n => n+1)}>Try again</button></div> : <div className="sim-figures"><div><strong>{result ? kg(result.totalHarvestKg) : '—'}</strong><span>algae harvested</span></div><div><strong>{result ? kg(result.totalCo2Kg) : '—'}</strong><span>CO₂ absorbed</span></div><div><strong>{result ? kg(result.peakBiomassKg) : '—'}</strong><span>peak algae biomass</span></div></div>}{result && <Trace daily={result.daily} day={playDay} />}</div>
       </section>
       <aside className="simulation-sidebar" aria-label="Measurements and simulation settings">
-        <section className="sensor-panel" aria-busy={status === 'loading'}><span className="workspace-step">03 / READ THE RESPONSE</span><div className="sensor-panel-heading"><h2>Sensor readings</h2><span>Day {point?.day ?? 1}</span></div><div className="sensor-readings">{measurements.map(m => <button key={m.id} className="sensor-reading" aria-pressed={selectedSensor === m.id} onClick={() => setSelectedSensor(m.id)}><span>{m.name}</span><strong>{m.value}<small>{m.unit}</small></strong></button>)}</div><div className="sensor-explanation"><strong>{selected.name} sensor</strong><p>{selected.description}</p></div><p className="sensor-note">Select a sensor on the plan or a reading here. Marker positions are illustrative; readings describe the whole pond.</p></section>
-        <section className="setup-panel"><div className="setup-heading"><h2>Adjust conditions</h2><span>Updates automatically</span></div><div className="setup-switch" role="group" aria-label="Simulation settings"><button aria-pressed={controls === 'pond'} onClick={() => setControls('pond')}>Pond setup</button><button aria-pressed={controls === 'environment'} onClick={() => setControls('environment')}>Environment</button></div>
+        <CollapsiblePanel step="03 / READ THE RESPONSE" title="Sensor readings" summary={`Day ${point?.day ?? 1}`}><section className="sensor-panel" aria-busy={status === 'loading'}><div className="sensor-readings">{measurements.map(m => <button key={m.id} className="sensor-reading" aria-pressed={selectedSensor === m.id} onClick={() => setSelectedSensor(m.id)}><span>{m.name}</span><strong>{m.value}<small>{m.unit}</small></strong></button>)}</div><div className="sensor-explanation"><strong>{selected.name} sensor</strong><p>{selected.description}</p></div><p className="sensor-note">Select a sensor on the plan or a reading here. Marker positions are illustrative; readings describe the whole pond.</p></section></CollapsiblePanel>
+
+        <CollapsiblePanel step="04 / ADJUST CONDITIONS" title="Adjust conditions" summary={`${cfg.meanAirTempC} °C · ${cfg.areaM2.toLocaleString('en-IN')} m²`}><section className="setup-panel"><div className="setup-heading"><h2>Adjust conditions</h2><span>Updates automatically</span></div><div className="setup-switch" role="group" aria-label="Simulation settings"><button aria-pressed={controls === 'pond'} onClick={() => setControls('pond')}>Pond setup</button><button aria-pressed={controls === 'environment'} onClick={() => setControls('environment')}>Environment</button></div>
           {controls === 'pond' ? <div className="setup-fields">
             <Slider id="area" label="Pond area" value={cfg.areaM2} min={200} max={50000} step={100} display={`${cfg.areaM2.toLocaleString('en-IN')} m²`} onChange={set('areaM2')} hint="Dimensions and the scale bar follow this area." />
             <Slider id="depth" label="Water depth" value={Math.round(cfg.depthM * 100)} min={15} max={60} step={1} display={`${Math.round(cfg.depthM * 100)} cm`} onChange={e => setCfg(c => ({ ...c, depthM: Number(e.target.value) / 100 }))} />
@@ -109,7 +111,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
             <Slider id="nitrogen" label="Nitrogen in the water" value={cfg.influentNitrogenMgL} min={2} max={80} step={1} display={`${cfg.influentNitrogenMgL} mg/L`} onChange={set('influentNitrogenMgL')} />
             <details className="advanced-setup"><summary>Simulate a culture crash</summary><Slider id="crash" label="Crash starts" value={cfg.crashOnDay ?? 0} min={0} max={cfg.days - 1} step={1} display={cfg.crashOnDay ? `Day ${cfg.crashOnDay}` : 'No crash'} onChange={e=>setCfg(c=>({...c,crashOnDay:Number(e.target.value)||null}))} /></details>
           </div>}
-        </section>
+        </section></CollapsiblePanel>
       </aside>
     </div>
     {result && <details className="workspace-expansion"><summary>Planning a bigger farm? Explore expansion costs <span aria-hidden="true">↗</span></summary><ExpansionPanel currentAreaM2={cfg.areaM2} yieldKgPerM2PerYear={(result.totalHarvestKg/cfg.areaM2)*(365/cfg.days)} /></details>}

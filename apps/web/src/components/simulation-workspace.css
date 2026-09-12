@@ -111,3 +111,72 @@
   .sky-facts { grid-template-columns: repeat(auto-fit, minmax(62px, 1fr)); }
   .sky-facts dd { font-size: .76rem; }
 }
+
+/* ----------------------------------------------------- collapsible panels
+ * Phones fold; desktops never do. See components/collapsible-panel.tsx.
+ */
+.panel-fold {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--card);
+  overflow: hidden;
+}
+.panel-fold + .panel-fold { margin-top: 10px; }
+
+.panel-fold > summary {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  list-style: none;
+  min-height: 44px;
+}
+.panel-fold > summary::-webkit-details-marker { display: none; }
+
+.panel-fold-title { font-weight: 600; font-size: .95rem; }
+.panel-fold-summary {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: .8rem;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+.panel-fold-chevron {
+  flex: none;
+  width: 8px; height: 8px;
+  border-right: 2px solid var(--muted-foreground);
+  border-bottom: 2px solid var(--muted-foreground);
+  transform: rotate(45deg);
+  transition: transform .18s ease;
+}
+.panel-fold[open] > summary .panel-fold-chevron { transform: rotate(-135deg); }
+
+.panel-fold-body { padding: 0 14px 14px; }
+
+/* Desktop, or a section that must stay put: render as a plain section with
+ * no affordance suggesting it can be folded. */
+.panel-fold.is-static > summary { cursor: default; }
+.panel-fold.is-static > summary .panel-fold-chevron { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-fold-chevron { transition: none; }
+}
+
+/* At phone width the step label, title and summary cannot share one line
+ * without the step wrapping into the title. Give the step its own row. */
+@media (max-width: 560px) {
+  .panel-fold > summary {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    grid-template-areas:
+      "step step chevron"
+      "title title summary";
+    row-gap: 2px;
+    align-items: center;
+  }
+  .panel-fold > summary .workspace-step { grid-area: step; }
+  .panel-fold-title { grid-area: title; }
+  .panel-fold-summary { grid-area: summary; margin-left: 0; }
+  .panel-fold-chevron { grid-area: chevron; align-self: center; }
+}
