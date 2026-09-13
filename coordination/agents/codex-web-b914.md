@@ -1,6 +1,5 @@
 Agent: Codex web-b914
-Updated: 2026-09-12T23:14:47.173517+00:00
-Task: T1–T7
-Claim: apps/web/**
-Progress: protocols and contracts read; clean tree. Starting T1.
-Blockers: none.
+Updated: 2026-09-13T02:49:05.241770+00:00
+User now assigns full repo; only active worker.
+Task: urgent demo, local login/API recovery, signed simulator→production farm, eligible listings and payment audit.
+Progress: production /health 200; local port4000 down; existing watch PID54930 and simulator PID84379. Harvest submissions failing. Production admin login awaits approval due auto-review rejection.

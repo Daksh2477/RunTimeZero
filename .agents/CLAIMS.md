@@ -38,3 +38,5 @@ and merge at the end.
 
 | Codex web-b914 | Resume frontend ownership; implement brief T1–T7 | `apps/web/**` | 2026-09-12T23:14:47.173517+00:00 |
 | Claude (takeover) | Codex is down; taking over apps/web per user: finish Codex WIP + T2/T4 remainder, finance UI | `apps/web/**` | 2026-09-13T02:00Z |
+
+| Codex web-b914 | Full-repo demo recovery per user explicit sole-owner instruction; supersedes earlier ownership split | `apps/**`, `packages/**`, `scripts/**`, `docs/**`, `deploy/**` | 2026-09-13T02:49:05.241770+00:00 |
