@@ -38,7 +38,7 @@ export function FarmPonds({ sites: initialSites }: { sites: FleetSite[] }) {
       ...site,
       ponds: site.ponds.map((pond) => {
         const r = byPond.get(pond.id);
-        if (!r || (pond.lastReadingAt && Date.parse(pond.lastReadingAt) >= Date.parse(r.at))) return pond;
+        if (!r || (!r.receivedAt && pond.lastReadingAt && Date.parse(pond.lastReadingAt) >= Date.parse(r.at))) return pond;
         return {
           ...pond,
           lastReadingAt: r.at,
@@ -56,6 +56,7 @@ export function FarmPonds({ sites: initialSites }: { sites: FleetSite[] }) {
   }, [initialSites, live.readings]);
   const [search, setSearch] = useState('');
 
+  const replay=live.readings.filter(r=>r.source==='sim'&&r.receivedAt).sort((a,b)=>(b.receivedAt??0)-(a.receivedAt??0))[0];
   const all = useMemo(() => sites.flatMap((s) => s.ponds), [sites]);
   const attention = all.filter(needsAttention).length;
   const waiting = all.filter(pendingCheck).length;
@@ -94,6 +95,7 @@ export function FarmPonds({ sites: initialSites }: { sites: FleetSite[] }) {
 
   return (
     <>
+      {replay&&<p className="inline-notice" role="status">Simulation replay · {new Date(replay.at).toLocaleString('en-IN')} · received {Math.max(0,Math.floor((live.now-replay.receivedAt!)/1000))} s ago · {replay.verified?'Signed device reading':'Unverified source'}. Stored carbon reports use their own evidence windows.</p>}
       <div className="farm-counts">
         <div>
           <span>Ponds tracked</span>

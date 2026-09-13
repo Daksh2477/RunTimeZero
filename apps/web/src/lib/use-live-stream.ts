@@ -6,7 +6,7 @@ import { siteAllowed } from './auth-contract';
 import { apiData } from './use-api-data';
 import type { FleetSite } from './api';
 export interface PinSignal {pin:string;channel:string;volts:number|null;raw:number;value:number|boolean;saturated:boolean}
-export interface LiveReading {pondId:string;siteId:string|null;at:string;source:'sim'|'device'|null;readings:{tempC:number|null;ph:number|null;doMgL:number|null;od:number|null;paddlewheelOn:boolean|null};signals?:PinSignal[]}
+export interface LiveReading {receivedAt?:number;verified?:boolean;deviceId?:string|null;pondId:string;siteId:string|null;at:string;source:'sim'|'device'|null;readings:{tempC:number|null;ph:number|null;doMgL:number|null;od:number|null;paddlewheelOn:boolean|null};signals?:PinSignal[]}
 interface Source {pondId:string;siteId:string|null;source:'sim'|'device'|null;lastAt:string}
 interface Alert {id:string;pondId:string;type:string;severity:string;message:string;detectedAt:string;arrivedAt:number}
 export function useLiveStream({pondId,siteId}:{pondId?:string;siteId?:string}={}) {
@@ -20,7 +20,20 @@ export function useLiveStream({pondId,siteId}:{pondId?:string;siteId?:string}={}
   const allowedPonds=new Set<string>();const seenAlerts=new Set<string>();let controller=new AbortController();
   const accepts=(p:string,s:string|null)=> (!pondId||p===pondId)&&(!siteId||siteId===s)&&(session.account.role!=='operator'||(!!s&&siteAllowed(session,s)));
   const refresh=()=>{if(Date.now()-lastRefresh>5000){lastRefresh=Date.now();router.refresh();}};
-  const addReading=(t:LiveReading)=>{if(!accepts(t.pondId,t.siteId))return;allowedPonds.add(t.pondId);setReadings(old=>{const previous=old[t.pondId];return previous&&Date.parse(previous.at)>Date.parse(t.at)?old:{...old,[t.pondId]:t};});setSources(old=>[...old.filter(x=>x.pondId!==t.pondId),{pondId:t.pondId,siteId:t.siteId,source:t.source,lastAt:t.at}]);};
+  const addReading=(t:LiveReading,incoming=false)=>{
+   if(!accepts(t.pondId,t.siteId))return;
+   allowedPonds.add(t.pondId);
+   setReadings(old=>{
+    const previous=old[t.pondId];
+    // Replay events arrive now but describe history; the archive's newest row
+    // must not pin the live view to a later simulated date.
+    if(!incoming && previous?.receivedAt)return old;
+    if(!incoming && previous && Date.parse(previous.at)>Date.parse(t.at))return old;
+    if(incoming && t.source!=='sim' && previous && Date.parse(previous.at)>Date.parse(t.at))return old;
+    return {...old,[t.pondId]:incoming?{...t,receivedAt:Date.now()}:t};
+   });
+   setSources(old=>[...old.filter(x=>x.pondId!==t.pondId),{pondId:t.pondId,siteId:t.siteId,source:t.source,lastAt:t.at}]);
+  };
   async function poll(){
    if(stopped||document.hidden||polling)return;polling=true;
    try{
@@ -40,7 +53,7 @@ export function useLiveStream({pondId,siteId}:{pondId?:string;siteId?:string}={}
    stream=new EventSource('/api/backend/live/stream');
    stream.onopen=()=>{attempts=0;lastEvent=Date.now();setConnection('live');setError('');clearInterval(pollTimer);pollTimer=undefined;};
    stream.addEventListener('heartbeat',()=>{lastEvent=Date.now();});
-   stream.addEventListener('telemetry',e=>{lastEvent=Date.now();try{const t=JSON.parse((e as MessageEvent).data) as LiveReading;if(!t.pondId||!t.readings||!Number.isFinite(Date.parse(t.at)))return;addReading(t);}catch{setError('An unreadable live reading was skipped.');}});
+   stream.addEventListener('telemetry',e=>{lastEvent=Date.now();try{const t=JSON.parse((e as MessageEvent).data) as LiveReading;if(!t.pondId||!t.readings||!Number.isFinite(Date.parse(t.at)))return;addReading(t,true);}catch{setError('An unreadable live reading was skipped.');}});
    stream.addEventListener('advisory',e=>{lastEvent=Date.now();try{const a=JSON.parse((e as MessageEvent).data) as Alert;if(!a.id||!a.message||(pondId&&a.pondId!==pondId)||!allowedPonds.has(a.pondId)||seenAlerts.has(a.id))return;seenAlerts.add(a.id);setAlerts(old=>[{...a,arrivedAt:Date.now()},...old].slice(0,30));refresh();}catch{setError('An unreadable alert was skipped.');}});
    stream.onerror=fail;clearInterval(watchdog);watchdog=setInterval(()=>{if(Date.now()-lastEvent>45000)fail();},5000);
   }
