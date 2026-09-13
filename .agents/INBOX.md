@@ -531,3 +531,19 @@ I am now on the backend half: /live/stream SSE, market unlist/relist and
   2. /sim and pond pages: a connection strip per node, Device → MQTT broker → API → Dashboard, animated on each `telemetry` event, with the live pin signals and a Verified/Unverified badge.
   3. Dashboard: devices online x/y per site.
 - Ask the user if anything is unclear, don't guess. Commit via scripts/commit.sh.
+
+## 2026-09-13 claude-backend → claude-web: user's demo fixes (apps/web is yours)
+User asks, priority order:
+1. My activity: "Produce sales" is unclear. Label it "Harvests you sold" (operator) / "Harvest you bought" (buyer); hide empty sections for the role.
+2. Market tabs other than the first don't match the app's UI; restyle them to the same cards/tabs.
+3. Pond page: an "Eligible to sell" card from `GET /market/eligible/pond/:pondId` (I'm building it now, shape below), with one "Approve and list" button → `POST /market/eligible/pond/:pondId/approve` → listed; buyers see it on the market.
+4. /sim: show the day-night cycle (sky/light + DO/pH diurnal swing). It currently doesn't.
+5. /sim public view: ONE device with all sensors instead of separate sensors; link to its circuit (/hardware).
+6. Circuit diagram must be easy to find: link from pond page, add-pond flow and sim.
+7. Finance: show projected profit using `projection` I'm adding to `GET /finance/site/:siteId` (shape below).
+Shapes coming in the next entry. Ask the user if unclear.
+
+## 2026-09-13 claude-backend → claude-web: shapes for items 3 and 7
+- `GET /market/eligible/pond/:pondId` (auth) → `{pondId,label,siteId, readings:{firstAt,lastAt}, checkedJustNow, credits:{checks,flaggedChecks,periodStart,periodEnd,creditableKg,suggestedInrPerTonne,estInr,disposition:"biochar"}, harvests:[{harvestId,harvestedAt,kg,grade,suggestedInrPerKg,estInr}], canApprove, blockers[]}`. Runs the day's verification check automatically; no user input needed.
+- `POST /market/eligible/pond/:pondId/approve` (operator of that site/admin) → 201 `{pondId, batch:{id,reportHash,creditableCo2Kg,anchored,txHash,note}|null, creditNote|null, listedHarvests:[{harvestId,listedKg,availableKg}]}`. Show `creditNote` if batch is null.
+- `GET /finance/site/:siteId` adds `projection:{horizonDays,dailyRevenueInr,dailyRunningCostInr,dailyNetInr,unsoldInventoryInr,projectedRevenueInr,projectedCostInr,projectedProfitInr,breakEvenInDays|null,basis}`. Headline = projectedProfitInr ("Projected 1-year profit"), show `basis` verbatim.

@@ -88,6 +88,51 @@ export async function siteFinance(siteId: string, account: { sub: string; role: 
   const revenueInr = creditInr + produceInr;
   const costInr = buildInr + runningInr;
 
+  // Where this is heading: the last 30 days' sales and running costs carried
+  // forward a year, plus what is already sitting unsold. A projection of the
+  // farm's own recent record, not a forecast of prices.
+  const [recent, stock] = await Promise.all([
+    pool.query(
+      `SELECT
+         (SELECT COALESCE(SUM(r.kg / 1000 * r.inr_per_tonne), 0) FROM retirements r
+            JOIN batches b ON b.id = r.batch_id
+           WHERE b.site_id = $1 AND r.retired_at > now() - interval '30 days') AS credit_inr,
+         (SELECT COALESCE(SUM(o.kg * o.inr_per_kg), 0) FROM produce_orders o
+            JOIN harvest_records h ON h.id = o.harvest_id JOIN ponds p ON p.id = h.pond_id
+           WHERE p.site_id = $1 AND o.placed_at > now() - interval '30 days') AS produce_inr`, [siteId]),
+    pool.query(
+      `SELECT
+         (SELECT COALESCE(SUM(GREATEST(0, b.creditable_co2_kg - COALESCE(
+             (SELECT SUM(r.kg) FROM retirements r WHERE r.batch_id = b.id), 0)) / 1000
+             * COALESCE(b.asking_inr_per_tonne, 1500)), 0)
+            FROM batches b WHERE b.site_id = $1 AND b.listed) AS credit_inr,
+         (SELECT COALESCE(SUM(GREATEST(0, h.listed_kg - h.sold_kg) * COALESCE(h.asking_inr_per_kg, 240)), 0)
+            FROM harvest_records h JOIN ponds p ON p.id = h.pond_id
+           WHERE p.site_id = $1 AND h.listed_kg IS NOT NULL) AS produce_inr`, [siteId]),
+  ]);
+  const activeDaily = pondRows
+    .filter((p) => ponds.rows.find((r) => r.id === p.pondId)?.retired_at === null && p.running.days > 0)
+    .reduce((s, p) => s + (p.running.energyInr + p.running.labourInr + p.running.harvestInr) / p.running.days, 0);
+  const dailyRevenueInr = (Number(recent.rows[0].credit_inr) + Number(recent.rows[0].produce_inr)) / 30;
+  const dailyNetInr = dailyRevenueInr - activeDaily;
+  const inventoryInr = Math.round(Number(stock.rows[0].credit_inr) + Number(stock.rows[0].produce_inr));
+  const currentProfit = revenueInr - costInr;
+  const HORIZON_DAYS = 365;
+  const projection = {
+    horizonDays: HORIZON_DAYS,
+    dailyRevenueInr: Math.round(dailyRevenueInr),
+    dailyRunningCostInr: Math.round(activeDaily),
+    dailyNetInr: Math.round(dailyNetInr),
+    unsoldInventoryInr: inventoryInr,
+    projectedRevenueInr: Math.round(revenueInr + inventoryInr + dailyRevenueInr * HORIZON_DAYS),
+    projectedCostInr: Math.round(costInr + activeDaily * HORIZON_DAYS),
+    projectedProfitInr: Math.round(currentProfit + inventoryInr + dailyNetInr * HORIZON_DAYS),
+    breakEvenInDays: currentProfit + inventoryInr >= 0
+      ? 0
+      : dailyNetInr > 0 ? Math.ceil(-(currentProfit + inventoryInr) / dailyNetInr) : null,
+    basis: 'Last 30 days of sales and current running costs carried forward one year, plus unsold listed credits and produce at their asking prices. Not a price forecast.',
+  };
+
   return {
     site: site[0],
     asOf: new Date(now).toISOString(),
@@ -98,6 +143,7 @@ export async function siteFinance(siteId: string, account: { sub: string; role: 
       totalInr: revenueInr,
     },
     profitInr: revenueInr - costInr,
+    projection,
     ponds: pondRows,
     assumptions: RATES,
     note: 'Recorded sales against the simulated hardware bill and running costs accrued since each pond was added or first harvested, whichever came first. Retirements recorded without a price add nothing to revenue.',

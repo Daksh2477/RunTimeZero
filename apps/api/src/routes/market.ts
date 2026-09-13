@@ -11,6 +11,7 @@ import { Router, type Response } from 'express';
 import { getCertificate, listMarket, retire, setListed } from '../services/market-service.ts';
 import { matchesFor, mine, priceHistory, sellerTrust } from '../services/market-insights.ts';
 import { requireAuth, type Authenticated } from './auth.ts';
+import { approvePond, pondEligibility } from '../services/eligibility.ts';
 import {
   listForSale, listProduce, orderProduce, sellableHarvests,
 } from '../services/produce-service.ts';
@@ -74,6 +75,26 @@ marketRouter.get('/matches', requireAuth, async (req: Authenticated, res) => {
       maxInr: Number.isFinite(maxInr) && maxInr > 0 ? maxInr : undefined,
       tier: typeof req.query.tier === 'string' ? req.query.tier : undefined,
     }));
+  } catch (err) {
+    send(res, err);
+  }
+});
+
+/** What this pond can sell now, from its verified readings. */
+marketRouter.get('/eligible/pond/:pondId', requireAuth, async (req, res) => {
+  try {
+    const e = await pondEligibility(req.params.pondId as string);
+    if (!e) return res.status(404).json({ error: 'No such pond' });
+    res.json(e);
+  } catch (err) {
+    send(res, err);
+  }
+});
+
+/** One approval: issue the verified credit and list the unsold harvest. */
+marketRouter.post('/eligible/pond/:pondId/approve', async (req: Authenticated, res) => {
+  try {
+    res.status(201).json(await approvePond(req.params.pondId as string, req.account!));
   } catch (err) {
     send(res, err);
   }
