@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1100" width="1600" height="1100" font-family="Inter,Segoe UI,Arial,sans-serif">
+<rect width="1600" height="1100" fill="#ffffff"/>
+<text x="40" y="56" font-size="30" font-weight="700" fill="#10231c">AlgaCarbon sensor node — basic kit</text>
+<text x="40" y="90" font-size="17" fill="#4a5a54">One device per pond loop · ESP32 · 4 channels · BOM ₹9,740 · 20.8 Wh/day · 2 days on battery</text>
+<rect x="640" y="170" width="320" height="520" rx="18" fill="#10231c"/>
+<text x="800" y="214" font-size="24" font-weight="700" fill="#fff" text-anchor="middle">U1 · ESP32-WROOM-32</text>
+<text x="800" y="242" font-size="15" fill="#9fd9c3" text-anchor="middle">Signs each reading (HMAC-SHA256)</text>
+<rect x="60" y="262" width="360" height="76" rx="10" fill="#f4f8f6" stroke="#0e7c66" stroke-width="2"/>
+<text x="74" y="288" font-size="16" font-weight="700" fill="#10231c">S1 · pH</text>
+<text x="74" y="310" font-size="13" fill="#4a5a54">Gravity analog pH kit (SEN0161-V2)</text>
+<text x="74" y="329" font-size="13" fill="#0e7c66">ADC1 · 5V · ₹2,900</text>
+<line x1="420" y1="300" x2="640" y2="300" stroke="#0e7c66" stroke-width="3"/>
+<circle cx="640" cy="300" r="6" fill="#0e7c66"/>
+<text x="652" y="305" font-size="15" fill="#fff" text-anchor="start">GPIO34</text>
+<rect x="60" y="392" width="360" height="76" rx="10" fill="#f4f8f6" stroke="#0e7c66" stroke-width="2"/>
+<text x="74" y="418" font-size="16" font-weight="700" fill="#10231c">S3 · Optical density (biomass)</text>
+<text x="74" y="440" font-size="13" fill="#4a5a54">680 nm LED + BPW34 photodiode, 10 mm acrylic f</text>
+<text x="74" y="459" font-size="13" fill="#0e7c66">ADC1 · 3.3V · ₹1,200</text>
+<line x1="420" y1="430" x2="640" y2="430" stroke="#0e7c66" stroke-width="3"/>
+<circle cx="640" cy="430" r="6" fill="#0e7c66"/>
+<text x="652" y="435" font-size="15" fill="#fff" text-anchor="start">GPIO32</text>
+<rect x="60" y="522" width="360" height="76" rx="10" fill="#f4f8f6" stroke="#2b6cb0" stroke-width="2"/>
+<text x="74" y="548" font-size="16" font-weight="700" fill="#10231c">K1 · Paddlewheel running</text>
+<text x="74" y="570" font-size="13" fill="#4a5a54">PC817 optocoupler off the contactor aux contac</text>
+<text x="74" y="589" font-size="13" fill="#2b6cb0">GPIO · 3.3V · ₹25</text>
+<line x1="420" y1="560" x2="640" y2="560" stroke="#2b6cb0" stroke-width="3"/>
+<circle cx="640" cy="560" r="6" fill="#2b6cb0"/>
+<text x="652" y="565" font-size="15" fill="#fff" text-anchor="start">GPIO27</text>
+<rect x="1180" y="262" width="360" height="76" rx="10" fill="#f4f8f6" stroke="#b7791f" stroke-width="2"/>
+<text x="1194" y="288" font-size="16" font-weight="700" fill="#10231c">S2 · Water temperature</text>
+<text x="1194" y="310" font-size="13" fill="#4a5a54">DS18B20 waterproof probe + 4.7 kΩ pull-up</text>
+<text x="1194" y="329" font-size="13" fill="#b7791f">OneWire · 3.3V · ₹190</text>
+<line x1="1180" y1="300" x2="960" y2="300" stroke="#b7791f" stroke-width="3"/>
+<circle cx="960" cy="300" r="6" fill="#b7791f"/>
+<text x="948" y="305" font-size="15" fill="#fff" text-anchor="end">GPIO4</text>
+<rect x="1180" y="392" width="360" height="76" rx="10" fill="#f4f8f6" stroke="#2b6cb0" stroke-width="2"/>
+<text x="1194" y="418" font-size="16" font-weight="700" fill="#10231c">M1 · Pulls a sample through the flow cell</text>
+<text x="1194" y="440" font-size="13" fill="#4a5a54">12 V peristaltic pump + IRLZ44N MOSFET</text>
+<text x="1194" y="459" font-size="13" fill="#2b6cb0">GPIO · 12V · ₹1,160</text>
+<line x1="1180" y1="430" x2="960" y2="430" stroke="#2b6cb0" stroke-width="3"/>
+<circle cx="960" cy="430" r="6" fill="#2b6cb0"/>
+<text x="948" y="435" font-size="15" fill="#fff" text-anchor="end">GPIO26</text>
+<rect x="1180" y="522" width="360" height="76" rx="10" fill="#f4f8f6" stroke="#2b6cb0" stroke-width="2"/>
+<text x="1194" y="548" font-size="16" font-weight="700" fill="#10231c">D1 · Blinks on publish — field diagnostic</text>
+<text x="1194" y="570" font-size="13" fill="#4a5a54">LED + 330 Ω</text>
+<text x="1194" y="589" font-size="13" fill="#2b6cb0">GPIO · 3.3V · ₹5</text>
+<line x1="1180" y1="560" x2="960" y2="560" stroke="#2b6cb0" stroke-width="3"/>
+<circle cx="960" cy="560" r="6" fill="#2b6cb0"/>
+<text x="948" y="565" font-size="15" fill="#fff" text-anchor="end">GPIO13</text>
+<text x="60" y="750" font-size="18" font-weight="700" fill="#c53030">Power</text>
+<rect x="60" y="780" width="240" height="70" rx="10" fill="#fff5f5" stroke="#c53030" stroke-width="2"/>
+<text x="72" y="808" font-size="15" font-weight="700" fill="#10231c">PS1</text>
+<text x="72" y="830" font-size="12" fill="#4a5a54">10 W solar panel</text>
+<rect x="340" y="780" width="240" height="70" rx="10" fill="#fff5f5" stroke="#c53030" stroke-width="2"/>
+<text x="352" y="808" font-size="15" font-weight="700" fill="#10231c">PS2</text>
+<text x="352" y="830" font-size="12" fill="#4a5a54">12 V 7 Ah SMF battery</text>
+<line x1="300" y1="815" x2="340" y2="815" stroke="#c53030" stroke-width="3" marker-end="url(#a)"/>
+<rect x="620" y="780" width="240" height="70" rx="10" fill="#fff5f5" stroke="#c53030" stroke-width="2"/>
+<text x="632" y="808" font-size="15" font-weight="700" fill="#10231c">PS3</text>
+<text x="632" y="830" font-size="12" fill="#4a5a54">10 A PWM solar charge controller</text>
+<line x1="580" y1="815" x2="620" y2="815" stroke="#c53030" stroke-width="3" marker-end="url(#a)"/>
+<rect x="900" y="780" width="240" height="70" rx="10" fill="#fff5f5" stroke="#c53030" stroke-width="2"/>
+<text x="912" y="808" font-size="15" font-weight="700" fill="#10231c">PS4</text>
+<text x="912" y="830" font-size="12" fill="#4a5a54">LM2596 buck converter 12 V → 5 V</text>
+<line x1="860" y1="815" x2="900" y2="815" stroke="#c53030" stroke-width="3" marker-end="url(#a)"/>
+<path d="M1020 780 V740 H920 V690" fill="none" stroke="#c53030" stroke-width="3"/>
+<text x="932" y="720" font-size="14" fill="#c53030">5 V / 3.3 V</text>
+<rect x="60" y="984" width="250" height="52" rx="26" fill="#e6f4ee" stroke="#0e7c66" stroke-width="2"/>
+<text x="185" y="1015" font-size="15" font-weight="600" fill="#10231c" text-anchor="middle">ESP32 (Wi-Fi / LoRa)</text>
+<rect x="360" y="984" width="250" height="52" rx="26" fill="#e6f4ee" stroke="#0e7c66" stroke-width="2"/>
+<text x="485" y="1015" font-size="15" font-weight="600" fill="#10231c" text-anchor="middle">MQTT broker</text>
+<line x1="310" y1="1010" x2="360" y2="1010" stroke="#0e7c66" stroke-width="3" marker-end="url(#g)"/>
+<rect x="660" y="984" width="250" height="52" rx="26" fill="#e6f4ee" stroke="#0e7c66" stroke-width="2"/>
+<text x="785" y="1015" font-size="15" font-weight="600" fill="#10231c" text-anchor="middle">AlgaCarbon API</text>
+<line x1="610" y1="1010" x2="660" y2="1010" stroke="#0e7c66" stroke-width="3" marker-end="url(#g)"/>
+<rect x="960" y="984" width="250" height="52" rx="26" fill="#e6f4ee" stroke="#0e7c66" stroke-width="2"/>
+<text x="1085" y="1015" font-size="15" font-weight="600" fill="#10231c" text-anchor="middle">Live dashboard</text>
+<line x1="910" y1="1010" x2="960" y2="1010" stroke="#0e7c66" stroke-width="3" marker-end="url(#g)"/>
+<text x="60" y="966" font-size="18" font-weight="700" fill="#0e7c66">Device → dashboard: signed reading every 30 s → verified → stored → streamed live</text>
+<defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#c53030"/></marker><marker id="g" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#0e7c66"/></marker></defs>
+</svg>

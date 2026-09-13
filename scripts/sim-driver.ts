@@ -205,8 +205,27 @@ function dayOfYear(d: Date): number {
   return Math.floor((d.getTime() - start) / 86_400_000);
 }
 
+/*
+ * REMOTE MODE: drive the deployed site from a laptop.
+ *
+ *   SIM_REMOTE=1 SIM_API_URL=https://algacarbon.itzzsuperrr.me/api \
+ *     SIM_API_USER=<operator or admin> SIM_API_PASSWORD=<password> npm run sim
+ *
+ * Ponds and device keys come from that site's API instead of a local database,
+ * so the laptop acts as every pond's device and its signatures verify there.
+ */
+const REMOTE = process.env.SIM_REMOTE === '1';
+
+async function loadRemotePonds(): Promise<Awaited<ReturnType<typeof loadPonds>>> {
+  const res = await fetch(`${API_URL}/live/devices`);
+  if (!res.ok) throw new Error(`GET /live/devices -> ${res.status}`);
+  const devices = (await res.json()) as { pondId: string; pondLabel: string; nodeIndex: number; areaM2: number; depthM: number; lat: number }[];
+  return devices.filter((d) => d.nodeIndex === 0)
+    .map((d) => ({ id: d.pondId, label: d.pondLabel, areaM2: d.areaM2, depthM: d.depthM, lat: d.lat }));
+}
+
 async function main() {
-  const ponds = await loadPonds();
+  const ponds = REMOTE ? await loadRemotePonds() : await loadPonds();
   if (ponds.length === 0) {
     console.error('no ponds found — run `npm run db:seed` first');
     process.exit(1);
@@ -258,6 +277,19 @@ async function main() {
   // The simulator is each pond's device, so it signs with that device's key.
   const keys = new Map<string, { id: string; secret: string }>();
   const loadKeys = async () => {
+    if (REMOTE) {
+      const res = await fetch(`${API_URL}/live/devices`);
+      const devices = (await res.json()) as { id: string; pondId: string; nodeIndex: number }[];
+      for (const d of devices.filter((x) => x.nodeIndex === 0 && !keys.has(x.pondId))) {
+        const cfg = await fetch(`${API_URL}/land/devices/${d.id}/config`, {
+          headers: { Authorization: `Bearer ${apiToken}` },
+        });
+        if (!cfg.ok) { console.warn(`[sim] no key for ${d.id}: ${cfg.status} (sign in as operator/admin)`); continue; }
+        const body = (await cfg.json()) as { secret: string };
+        keys.set(d.pondId, { id: d.id, secret: body.secret });
+      }
+      return;
+    }
     await ensureAllDevices();
     const { rows } = await apiPool.query('SELECT id, pond_id, secret FROM devices WHERE node_index = 0');
     for (const r of rows) keys.set(r.pond_id, { id: r.id, secret: r.secret });
@@ -306,7 +338,7 @@ async function main() {
   setInterval(async () => {
     try {
       const known = new Set(twins.map((t) => t.meta.id));
-      const fresh = (await loadPonds()).filter((p) => !known.has(p.id));
+      const fresh = (REMOTE ? await loadRemotePonds() : await loadPonds()).filter((p) => !known.has(p.id));
       if (!fresh.length) return;
       await loadKeys();
       for (const p of fresh) {

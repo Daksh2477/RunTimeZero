@@ -28,6 +28,9 @@ export interface Device {
   topic: string;
   lastSeenAt: string | null;
   online: boolean;
+  areaM2: number;
+  depthM: number;
+  lat: number;
 }
 
 export function topicFor(pondId: string): string {
@@ -90,8 +93,8 @@ export async function listDevices(filter: { pondId?: string; siteId?: string } =
   if (filter.pondId) { params.push(filter.pondId); where += ` AND p.id = $${params.length}`; }
   if (filter.siteId) { params.push(filter.siteId); where += ` AND p.site_id = $${params.length}`; }
   const { rows } = await pool.query(
-    `SELECT d.id, d.pond_id, d.node_index, d.kit, d.last_seen_at, p.label
-       FROM devices d JOIN ponds p ON p.id = d.pond_id
+    `SELECT d.id, d.pond_id, d.node_index, d.kit, d.last_seen_at, p.label, p.area_m2, p.depth_m, s.lat
+       FROM devices d JOIN ponds p ON p.id = d.pond_id JOIN sites s ON s.id = p.site_id
       WHERE ${where} ORDER BY p.label, d.node_index`,
     params,
   );
@@ -104,6 +107,9 @@ export async function listDevices(filter: { pondId?: string; siteId?: string } =
     topic: topicFor(r.pond_id),
     lastSeenAt: r.last_seen_at?.toISOString() ?? null,
     online: r.last_seen_at !== null && Date.now() - r.last_seen_at.getTime() < ONLINE_WITHIN_MS,
+    areaM2: Number(r.area_m2),
+    depthM: Number(r.depth_m),
+    lat: Number(r.lat),
   }));
 }
 

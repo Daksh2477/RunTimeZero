@@ -19,7 +19,7 @@ export default async function PondPage({ params }: { params: Promise<{ id: strin
   const value = (key: string) => latestCheck?.[key] == null ? null : Number(latestCheck[key]);
   return <main className="wrap">
     <Link className="back" href="/console">← Back to my ponds</Link>
-    <div className="page-heading"><div><p className="eyebrow">POND DETAILS</p><h1>{pond.label}</h1><p>{pond.siteName} · {pond.areaM2.toLocaleString('en-IN')} square metres</p></div><div className="heading-actions"><Link className="button secondary" href={`/sim?pond=${id}`}>Plan ahead →</Link><RefreshControls auto /></div></div>
+    <div className="page-heading"><div><p className="eyebrow">POND DETAILS</p><h1>{pond.label}</h1><p>{pond.siteName} · {pond.areaM2.toLocaleString('en-IN')} square metres</p></div><div className="heading-actions"><Link className="button secondary" href={`/sim?pond=${id}`}>Plan ahead →</Link><Link className="button secondary" href="/hardware">Device & circuit →</Link><RefreshControls auto /></div></div>
     <LiveDashboard pondId={id} siteId={pond.siteId} areaM2={pond.areaM2} depthM={pond.depthM}/>
     <RelatedLinks pondId={id} siteId={pond.siteId} checkId={latestCheck?.id ? String(latestCheck.id) : undefined}/><Breadcrumbs items={[{href:"/farm",label:"My ponds"},{href:`/console/site/${pond.siteId}`,label:pond.siteName},{href:`/console/pond/${id}`,label:pond.label}]}/>
     <div className="detail-grid">

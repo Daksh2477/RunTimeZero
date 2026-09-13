@@ -33,6 +33,7 @@ const NAV = [
   { href: '/console/researcher', label: 'Research data', icon: Flask },
   { href: '/verify', label: 'Carbon reports', icon: Shield },
   { href: '/sim', label: 'Simulator', icon: Chart },
+  { href: '/hardware', label: 'Hardware', icon: Chart },
 ] as const;
 
 export function Navigation() {
@@ -50,7 +51,7 @@ export function Navigation() {
    * like it had lost its way in. Show the signed-out set meanwhile; it is
    * the correct answer for anyone who is in fact signed out.
    */
-  const visible = role ? NAV.filter((n) => canAccess(role, n.href)) : NAV.filter(n => ['/console/market','/verify','/sim'].includes(n.href));
+  const visible = role ? NAV.filter((n) => canAccess(role, n.href)) : NAV.filter(n => ['/console/market','/verify','/sim','/hardware'].includes(n.href));
   const phone = role === 'admin' ? [{href:'/console/admin',label:'Admin',icon:Shield}, ...visible.filter(n=>n.href!=='/console/researcher')] : role === 'buyer' ? [{href:'/console/investor',label:'Invest',icon:Chart}, ...visible] : visible;
   const active = visible.filter(n => path === n.href || path.startsWith(n.href + '/')).sort((a,b) => b.href.length - a.href.length)[0]?.href;
 
