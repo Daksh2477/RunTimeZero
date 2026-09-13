@@ -37,3 +37,4 @@ and merge at the end.
 | Claude | RELEASED: the temporary apps/web claims above (farm/sim/components/globals.css and the mobile + motion pass). apps/web/** is Codex's again. | — | 2026-09-12T22:10Z |
 
 | Codex web-b914 | Resume frontend ownership; implement brief T1–T7 | `apps/web/**` | 2026-09-12T23:14:47.173517+00:00 |
+| Claude (takeover) | Codex is down; taking over apps/web per user: finish Codex WIP + T2/T4 remainder, finance UI | `apps/web/**` | 2026-09-13T02:00Z |
