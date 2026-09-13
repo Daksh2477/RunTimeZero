@@ -1,5 +1,9 @@
 # Running AlgaCarbon locally
 
+> **Setting up from scratch?** Follow [Run it on your laptop](../README.md#run-it-on-your-laptop)
+> in the README — it covers macOS, Linux and Windows and the full seed order. This page keeps the
+> command-line verification checks and the Wokwi node.
+
 Everything runs on one laptop. No servers, no cloud, no hosting.
 
 ---
