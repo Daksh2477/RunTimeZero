@@ -11,6 +11,7 @@ import {
 } from './routes/auth.ts';
 import { startMqttIngest } from './ingest/mqtt.ts';
 import { batchesRouter } from './routes/batches.ts';
+import { financeRouter } from './routes/finance.ts';
 import { fleetRouter } from './routes/fleet.ts';
 import { harvestsRouter } from './routes/harvests.ts';
 import { investRouter } from './routes/invest.ts';
@@ -90,6 +91,7 @@ app.use('/verify', verifyRouter);
 app.use('/simulate', simulateRouter);
 app.use('/batches', writesNeedAuth, batchesRouter);
 app.use('/market', writesNeedAuth, marketRouter);
+app.use('/finance', financeRouter);
 app.use('/research', writesNeedAuth, researchRouter);
 app.use('/invest', writesNeedAuth, investRouter);
 app.use('/summary', summaryRouter);

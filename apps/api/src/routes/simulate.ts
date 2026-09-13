@@ -15,6 +15,7 @@ import { WasmPond, physics_ceiling_co2_kg } from '../../../../packages/physics/p
 import { requireAuth, type Authenticated } from './auth.ts';
 import { RequestError, validatePondId } from '../reconcile/validation.ts';
 import { projectPond } from '../services/projection.ts';
+import { RATES } from '../services/economics.ts';
 
 export const simulateRouter = Router();
 
@@ -118,21 +119,11 @@ simulateRouter.post('/', (req, res) => {
 
   // Blunt economics. Every rate is stated in the response so the caller can
   // disagree with our assumptions rather than with our arithmetic.
-  const RATES = {
-    biofertiliserInrPerKg: 12,
-    paddlewheelWPerM2: 0.5,
-    tariffInrPerKwh: 8,
-    creditInrPerTonne: 1500,
-    labourInrPerDay: 400,
-    burialInrPerKg: 2,
-  };
 
   const paddlewheelKwh = (RATES.paddlewheelWPerM2 * areaM2 * 24 * days) / 1000;
   const energyCost = paddlewheelKwh * RATES.tariffInrPerKwh;
   const labourCost = RATES.labourInrPerDay * days * Math.max(1, areaM2 / 20_000);
-  // Harvesting and drying dominate real operating cost, and the method chosen
-  // swings it by an order of magnitude. We use a mid-range figure and say so.
-  const harvestCost = totalHarvestKg * 6;
+  const harvestCost = totalHarvestKg * RATES.harvestInrPerKg;
   const totalCost = energyCost + labourCost + harvestCost;
 
   /*
