@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { LiveDashboard } from '@/components/live-dashboard';
 import { getFleet, type FleetPond, type FleetSite } from '@/lib/api';
 import { RefreshControls } from '@/components/refresh-controls';
 import { FarmPonds } from '@/components/farm-ponds';
@@ -37,7 +36,7 @@ export default async function FarmPage() {
   if (failed) {
     return (
       <main className="wrap farm">
-        <LiveDashboard/><div className="farm-offline">
+        <div className="farm-offline">
           <h1>Cannot reach your ponds right now</h1>
           <p>
             We could not load the pond records. This does not tell us whether the sensors or ponds are working normally.
@@ -50,7 +49,7 @@ export default async function FarmPage() {
 
   return (
     <main className="wrap farm">
-      <div className="page-heading"><div><p className="eyebrow">POND MONITORING</p><h1>Your ponds today</h1><p>Start with the alerts, then check the latest readings.</p></div><RefreshControls auto /></div>
+      <div className="page-heading"><div><p className="eyebrow">POND MONITORING</p><h1>Your ponds today</h1><p>Start with the alerts, then check the latest readings.</p></div><RefreshControls /></div>
       <section className={`farm-verdict ${ponds.some(({ pond }) => pondState(pond).tone === 'bad') ? 'is-bad' : needAttention.length ? 'is-watch' : ''}`}>
         <h2>{!ponds.length ? 'No ponds have been added yet' : needAttention.length ? `${needAttention.length} ${needAttention.length === 1 ? 'pond needs' : 'ponds need'} a closer look` : 'No urgent alerts in the available records'}</h2>
         <p>{!ponds.length ? 'Explore a sample pond while your site is being configured.' : 'Readings can be old or incomplete. Check the time shown on each pond before acting.'}</p>
@@ -69,7 +68,6 @@ export default async function FarmPage() {
         <span className="farm-manage-go" aria-hidden="true">→</span>
       </Link>
 
-      <LiveDashboard/>
       <FarmPonds sites={sites} />
       <FinancePanel />
 

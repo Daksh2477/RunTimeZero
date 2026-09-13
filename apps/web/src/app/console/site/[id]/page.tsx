@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { LiveDashboard } from '@/components/live-dashboard';
 import { RelatedLinks, Breadcrumbs } from '@/components/related-links';
 import { serverApiFetch } from '@/lib/server-api';
 import { SiteConnections } from '@/components/site-connections';
@@ -15,7 +14,6 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
   let e: Economics | null = null;
   try { const r = await serverApiFetch(`/fleet/site/${encodeURIComponent(id)}/economics`, { cache: 'no-store', signal: AbortSignal.timeout(8000) }); if (r.ok) e = await r.json(); } catch { /* Render a recoverable connection state below. */ }
   return <main className="wrap"><Link className="back" href="/console">← Back to my ponds</Link><div className="page-heading"><div><p className="eyebrow">FARM MONEY</p><h1>Know where the money goes.</h1><p>Costs, revenue and profit first, then the expense records entered for this farm.</p></div><RefreshControls /></div>
-    <LiveDashboard siteId={id}/>
     <FinancePanel siteId={id}/>
     <RelatedLinks siteId={id}/><Breadcrumbs items={[{href:"/farm",label:"My ponds"},{href:`/console/site/${id}`,label:"Farm"}]}/>
     {!e ? <EmptyState title="We couldn’t load these costs"><p>The connection may be unavailable. Refresh to try again.</p></EmptyState> : !e.breakdown.length ? <EmptyState title="No expenses recorded yet"><p>Once farm expenses are added, you’ll see the total and a breakdown here. Missing expenses do not mean the farm costs nothing to run.</p><Link className="button secondary" href="/sim">Explore sample running costs →</Link></EmptyState> : <>

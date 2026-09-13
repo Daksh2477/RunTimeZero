@@ -19,6 +19,7 @@ import Link from 'next/link';
 import type { FleetPond, FleetSite } from '@/lib/api';
 import { PondCard } from '@/components/pond-card';
 import { pondState, TONE_RANK } from '@/lib/pond-state';
+import { useLiveStream } from '@/lib/use-live-stream';
 
 type Filter = 'all' | 'attention' | 'waiting';
 
@@ -26,8 +27,33 @@ const needsAttention = (p: FleetPond) => pondState(p).tone !== 'ok';
 /** No verdict yet, or one the engine could not stand behind. */
 const pendingCheck = (p: FleetPond) => !p.verdict || p.verdict === 'insufficient_evidence';
 
-export function FarmPonds({ sites }: { sites: FleetSite[] }) {
+export function FarmPonds({ sites: initialSites }: { sites: FleetSite[] }) {
   const [filter, setFilter] = useState<Filter>('all');
+  // Live readings overlay the server snapshot in place, so the cards update
+  // without a page refresh (which flickered the whole list every 30 s).
+  const live = useLiveStream();
+  const sites = useMemo(() => {
+    const byPond = new Map(live.readings.map((r) => [r.pondId, r]));
+    return initialSites.map((site) => ({
+      ...site,
+      ponds: site.ponds.map((pond) => {
+        const r = byPond.get(pond.id);
+        if (!r || (pond.lastReadingAt && Date.parse(pond.lastReadingAt) >= Date.parse(r.at))) return pond;
+        return {
+          ...pond,
+          lastReadingAt: r.at,
+          latest: {
+            ...(pond.latest ?? {}),
+            temperatureC: r.readings.tempC,
+            ph: r.readings.ph,
+            dissolvedOxygenMgL: r.readings.doMgL,
+            opticalDensity: r.readings.od,
+            mixing: r.readings.paddlewheelOn ?? pond.latest?.mixing ?? null,
+          },
+        } as FleetPond;
+      }),
+    }));
+  }, [initialSites, live.readings]);
   const [search, setSearch] = useState('');
 
   const all = useMemo(() => sites.flatMap((s) => s.ponds), [sites]);
