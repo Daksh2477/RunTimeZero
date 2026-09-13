@@ -29,6 +29,7 @@ import { MarketActivity, MarketMatches, PriceHistory } from '@/components/market
 import { MarketListingForm } from '@/components/market-listing-form';
 import { ResourceState } from '@/components/detail-sheet';
 import { useRole } from '@/lib/session';
+import { useApiData } from '@/lib/use-api-data';
 
 const inr = (v: number) =>
   v >= 10_000_000 ? `₹${(v / 10_000_000).toFixed(2)} Cr`
@@ -39,6 +40,8 @@ type Tab = 'credits' | 'produce' | 'activity' | 'create' | 'matches';
 
 export default function MarketPage() {
   const {role}=useRole();
+  const activitySupport=useApiData<unknown>(role?'/market/mine':null);
+  const matchSupport=useApiData<unknown>(role?'/market/matches':null);
   const [loading,setLoading]=useState(true),[error,setError]=useState(''),[revision,setRevision]=useState(0);
   const [tier,setTier]=useState(''),[disposition,setDisposition]=useState(''),[refused,setRefused]=useState(''),[minimum,setMinimum]=useState(''),[sort,setSort]=useState('available');
   const [tab, setTab] = useState<Tab>('credits');
@@ -111,7 +114,7 @@ export default function MarketPage() {
         </div>
 
         <div className="flex flex-wrap gap-2 rounded-2xl border border-border/60 bg-card/40 p-2 backdrop-blur-sm">
-          {(['credits', 'produce', ...(role?['activity','matches']:[]), ...(['operator','admin'].includes(role??'')?['create']:[])] as Tab[]).map((t) => (
+          {(['credits', 'produce', ...(role&&!activitySupport.missing?['activity']:[]), ...(role&&!matchSupport.missing?['matches']:[]), ...(['operator','admin'].includes(role??'')?['create']:[])] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"

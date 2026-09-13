@@ -33,12 +33,13 @@ export default function InvestorConsole() {
   const [selected, setSelected] = useState<Listing | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = () => {
-    getMarket().then((l) => { setListings(l); setSelected((s) => s ?? l[0] ?? null); })
-      .catch((e) => setError(e.message));
-    getOpportunities().then(setFarms).catch(() => setFarms([]));
+  const load = async () => {
+    setError(null);
+    const [market,opportunities]=await Promise.allSettled([getMarket(),getOpportunities()]);
+    if(market.status==='fulfilled'){setListings(market.value);setSelected(s=>market.value.find(l=>l.batchId===s?.batchId)??market.value[0]??null);}else setError(market.reason instanceof Error?market.reason.message:'Market unavailable.');
+    setFarms(opportunities.status==='fulfilled'?opportunities.value:[]);
   };
-  useEffect(load, []);
+  useEffect(()=>{void load();}, []);
 
   const totalAvailable = (listings ?? []).reduce((s, l) => s + l.availableKg, 0);
   const totalRetired = (listings ?? []).reduce((s, l) => s + l.retiredKg, 0);
@@ -48,7 +49,7 @@ export default function InvestorConsole() {
       <main className="mx-auto max-w-[1800px] px-4 py-10 sm:px-6">
         <p className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 text-sm">
           Could not reach the market: {error}
-        </p>
+        </p><button className="button secondary" onClick={()=>void load()}>Try again</button>
       </main>
     );
   }
@@ -97,6 +98,7 @@ export default function InvestorConsole() {
         </section>
 
         <RetirePanel
+          key={selected?.batchId??"empty"}
           listing={selected}
           onRetired={load}
           onRetire={retireCredits}

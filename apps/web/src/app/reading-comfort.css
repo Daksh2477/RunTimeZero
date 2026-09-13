@@ -205,3 +205,6 @@ body .live-pond-scene .pond-landscape { display: block; }
 .circuit-diagram { display: block; width: 100%; min-width: 660px; }
 .hardware-parts { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,280px),1fr)); gap: 12px; }
 body .hardware .summary-card .num { font-size: clamp(1.2rem,3vw,2rem); }
+body .detail-sheet .land-edit { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin: 0; padding: 0; }
+body .detail-sheet .land-edit-actions { position: sticky; bottom: 0; background: var(--card); padding-block: 12px; z-index: 1; }
+@media(max-width:560px) { body .detail-sheet .land-edit { grid-template-columns: 1fr; } body .detail-sheet .land-edit > * { grid-column: 1; } }

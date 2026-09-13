@@ -18,6 +18,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { DetailSheet } from '@/components/detail-sheet';
 
 const BASE = '/api/backend';
 
@@ -238,15 +239,14 @@ export default function LandPage() {
 
           <dl className="land-preview">
             <div><dt>Area</dt><dd>{area.toLocaleString('en-IN')} m²</dd></div>
-            <div><dt>Sensors</dt><dd>1 sonde + node</dd></div>
-            <div><dt>Kit cost</dt><dd>₹32,500</dd></div>
+            <div><dt>Sensor sizing</dt><dd><Link href={`/hardware?site=${siteId}`}>Open hardware plan →</Link></dd></div>
           </dl>
 
           <p className="helper">
             {form.widthM >= 40
               ? 'Wide enough for satellite verification, which is the cheapest evidence there is.'
               : `At ${form.widthM} m wide, satellites cannot resolve this pond — `
-                + 'it will be verified by drone or weighbridge. Above 40 m wide they can.'}
+                + 'a drone or weighbridge record is needed. Above 40 m wide, satellite evidence may be usable.'}
           </p>
 
           <button type="button" className="button" disabled={busy || !form.label.trim()}
@@ -287,7 +287,7 @@ export default function LandPage() {
               </div>
 
               {editingId === p.id && draft && (
-                <form className="land-edit" onSubmit={(e) => { e.preventDefault(); void saveEdit(p); }}>
+                <DetailSheet title={`Edit ${p.label}`} onClose={()=>{setEditingId(null);setDraft(null);}}><form className="land-edit" onSubmit={(e) => { e.preventDefault(); void saveEdit(p); }}>
                   <label><span>Name</span>
                     <input value={draft.label}
                       onChange={(e) => setDraft({ ...draft, label: e.target.value })} />
@@ -355,6 +355,7 @@ export default function LandPage() {
                         : `at ${draft.widthM} m wide, verification falls back to drone or weighbridge.`}
                   </p>
 
+                  {error&&<p className="err" role="alert">{error}</p>}
                   <div className="land-edit-actions">
                     <button type="submit" className="button small" disabled={busy}>
                       {busy ? 'Saving…' : 'Save changes'}
@@ -364,7 +365,7 @@ export default function LandPage() {
                       Discard
                     </button>
                   </div>
-                </form>
+                </form></DetailSheet>
               )}
             </article>
           ))}
