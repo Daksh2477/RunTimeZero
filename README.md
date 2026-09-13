@@ -208,10 +208,14 @@ break a pond on purpose), start the pond simulator in a third tab while the API 
 
 ```bash
 # Tab 3 — simulated sensor nodes publishing over MQTT
-npm run sim -- --speed 200
+npm run sim -- --speed 1 --backdate 75
 ```
 
-It catches up on recent days quickly, then publishes in real time. The simulator and the API only
+`--speed 1` publishes one simulated hour per pond every second, so readings move on screen and a
+full day-night cycle takes 24 seconds. `--backdate 75` starts 75 days back, which gives about 30
+minutes of continuous data before it reaches the present and slows to one reading per real hour.
+Don't use high speeds like 48 or 200: the public broker drops the connection under that burst and
+readings are silently lost. Keep `--backdate` under 90; older readings are refused. The simulator and the API only
 talk through the broker; the verifier never sees the simulator's ground truth.
 
 ### Accounts
