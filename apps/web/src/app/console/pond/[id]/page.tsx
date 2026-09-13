@@ -12,14 +12,14 @@ export const dynamic = 'force-dynamic';
 export default async function PondPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const data = await getPond(id);
-  if (!data) return <main className="wrap"><Link className="back" href="/console">← Back to my ponds</Link><EmptyState title="We couldn’t load this pond"><p>The pond may not exist, or its connection is temporarily unavailable.</p><RefreshControls /></EmptyState></main>;
+  if (!data) return <main className="wrap"><Link className="back" href="/console">← Back to my ponds</Link><EmptyState title="We couldn’t load this pond"><p>The pond may not exist, or its connection is temporarily unavailable.</p><RefreshControls auto /></EmptyState></main>;
   const { pond, telemetry, observations, harvests, advisories, latestCheck } = data;
   const verdict = latestCheck ? String(latestCheck.verdict) : null;
   const status = statusInfo(verdict);
   const value = (key: string) => latestCheck?.[key] == null ? null : Number(latestCheck[key]);
   return <main className="wrap">
     <Link className="back" href="/console">← Back to my ponds</Link>
-    <div className="page-heading"><div><p className="eyebrow">POND DETAILS</p><h1>{pond.label}</h1><p>{pond.siteName} · {pond.areaM2.toLocaleString('en-IN')} square metres</p></div><div className="heading-actions"><Link className="button secondary" href={`/sim?pond=${id}`}>Plan ahead →</Link><Link className="button secondary" href="/hardware">Device & circuit →</Link><RefreshControls /></div></div>
+    <div className="page-heading"><div><p className="eyebrow">POND DETAILS</p><h1>{pond.label}</h1><p>{pond.siteName} · {pond.areaM2.toLocaleString('en-IN')} square metres</p></div><div className="heading-actions"><Link className="button secondary" href={`/sim?pond=${id}`}>Plan ahead →</Link><Link className="button secondary" href="/hardware">Device & circuit →</Link><RefreshControls auto /></div></div>
     <EligibleToSell pondId={id}/>
     <RelatedLinks pondId={id} siteId={pond.siteId} checkId={latestCheck?.id ? String(latestCheck.id) : undefined}/><Breadcrumbs items={[{href:"/farm",label:"My ponds"},{href:`/console/site/${pond.siteId}`,label:pond.siteName},{href:`/console/pond/${id}`,label:pond.label}]}/>
     <div className="detail-grid">

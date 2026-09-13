@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { useRole } from '@/lib/session';
 import { useApiData } from '@/lib/use-api-data';
 import { ResourceState } from './detail-sheet';
@@ -11,8 +12,10 @@ interface Mine {role:string;siteId:string|null;site:SiteFinance|null;spend:{cred
 export function FinancePanel({siteId}:{siteId?:string}) {
  // Wait for the session read so the first client render matches the server's empty one.
  const {role:signedIn,ready}=useRole();const role=ready?signedIn:null;
- const mine=useApiData<Mine>(role&&!siteId?'/finance/mine':null);
- const site=useApiData<SiteFinance>(role&&siteId?`/finance/site/${encodeURIComponent(siteId)}`:null);
+ const [revision,setRevision]=useState(0);
+ useEffect(()=>{const timer=setInterval(()=>{if(document.visibilityState==='visible')setRevision(n=>n+1);},30000);return()=>clearInterval(timer);},[]);
+ const mine=useApiData<Mine>(role&&!siteId?'/finance/mine':null,revision);
+ const site=useApiData<SiteFinance>(role&&siteId?`/finance/site/${encodeURIComponent(siteId)}`:null,revision);
  if(!role||mine.missing||site.missing)return null;
  const r=siteId?site:mine;const f=siteId?site.data:mine.data?.site;const spend=mine.data?.spend;
  return <section className="panel"><h2>Costs, revenue and profit</h2><ResourceState {...r}/>

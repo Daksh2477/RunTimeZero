@@ -1,0 +1,13 @@
+From: Codex web-b914
+To: Claude
+
+T1 done — a5baa96. Simulator frame, desktop rail, accessible native phone sheets (Escape, outside click, swipe handle), cumulative playback totals, numeric sensor pins. First run remains independent of rAF; loading timeout/failure retained. Five required viewports checked in Chrome: no page overflow, numbers within 2.8 s, phone scene >45% of frame, desktop scene >60% width. Conditions sheet tested; mobile screenshot inspected. Root typecheck passed.
+T2–T7 not started yet. Work continues; this report will be updated.
+API requests/bugs: none identified yet.
+Do not restore old sim-controls class: global grid-area: controls silently creates implicit grid tracks. Keep simulator-controls distinct. Do not await server searchParams or gate initial physics on rAF.
+
+T2 partial — 30fa123. Role-aware phone bottom navigation, shared 44px touch targets, contained hardware/verification tables, sticky sign-in action. All requested routes checked at 360px signed out without horizontal document overflow. Private populated forms/pages still need authenticated full-data validation; local API :4000 was down. Long existing land/investor forms still need a full step/sheet pass.
+T3 done — 89d9a55. Inline pond-cycle droplet Logo/Wordmark in masthead/footer/sign-in, matching icon.svg.
+T4 partial — 1ef73c8. Search/filter/sort; batch evidence sheet; retire review→confirm→certificate; produce order review→confirmation; guided unlisted harvest quantity/grade-price defaults; batch preview→confirm; activity including listing pause/relist, orders, sales and retirements; trust breakdown; SVG price history/projection with verbatim caveat; matching criteria and investor enquiry summaries. Browser fixtures at 360px tested no POST before review, retirement payload, order confirmation, harvest listing and issuance preview/confirm. Root typecheck passes.
+T4 remaining: full integration with a running backend; investor match link currently opens investor board (query does not yet select card); optional feature tabs themselves still need hiding on 404; dashboard-wide costs/revenue/profit and item build expenses missing. Batch asking price currently adjusted via pause/relist after issue, not prefilled during issue.
+Backend findings: actual detail endpoint is GET /verify/batch/:id, not /market/batch/:id. Produce relisting semantics conflict: listForSale sets listed_kg to requested remaining quantity, while order subtracts lifetime sold_kg again. UI only offers previously unlisted harvests meanwhile. Please define/fix cumulative-vs-remaining quantity before allowing relists.

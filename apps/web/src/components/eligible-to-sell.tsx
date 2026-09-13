@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRole } from '@/lib/session';
 import { apiData, useApiData } from '@/lib/use-api-data';
 import { dateLabel, mass } from '@/lib/display';
@@ -11,6 +11,7 @@ interface Approved {pondId:string;batch:{id:string;creditableCo2Kg:number;anchor
 /** What this pond could put on the market now, listed with one approval. */
 export function EligibleToSell({pondId}:{pondId:string}) {
  const {role,ready}=useRole();const [revision,setRevision]=useState(0);
+ useEffect(()=>{const timer=setInterval(()=>{if(document.visibilityState==='visible')setRevision(n=>n+1);},30000);return()=>clearInterval(timer);},[]);
  const r=useApiData<Eligible>(ready&&role?`/market/eligible/pond/${encodeURIComponent(pondId)}`:null,revision);
  const [issueCredits,setIssueCredits]=useState(false),[disposition,setDisposition]=useState('biochar'),[reference,setReference]=useState('');
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState<Approved|null>(null);
