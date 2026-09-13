@@ -26,6 +26,7 @@ import {
 } from './mrv.ts';
 
 export interface CreateBatchArgs {
+  pondId?: string;
   siteId: string;
   periodStart: string;
   periodEnd: string;
@@ -67,13 +68,14 @@ export async function previewBatch(args: CreateBatchArgs): Promise<BatchPreview 
        FROM divergence_checks dc
        JOIN ponds p ON p.id = dc.pond_id
       WHERE p.site_id = $1
+        AND ($4::uuid IS NULL OR p.id = $4)
         AND dc.window_start >= $2
         AND dc.window_end   <= $3
         AND NOT EXISTS (
           SELECT 1 FROM batches b WHERE dc.id = ANY(b.divergence_check_ids)
         )
       ORDER BY dc.window_start, p.label`,
-    [args.siteId, args.periodStart, args.periodEnd],
+    [args.siteId, args.periodStart, args.periodEnd, args.pondId ?? null],
   );
 
   const checks: CheckInput[] = rows.map((r) => ({

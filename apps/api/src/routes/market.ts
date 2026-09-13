@@ -94,7 +94,7 @@ marketRouter.get('/eligible/pond/:pondId', requireAuth, async (req, res) => {
 /** One approval: issue the verified credit and list the unsold harvest. */
 marketRouter.post('/eligible/pond/:pondId/approve', async (req: Authenticated, res) => {
   try {
-    res.status(201).json(await approvePond(req.params.pondId as string, req.account!));
+    res.status(201).json(await approvePond(req.params.pondId as string, req.account!, {issueCredits:req.body?.issueCredits === true,disposition:typeof req.body?.disposition==='string'?req.body.disposition:undefined,dispositionEvidenceRef:typeof req.body?.dispositionEvidenceRef==='string'?req.body.dispositionEvidenceRef:undefined}));
   } catch (err) {
     send(res, err);
   }

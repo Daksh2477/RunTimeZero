@@ -11,6 +11,7 @@
  * would be quoting a number nobody has verified.
  */
 
+import { isDurable, type Disposition } from './mrv.ts';
 import { pool } from '../db/client.ts';
 import { runReconciliation } from './reconcile-service.ts';
 import { createBatch, previewBatch } from './batch-service.ts';
@@ -95,7 +96,8 @@ export async function pondEligibility(pondId: string) {
       creditableKg: Math.round(creditableKg * 10) / 10,
       suggestedInrPerTonne: priceT,
       estInr: Math.round((creditableKg / 1000) * priceT),
-      disposition: 'biochar',
+      disposition: null,
+      requiresDispositionEvidence: true,
     },
     harvests,
     canApprove: blockers.length === 0,
@@ -104,7 +106,9 @@ export async function pondEligibility(pondId: string) {
 }
 
 /** Issue the pond's verified credit and list its unsold harvests, in one approval. */
-export async function approvePond(pondId: string, account: { sub: string; username: string; role: string }) {
+export async function approvePond(pondId: string, account: { sub: string; username: string; role: string }, options: { issueCredits?: boolean; disposition?: string; dispositionEvidenceRef?: string } = {}) {
+  if (!['admin','operator'].includes(account.role)) throw Object.assign(new Error('Only operators and administrators can list a pond'), { status: 403 });
+  if (options.issueCredits && (!isDurable(options.disposition as Disposition) || !options.dispositionEvidenceRef?.trim())) throw Object.assign(new Error('Choose a durable use and supply its storage or offtake evidence before issuing removal credits.'), { status: 422 });
   const e = await pondEligibility(pondId);
   if (!e) throw Object.assign(new Error('No such pond'), { status: 404 });
   if (account.role !== 'admin') {
@@ -116,15 +120,15 @@ export async function approvePond(pondId: string, account: { sub: string; userna
   if (!e.canApprove) throw Object.assign(new Error(e.blockers.join(' ')), { status: 409 });
 
   let batch = null;
-  let creditNote: string | null = null;
-  if (e.credits.creditableKg > 0 && e.credits.periodStart && e.credits.periodEnd) {
+  let creditNote: string | null = e.credits.creditableKg > 0 && !options.issueCredits ? 'Capture remains unissued until durable-storage evidence is supplied.' : null;
+  if (options.issueCredits && e.credits.creditableKg > 0 && e.credits.periodStart && e.credits.periodEnd) {
     const args = {
       siteId: e.siteId,
+      pondId,
       periodStart: e.credits.periodStart,
       periodEnd: e.credits.periodEnd,
-      disposition: 'biochar' as const,
-      // Declared by the operator at approval, and labelled as exactly that.
-      dispositionEvidenceRef: `operator-declared:${account.username}:${new Date().toISOString().slice(0, 10)}`,
+      disposition: options.disposition as Disposition,
+      dispositionEvidenceRef: options.dispositionEvidenceRef!.trim(),
       askingInrPerTonne: e.credits.suggestedInrPerTonne,
     };
     const preview = await previewBatch(args);
@@ -133,7 +137,7 @@ export async function approvePond(pondId: string, account: { sub: string; userna
   }
 
   const listed = [];
-  for (const h of e.harvests) {
+  for (const h of options.issueCredits ? [] : e.harvests) {
     listed.push(await listForSale(h.harvestId, h.kg, h.suggestedInrPerKg));
   }
   return { pondId, batch, creditNote, listedHarvests: listed };
