@@ -13,6 +13,7 @@
  *
  *   npm run sim
  *   npm run sim -- --fraud 1.3 --speed 200
+ *   npm run sim -- --pond c5a2d6a7-15c4-4164-a942-31aefbe2b09a   # one pond only
  */
 
 import mqtt from 'mqtt';
@@ -22,7 +23,7 @@ import {
   startControlServer, type ActiveFault, type FaultKind, type Rig, type RigPond,
 } from './sim-control.ts';
 import { pool as apiPool } from '../apps/api/src/db/client.ts';
-import { ensureAllDevices, signReading } from '../apps/api/src/services/devices.ts';
+import { ensureAllDevices, signReading, topicFor } from '../apps/api/src/services/devices.ts';
 
 const { Pool } = pg;
 
@@ -34,6 +35,13 @@ function arg(flag: string, fallback: number): number {
   if (i === -1) return fallback;
   const v = Number(process.argv[i + 1]);
   return Number.isFinite(v) ? v : fallback;
+}
+
+function strArg(flag: string, fallback: string | null): string | null {
+  const i = process.argv.indexOf(flag);
+  if (i === -1) return fallback;
+  const v = process.argv[i + 1];
+  return v !== undefined ? v : fallback;
 }
 
 /**
@@ -97,6 +105,29 @@ const FRAUD_FACTOR = arg('--fraud', 1.3);
 const FEED_EVERY_DAYS = 4;
 const HARVEST_EVERY_DAYS = 5;
 const HARVEST_FRACTION = 0.4;
+
+/**
+ * Restrict the rig to one pond — by id or by label — instead of the whole
+ * fleet. For lighting up a single already-created pond's dashboard (e.g. from
+ * a laptop against the deployed site) without publishing telemetry for every
+ * other pond too.
+ *
+ *   npm run sim -- --pond c5a2d6a7-15c4-4164-a942-31aefbe2b09a
+ *   npm run sim -- --pond RW-02
+ *   SIM_ONLY_POND=c5a2d6a7-15c4-4164-a942-31aefbe2b09a npm run sim
+ */
+const ONLY_POND = strArg('--pond', process.env.SIM_ONLY_POND ?? null);
+
+function filterToTarget<T extends { id: string; label: string }>(rows: T[]): T[] {
+  if (!ONLY_POND) return rows;
+  const needle = ONLY_POND.toLowerCase();
+  return rows.filter((p) => p.id === ONLY_POND || p.label.toLowerCase() === needle);
+}
+
+/** Loose UUID check — good enough to tell a pond id from a label like "RW-02". */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** `/live/devices` takes `?pondId=`, so a UUID target can be fetched directly instead of pulling the whole fleet. */
+const ONLY_POND_QUERY = ONLY_POND && UUID_RE.test(ONLY_POND) ? `?pondId=${ONLY_POND}` : '';
 
 interface PondRow {
   id: string;
@@ -217,7 +248,7 @@ function dayOfYear(d: Date): number {
 const REMOTE = process.env.SIM_REMOTE === '1';
 
 async function loadRemotePonds(): Promise<Awaited<ReturnType<typeof loadPonds>>> {
-  const res = await fetch(`${API_URL}/live/devices`);
+  const res = await fetch(`${API_URL}/live/devices${ONLY_POND_QUERY}`);
   if (!res.ok) throw new Error(`GET /live/devices -> ${res.status}`);
   const devices = (await res.json()) as { pondId: string; pondLabel: string; nodeIndex: number; areaM2: number; depthM: number; lat: number }[];
   return devices.filter((d) => d.nodeIndex === 0)
@@ -225,7 +256,17 @@ async function loadRemotePonds(): Promise<Awaited<ReturnType<typeof loadPonds>>>
 }
 
 async function main() {
-  const ponds = REMOTE ? await loadRemotePonds() : await loadPonds();
+  const allPonds = REMOTE ? await loadRemotePonds() : await loadPonds();
+  const ponds = filterToTarget(allPonds);
+  if (ONLY_POND && ponds.length === 0) {
+    console.error(
+      `[sim] --pond ${ONLY_POND} matched no active pond with a registered device`
+      + ` (found ${allPonds.length} other ponds). Check the id/label, that the`
+      + ' pond is active, and — in remote mode — that you are signed in as its'
+      + ' operator or an admin.',
+    );
+    process.exit(1);
+  }
   if (ponds.length === 0) {
     console.error('no ponds found — run `npm run db:seed` first');
     process.exit(1);
@@ -274,27 +315,52 @@ async function main() {
   };
   const twins = ponds.map(makeTwin);
 
-  // The simulator is each pond's device, so it signs with that device's key.
-  const keys = new Map<string, { id: string; secret: string }>();
+  /*
+   * The simulator is each pond's device, so it signs with that device's key —
+   * and, just as importantly, publishes on that device's TOPIC rather than
+   * one this process guesses from its own MQTT_TOPIC_PREFIX.
+   *
+   * In remote mode this process and the deployed API read two different
+   * `.env` files. If they ever disagree on MQTT_TOPIC_PREFIX (the normal case
+   * — the VM's is a private string, a fresh laptop checkout still has the
+   * `.env.example` default), reconstructing the topic locally sends telemetry
+   * to a topic nobody is subscribed to: it publishes cleanly, `mqtt.connect`
+   * never errors, and the pond's dashboard just never updates, with nothing
+   * in this process's logs to say why. `/land/devices/:id/config` already
+   * returns the topic the SERVER is actually listening on — use that instead
+   * of rebuilding it from a local guess.
+   */
+  const keys = new Map<string, { id: string; secret: string; topic: string }>();
   const loadKeys = async () => {
     if (REMOTE) {
-      const res = await fetch(`${API_URL}/live/devices`);
+      const res = await fetch(`${API_URL}/live/devices${ONLY_POND_QUERY}`);
       const devices = (await res.json()) as { id: string; pondId: string; nodeIndex: number }[];
       for (const d of devices.filter((x) => x.nodeIndex === 0 && !keys.has(x.pondId))) {
         const cfg = await fetch(`${API_URL}/land/devices/${d.id}/config`, {
           headers: { Authorization: `Bearer ${apiToken}` },
         });
         if (!cfg.ok) { console.warn(`[sim] no key for ${d.id}: ${cfg.status} (sign in as operator/admin)`); continue; }
-        const body = (await cfg.json()) as { secret: string };
-        keys.set(d.pondId, { id: d.id, secret: body.secret });
+        const body = (await cfg.json()) as { secret: string; topic: string };
+        keys.set(d.pondId, { id: d.id, secret: body.secret, topic: body.topic });
       }
       return;
     }
     await ensureAllDevices();
     const { rows } = await apiPool.query('SELECT id, pond_id, secret FROM devices WHERE node_index = 0');
-    for (const r of rows) keys.set(r.pond_id, { id: r.id, secret: r.secret });
+    for (const r of rows) keys.set(r.pond_id, { id: r.id, secret: r.secret, topic: topicFor(r.pond_id) });
   };
   await loadKeys();
+  if (REMOTE) {
+    for (const p of ponds) {
+      if (!keys.has(p.id)) {
+        console.warn(
+          `[sim] no device/key for ${p.label} (${p.id}) — its readings will publish`
+          + ' unsigned to a locally-guessed topic and the dashboard will likely'
+          + ' show nothing. Sign in as that pond\'s operator or an admin.',
+        );
+      }
+    }
+  }
 
   const tickMs = 1000;
 
@@ -338,7 +404,8 @@ async function main() {
   setInterval(async () => {
     try {
       const known = new Set(twins.map((t) => t.meta.id));
-      const fresh = (REMOTE ? await loadRemotePonds() : await loadPonds()).filter((p) => !known.has(p.id));
+      const fresh = filterToTarget(REMOTE ? await loadRemotePonds() : await loadPonds())
+        .filter((p) => !known.has(p.id));
       if (!fresh.length) return;
       await loadKeys();
       for (const p of fresh) {
@@ -422,7 +489,8 @@ async function main() {
         ).toISOString();
         const seq = rig.simHour + h;
         const key = keys.get(t.meta.id);
-        client.publish(`${TOPIC_PREFIX}/${t.meta.id}/telemetry`, JSON.stringify({
+        const topic = key?.topic ?? `${TOPIC_PREFIX}/${t.meta.id}/telemetry`;
+        client.publish(topic, JSON.stringify({
           pondId: t.meta.id,
           origin: 'sim',
           seq,
@@ -452,4 +520,4 @@ function round(v: number, dp: number): number {
 main().catch((err) => {
   console.error('[sim] failed:', err instanceof Error ? err.message : err);
   process.exit(1);
-});
+});;

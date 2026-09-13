@@ -87,5 +87,23 @@ module.exports = {
       autorestart: true,
       env,
     },
+    {
+      name: 'algacarbon-sim',
+      cwd: ROOT,
+      script: 'scripts/sim-driver.ts',
+      // Local mode: reads DATABASE_URL directly, no SIM_REMOTE. Scoped to one
+      // pond on purpose — drop --pond entirely to drive the whole fleet.
+      args: '--pond c5a2d6a7-15c4-4164-a942-31aefbe2b09a --speed 1 --backdate 14',
+      interpreter,
+      interpreter_args: '--experimental-strip-types',
+      // Small and quiet compared to the API/web apps; a runaway loop here
+      // still shouldn't be allowed to starve either of them.
+      max_memory_restart: '150M',
+      autorestart: true,
+      // SIM_API_URL isn't in .env — the script defaults to :4000, which is
+      // the dev port, not this box's real API_PORT. Only this app gets the
+      // override; algacarbon-api/-web keep the shared `env` object as-is.
+      env: { ...env, SIM_API_URL: `http://localhost:${env.API_PORT || '4300'}` },
+    },
   ],
 };
