@@ -21,6 +21,8 @@ import { WasmPond } from '../packages/physics/pkg/rtz_physics.js';
 import {
   startControlServer, type ActiveFault, type FaultKind, type Rig, type RigPond,
 } from './sim-control.ts';
+import { pool as apiPool } from '../apps/api/src/db/client.ts';
+import { ensureAllDevices, signReading } from '../apps/api/src/services/devices.ts';
 
 const { Pool } = pg;
 
@@ -231,7 +233,7 @@ async function main() {
   const FRAUD_POND = process.env.SIM_FRAUD_POND ?? 'RW-02';
   const CRASH_POND = process.env.SIM_CRASH_POND ?? 'TX-A';
 
-  const twins = ponds.map((p, i) => {
+  const makeTwin = (p: (typeof ponds)[number], i: number) => {
     const pond = new WasmPond(p.lat, p.areaM2, p.depthM, BigInt(1000 + i), today);
 
     // The pond itself grows normally — the fraud is only in what gets reported.
@@ -250,7 +252,17 @@ async function main() {
     }
 
     return { meta: p, pond, isFraudulent, hoursLived: 0 };
-  });
+  };
+  const twins = ponds.map(makeTwin);
+
+  // The simulator is each pond's device, so it signs with that device's key.
+  const keys = new Map<string, { id: string; secret: string }>();
+  const loadKeys = async () => {
+    await ensureAllDevices();
+    const { rows } = await apiPool.query('SELECT id, pond_id, secret FROM devices WHERE node_index = 0');
+    for (const r of rows) keys.set(r.pond_id, { id: r.id, secret: r.secret });
+  };
+  await loadKeys();
 
   const tickMs = 1000;
 
@@ -265,7 +277,9 @@ async function main() {
     paused: false,
     simHour: 0,
     brokerUrl: BROKER_URL,
-    ponds: twins.map((t): RigPond => ({
+    ponds: [],
+  };
+  const makeRigPond = (t: (typeof twins)[number]): RigPond => ({
       id: t.meta.id,
       label: t.meta.label,
       get hoursLived() { return t.hoursLived; },
@@ -285,8 +299,26 @@ async function main() {
         void reportHarvest(t.meta.id, t.meta.label, dry, new Date());
         return dry;
       },
-    })),
-  };
+  });
+  rig.ponds = twins.map(makeRigPond);
+
+  // A pond added in the console goes live within a minute, no restart.
+  setInterval(async () => {
+    try {
+      const known = new Set(twins.map((t) => t.meta.id));
+      const fresh = (await loadPonds()).filter((p) => !known.has(p.id));
+      if (!fresh.length) return;
+      await loadKeys();
+      for (const p of fresh) {
+        const t = makeTwin(p, twins.length);
+        twins.push(t);
+        rig.ponds.push(makeRigPond(t));
+        console.log(`[sim] new pond ${p.label} is now publishing`);
+      }
+    } catch (err) {
+      console.error('[sim] pond refresh failed', err instanceof Error ? err.message : err);
+    }
+  }, 60_000);
   startControlServer(rig);
 
   let caughtUp = false;
@@ -353,14 +385,21 @@ async function main() {
         const rigPond = rig.ponds.find((x) => x.id === t.meta.id);
         if (rigPond) rigPond.latest = telemetry;
 
+        const observedAt = new Date(
+          simClockStart.getTime() + (rig.simHour + h) * 3_600_000,
+        ).toISOString();
+        const seq = rig.simHour + h;
+        const key = keys.get(t.meta.id);
         client.publish(`${TOPIC_PREFIX}/${t.meta.id}/telemetry`, JSON.stringify({
           pondId: t.meta.id,
           origin: 'sim',
-          seq: rig.simHour + h,
-          uptimeMs: (rig.simHour + h) * 3_600_000,
-          observedAt: new Date(
-            simClockStart.getTime() + (rig.simHour + h) * 3_600_000,
-          ).toISOString(),
+          seq,
+          uptimeMs: seq * 3_600_000,
+          observedAt,
+          ...(key ? {
+            deviceId: key.id,
+            sig: signReading(key.secret, { deviceId: key.id, pondId: t.meta.id, observedAt, seq }),
+          } : {}),
           ...telemetry,
         }));
       }

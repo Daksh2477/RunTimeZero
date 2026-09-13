@@ -3,6 +3,7 @@
  *
  *   GET /live/stream   Server-Sent Events: telemetry, advisory, heartbeat
  *   GET /live/status   last reading per pond
+ *   GET /live/devices  every node, online or not (?siteId, ?pondId)
  *
  * SSE rather than WebSockets: one direction is all a dashboard needs, it rides
  * plain HTTP through the Next proxy and nginx, and EventSource reconnects on
@@ -11,6 +12,7 @@
 
 import { Router } from 'express';
 import { liveStatus, subscribe } from '../services/live.ts';
+import { listDevices } from '../services/devices.ts';
 
 export const liveRouter = Router();
 
@@ -40,6 +42,15 @@ liveRouter.get('/stream', (req, res) => {
     clearInterval(heartbeat);
     unsubscribe();
   });
+});
+
+liveRouter.get('/devices', async (req, res) => {
+  try {
+    const str = (v: unknown) => (typeof v === 'string' && v ? v : undefined);
+    res.json(await listDevices({ siteId: str(req.query.siteId), pondId: str(req.query.pondId) }));
+  } catch (err) {
+    res.status(500).json({ error: err instanceof Error ? err.message : 'Could not list devices' });
+  }
 });
 
 liveRouter.get('/status', async (_req, res) => {

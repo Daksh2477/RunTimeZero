@@ -457,4 +457,17 @@ CREATE TABLE IF NOT EXISTS accounts (
 ALTER TABLE retirements ADD COLUMN IF NOT EXISTS account_id UUID REFERENCES accounts(id) ON DELETE SET NULL;
 ALTER TABLE produce_orders ADD COLUMN IF NOT EXISTS account_id UUID REFERENCES accounts(id) ON DELETE SET NULL;
 
+-- Sensor nodes. Created with the pond (services/devices.ts); a node signs each
+-- reading with its secret so a public broker cannot impersonate it.
+CREATE TABLE IF NOT EXISTS devices (
+  id           TEXT PRIMARY KEY,
+  pond_id      UUID NOT NULL REFERENCES ponds(id) ON DELETE CASCADE,
+  node_index   INTEGER NOT NULL DEFAULT 0,
+  kit          TEXT NOT NULL,
+  secret       TEXT NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
+  last_seen_at TIMESTAMPTZ,
+  UNIQUE (pond_id, node_index)
+);
+
 COMMIT;

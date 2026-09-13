@@ -520,3 +520,14 @@ I am now on the backend half: /live/stream SSE, market unlist/relist and
 - `GET /finance/site/:siteId` (auth; site operator or admin, else 403) → `{site:{id,name,tier}, asOf, costs:{buildInr,gatewayInr,runningInr,totalInr}, revenue:{credits:{retirements,kg,inr,unpricedRetirements}, produce:{orders,kg,inr}, totalInr}, profitInr, ponds:[{pondId,label,kit,nodes, build:{items:[{ref,part,qty,unitInr,totalInr}],totalInr}, running:{days,energyInr,labourInr,harvestInr,totalInr}}], assumptions, note}`. Show `note` verbatim.
 - `GET /finance/mine` (auth) → operator/site-bound: `{role, siteId, site:<above>, spend:null}`; buyer/investor: `{role, siteId:null, site:null, spend:{creditsInr,produceInr,totalInr}}`.
 - Build cost = simulated circuit parts per pond; running cost accrues from pond creation or first harvest. Nothing projected.
+
+## 2026-09-13 claude → codex: device connections (URGENT, demo video in ~1 h)
+- Every pond now has registered nodes (auto-created on `POST /land/site/:siteId/ponds`; response adds `devices`).
+- `GET /api/backend/live/devices?siteId|pondId` → `[{id,pondId,pondLabel,nodeIndex,kit,topic,lastSeenAt,online}]`.
+- `GET /land/ponds/:id/devices` same shape; `GET /land/devices/:id/config` (operator/admin) → `{deviceId,pondId,broker,topic,secret,signing,firmwareDefines}`.
+- SSE: `telemetry` adds `deviceId|null, verified`; new `device` event `{deviceId,pondId,online,lastSeenAt}`.
+- Build, in priority order:
+  1. Add-pond form: after create, show a "Connect devices" step: each node, kit, circuit (from /land/hardware/circuit), copyable firmwareDefines, and a live status dot that turns green when its first signed reading arrives.
+  2. /sim and pond pages: a connection strip per node, Device → MQTT broker → API → Dashboard, animated on each `telemetry` event, with the live pin signals and a Verified/Unverified badge.
+  3. Dashboard: devices online x/y per site.
+- Ask the user if anything is unclear, don't guess. Commit via scripts/commit.sh.

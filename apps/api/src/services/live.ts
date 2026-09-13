@@ -17,6 +17,9 @@ export interface LiveTelemetry {
   siteId: string | null;
   at: string;
   source: LiveSource;
+  /** Null when the reading was unsigned. */
+  deviceId: string | null;
+  verified: boolean;
   readings: {
     tempC: number;
     ph: number;

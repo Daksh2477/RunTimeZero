@@ -10,6 +10,7 @@ import {
   authRouter, readToken, requireAuth, requireAuthForReads,
 } from './routes/auth.ts';
 import { startMqttIngest } from './ingest/mqtt.ts';
+import { ensureAllDevices } from './services/devices.ts';
 import { batchesRouter } from './routes/batches.ts';
 import { financeRouter } from './routes/finance.ts';
 import { fleetRouter } from './routes/fleet.ts';
@@ -106,6 +107,8 @@ const server = app.listen(port, () => {
   console.log(`[api] listening on :${port}`);
   // Ingestion starts with the server: the API has no other source of pond data.
   startMqttIngest();
+  // Ponds created before devices existed get their nodes here.
+  ensureAllDevices().catch((err) => console.error('[devices] backfill failed', err));
 });
 
 server.on('error', (err: NodeJS.ErrnoException) => {

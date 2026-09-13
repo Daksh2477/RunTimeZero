@@ -17,6 +17,7 @@
 import { Router, type Response } from 'express';
 import { pool } from '../db/client.ts';
 import { buildSensorPlan } from '../services/sensor-plan.ts';
+import { deviceConfig, ensureDevices, listDevices } from '../services/devices.ts';
 import { kitFor, nodeCircuit, nodesForPond, signalsFor, type Kit } from '../services/circuit.ts';
 
 export const landRouter = Router();
@@ -196,6 +197,30 @@ landRouter.get('/site/:siteId/circuit', async (req, res) => {
   }
 });
 
+/** A pond's nodes and their connection state. */
+landRouter.get('/ponds/:id/devices', async (req, res) => {
+  try {
+    return res.json(await listDevices({ pondId: req.params.id }));
+  } catch (err) {
+    return send(res, err);
+  }
+});
+
+/** Connection details for one node, including its secret. Operators only. */
+landRouter.get('/devices/:id/config', async (req, res) => {
+  try {
+    const role = (req as { account?: { role: string } }).account?.role;
+    if (role !== 'operator' && role !== 'admin') {
+      return res.status(403).json({ error: 'Only the site operator can see a device secret.' });
+    }
+    const config = await deviceConfig(req.params.id);
+    if (!config) return res.status(404).json({ error: 'No such device' });
+    return res.json(config);
+  } catch (err) {
+    return send(res, err);
+  }
+});
+
 /** Add a pond. */
 landRouter.post('/site/:siteId/ponds', async (req, res) => {
   try {
@@ -235,10 +260,15 @@ landRouter.post('/site/:siteId/ponds', async (req, res) => {
       [req.params.siteId],
     );
 
+    // The pond arrives with its nodes registered, so the operator can connect
+    // hardware (or the simulator picks it up) without a second step.
+    await ensureDevices(rows[0].id);
+
     res.status(201).json({
       id: rows[0].id,
       label,
       areaM2,
+      devices: await listDevices({ pondId: rows[0].id }),
       satelliteResolvable: widthM >= 40,
       note: widthM >= 40
         ? 'Wide enough for satellite verification.'

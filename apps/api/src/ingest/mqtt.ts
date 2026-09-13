@@ -13,7 +13,8 @@
 
 import mqtt from 'mqtt';
 import { insertTelemetry } from '../db/client.ts';
-import { publishTelemetry, type LiveSource } from '../services/live.ts';
+import { publish, publishTelemetry, type LiveSource } from '../services/live.ts';
+import { verifyAndMarkSeen } from '../services/devices.ts';
 
 const BROKER_URL = process.env.MQTT_BROKER_URL ?? 'mqtt://broker.hivemq.com:1883';
 const TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX ?? 'rtz/9f3a/pond';
@@ -44,6 +45,8 @@ interface TelemetryMessage {
   observedAt?: string;
   /** 'sim' from the simulator rig; anything else is treated as a device. */
   origin?: LiveSource;
+  deviceId?: string;
+  sig?: string;
   raw?: { vPh: number; vDo: number; vOd: number };
 }
 
@@ -127,6 +130,8 @@ export function parseTelemetry(raw: string): TelemetryMessage | null {
     energyKwh: isFiniteNumber(m.energyKwh) ? m.energyKwh : undefined,
     observedAt: observedAt ?? undefined,
     origin: m.origin === 'sim' ? 'sim' : 'device',
+    deviceId: typeof m.deviceId === 'string' ? m.deviceId : undefined,
+    sig: typeof m.sig === 'string' ? m.sig : undefined,
   };
 }
 
@@ -165,6 +170,15 @@ export function startMqttIngest(onStats?: (s: IngestStats) => void) {
 
     try {
       const observedAt = msg.observedAt ?? new Date().toISOString();
+      // A forged signature is refused outright; an unsigned reading is kept but
+      // shown as unverified, so the Wokwi board without a key still works.
+      const verified = await verifyAndMarkSeen({ ...msg, observedAt: msg.observedAt ?? '' });
+      if (verified === false) {
+        stats.rejected += 1;
+        console.warn(`[mqtt] rejected bad signature for device ${msg.deviceId}`);
+        onStats?.(stats);
+        return;
+      }
       await insertTelemetry({
         pondId: msg.pondId,
         observedAt,
@@ -179,10 +193,15 @@ export function startMqttIngest(onStats?: (s: IngestStats) => void) {
         energyKwh: msg.energyKwh ?? null,
       });
       stats.stored += 1;
+      if (verified) {
+        publish('device', { deviceId: msg.deviceId, pondId: msg.pondId, online: true, lastSeenAt: new Date().toISOString() });
+      }
       await publishTelemetry({
         pondId: msg.pondId,
         at: observedAt,
         source: msg.origin ?? 'device',
+        deviceId: msg.deviceId ?? null,
+        verified: verified === true,
         readings: {
           tempC: msg.temperatureC,
           ph: msg.ph,

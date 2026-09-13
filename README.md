@@ -125,6 +125,52 @@ Needs Node 22+, Postgres 16+, and Rust + `wasm-pack` if you're touching `package
 
 ---
 
+## Running the demo
+
+Live site: https://algacarbon.itzzsuperrr.me. Everything below runs on the VPS
+(`ssh awsmxr`, then `cd ~/algacarbon`) unless it says laptop.
+
+**Before recording (once):**
+
+```bash
+npm run db:reset-readings    # clear old telemetry; checks, batches and trades stay
+npm run db:market            # demo accounts + trades (password demo1234)
+```
+
+**Start live data** (laptop or VPS, keep it running while recording):
+
+```bash
+npm run sim -- --speed 200   # every pond's node publishes signed readings
+```
+
+It backfills recent days fast, then runs in real time. A pond added in the
+console starts publishing within a minute.
+
+**Accounts** (password `demo1234`): operators `naroda-ops`, `surat-ops`,
+`bhavnagar-farmer`, `anand-coop`; buyers `mill-esg-desk`, `feed-mill-buyer`;
+investors `green-fund`, `angel-investor`. Admin: `admin` / `admin`.
+
+**A demo run:**
+
+1. `/sim`: the public simulator, no login.
+2. Sign in as `naroda-ops`. The farm dashboard shows live readings, device status and alerts.
+3. Add a pond: its sensor nodes are created with it; watch them come online.
+4. `/hardware`: the simulated circuit, parts in ₹, and nodes per pond size.
+5. Check a pond's period, then on the market issue a batch (disposition buried/biochar/bioplastic).
+6. Sign in as `mill-esg-desk`, retire some of that batch, open the certificate.
+7. Market: price history, seller trust score, investor matches, costs and profit.
+
+**If something is off:** `pm2 logs algacarbon-api`; redeploy with
+`./deploy/deploy.sh --force`. The live stream needs `proxy_buffering off` in the
+nginx `/api/backend/` block.
+
+**Devices.** Each node has an id and a secret. It signs every reading
+(HMAC-SHA256 over `deviceId.pondId.observedAt.seq`); the API refuses forged
+signatures and marks unsigned readings unverified. Connection details for a
+node: `GET /api/land/devices/:id/config` as its operator.
+
+---
+
 ## What's built
 
 | | Status |
