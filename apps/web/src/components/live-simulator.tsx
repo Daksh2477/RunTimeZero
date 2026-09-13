@@ -110,16 +110,6 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   const elapsed = result?.daily.slice(0, playDay + 1);
   const totals = elapsed && { co2: elapsed.reduce((n,d) => n+d.co2Kg,0), harvest: elapsed.reduce((n,d) => n+d.harvestKg,0), peak: Math.max(...elapsed.map(d=>d.biomassKg)) };
   const selected = measurements.find(m => m.id === selectedSensor)!;
-  const monitor = <section className="sensor-panel" aria-live="polite" style={{marginTop:'1rem'}}>
-    <h3 style={{margin:'0 0 .25rem'}}>Live readings · Day {point?.day ?? 1}, {time}</h3>
-    <p className="sensor-note" style={{marginTop:0}}>What the pond’s one sensor node would send right now. The platform uses these to warn you before a crash and to check carbon claims against physics.</p>
-    <div style={{display:'grid',gap:'.5rem'}}>{measurements.map(m => { const ok = m.raw === undefined || (m.raw >= m.range[0] && m.raw <= m.range[1]); return <div key={m.id} className="sensor-reading" style={{display:'grid',gridTemplateColumns:'1fr auto',gap:'.15rem .75rem',textAlign:'left',padding:'.6rem .75rem'}}>
-      <span><strong>{m.name}</strong> <small>healthy {m.range[0]}–{m.range[1]} {m.unit}</small></span>
-      <strong>{m.value}<small> {m.unit}</small> <span style={{marginLeft:'.4rem',padding:'.1rem .45rem',borderRadius:99,fontSize:'.75rem',background: ok ? '#dff3e7' : '#fde2cf',color: ok ? '#1f6b43' : '#9a3b0c'}}>{ok ? 'OK' : 'Watch'}</span></strong>
-      <small style={{gridColumn:'1 / -1',opacity:.8}}>{m.use}</small>
-    </div>; })}</div>
-    {totals && <p className="sensor-note">So far: {kg(totals.co2)} CO₂ absorbed, {kg(totals.harvest)} algae harvested. <Link href="/hardware">How the node measures this →</Link></p>}
-  </section>;
   const reset = () => { setCfg({ ...DEFAULT_CONFIG, ...initial }); setPlayDay(0); setPlaying(false); setSensors(initialSensors); setSelectedSensor('ph'); };
 
   return <div className="sim-workspace">
@@ -136,7 +126,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
         <div className="simulation-totals" aria-busy={status === 'loading'}><div className="totals-heading"><h3>Through day {point?.day ?? 1}</h3><span role="status">{status === 'loading' ? 'Updating estimate…' : status === 'failed' ? 'Calculation unavailable' : 'Model estimate'}</span></div>{status === 'failed' ? <div role="alert"><p>The model could not finish. Your settings are still here.</p>{failure && <p className="sim-failure-detail">{failure}</p>}<button className="button secondary" onClick={() => setRetry(n => n+1)}>Try again</button></div> : <div className="sim-figures"><div><strong>{totals ? kg(totals.harvest) : '—'}</strong><span>algae harvested</span></div><div><strong>{totals ? kg(totals.co2) : '—'}</strong><span>CO₂ absorbed</span></div><div><strong>{totals ? kg(totals.peak) : '—'}</strong><span>peak algae biomass</span></div></div>}{result && <Trace daily={result.daily} day={playDay} />}</div>
       </section>
       <SimulatorControls scenario={<>    <div className="scenario-toolbar"><div><div className="scenario-options" role="group" aria-label="Environmental scenarios">{scenarios.map(s => <button key={s.id} aria-pressed={selectedScenario?.id === s.id} onClick={() => { setCfg(c => ({ ...c, meanAirTempC: s.temperature, diurnalSwingC: s.swing, mixerRunning: s.mixing, crashOnDay: null })); setPlayDay(0); setPlaying(true); }}>{s.label}</button>)}</div></div><button className="button secondary reset-simulation" onClick={reset}>Reset simulation</button></div>
-<p>Sample conditions run through the pond physics model. Estimates are not verified credits.</p>{monitor}</>}
+<p>Sample conditions run through the pond physics model. Estimates are not verified credits.</p></>}
         conditions={<section className="setup-panel"><div className="setup-heading"><h2>Adjust conditions</h2><span>Updates automatically</span></div><div className="setup-switch" role="group" aria-label="Simulation settings"><button aria-pressed={controls === 'pond'} onClick={() => setControls('pond')}>Pond setup</button><button aria-pressed={controls === 'environment'} onClick={() => setControls('environment')}>Environment</button></div>
           {controls === 'pond' ? <div className="setup-fields">
             <Slider id="area" label="Pond area" value={cfg.areaM2} min={200} max={50000} step={100} display={`${cfg.areaM2.toLocaleString('en-IN')} m²`} onChange={set('areaM2')} hint="Dimensions and the scale bar follow this area." />

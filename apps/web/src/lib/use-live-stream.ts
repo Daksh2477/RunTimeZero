@@ -28,7 +28,7 @@ export function useLiveStream({pondId,siteId}:{pondId?:string;siteId?:string}={}
     if(stopped||document.hidden)return;
     if(status.status==='fulfilled')setSources(status.value.sources.filter(s=>accepts(s.pondId,s.siteId)));
     if(fleet.status==='fulfilled')for(const site of fleet.value)for(const p of site.ponds){if(!accepts(p.id,site.id))continue;allowedPonds.add(p.id);if(p.latest&&p.lastReadingAt){const source=status.status==='fulfilled'?status.value.sources.find(s=>s.pondId===p.id)?.source??null:null;addReading({pondId:p.id,siteId:site.id,at:p.lastReadingAt,source,readings:{tempC:p.latest.temperatureC,ph:p.latest.ph,doMgL:p.latest.dissolvedOxygenMgL,od:p.latest.opticalDensity,paddlewheelOn:p.latest.mixing}});}}
-    if(status.status==='rejected'&&fleet.status==='rejected'){setError(status.reason instanceof Error?status.reason.message:'Live data unavailable.');setConnection('offline');}else{setError('');refresh();}
+    if(status.status==='rejected'&&fleet.status==='rejected'){setError(status.reason instanceof Error?status.reason.message:'Live data unavailable.');setConnection('offline');}else{setError('');}
    }finally{polling=false;}
   }
   const stopTimers=()=>{clearTimeout(retry);clearInterval(pollTimer);clearInterval(watchdog);stream?.close();stream=null;};
@@ -40,7 +40,7 @@ export function useLiveStream({pondId,siteId}:{pondId?:string;siteId?:string}={}
    stream=new EventSource('/api/backend/live/stream');
    stream.onopen=()=>{attempts=0;lastEvent=Date.now();setConnection('live');setError('');clearInterval(pollTimer);pollTimer=undefined;};
    stream.addEventListener('heartbeat',()=>{lastEvent=Date.now();});
-   stream.addEventListener('telemetry',e=>{lastEvent=Date.now();try{const t=JSON.parse((e as MessageEvent).data) as LiveReading;if(!t.pondId||!t.readings||!Number.isFinite(Date.parse(t.at)))return;addReading(t);refresh();}catch{setError('An unreadable live reading was skipped.');}});
+   stream.addEventListener('telemetry',e=>{lastEvent=Date.now();try{const t=JSON.parse((e as MessageEvent).data) as LiveReading;if(!t.pondId||!t.readings||!Number.isFinite(Date.parse(t.at)))return;addReading(t);}catch{setError('An unreadable live reading was skipped.');}});
    stream.addEventListener('advisory',e=>{lastEvent=Date.now();try{const a=JSON.parse((e as MessageEvent).data) as Alert;if(!a.id||!a.message||(pondId&&a.pondId!==pondId)||!allowedPonds.has(a.pondId)||seenAlerts.has(a.id))return;seenAlerts.add(a.id);setAlerts(old=>[{...a,arrivedAt:Date.now()},...old].slice(0,30));refresh();}catch{setError('An unreadable alert was skipped.');}});
    stream.onerror=fail;clearInterval(watchdog);watchdog=setInterval(()=>{if(Date.now()-lastEvent>45000)fail();},5000);
   }
