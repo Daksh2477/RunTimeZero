@@ -208,3 +208,5 @@ body .hardware .summary-card .num { font-size: clamp(1.2rem,3vw,2rem); }
 body .detail-sheet .land-edit { display: grid; grid-template-columns: 1fr 1fr; width: 100%; margin: 0; padding: 0; }
 body .detail-sheet .land-edit-actions { position: sticky; bottom: 0; background: var(--card); padding-block: 12px; z-index: 1; }
 @media(max-width:560px) { body .detail-sheet .land-edit { grid-template-columns: 1fr; } body .detail-sheet .land-edit > * { grid-column: 1; } }
+/* Page-specific .button.small rules outrank the phone 44px rule above, so restate it with matching weight. */
+@media(max-width:767px) { body :is(.pond-card footer, .land-row-actions, .land-edit-actions) .button.small, body .filter-button { min-height: 44px; } }
