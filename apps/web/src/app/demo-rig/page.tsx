@@ -1,0 +1,22 @@
+'use client';
+import { useEffect, useState } from 'react';
+const CONTROL='http://127.0.0.1:4401';
+const WEBSITE='https://algacarbon.itzzsuperrr.me';
+type Pond={id:string;label:string;latest:Record<string,number>|null;faults:{kind:string;startedAtSimHour:number;durationHours:number}[]};
+type State={simDay:number;simHour:number;speed:number;paused:boolean;ponds:Pond[]};
+export default function DemoRig(){
+ const [state,setState]=useState<State|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false),[label,setLabel]=useState('RW-01');
+ const local=typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname);
+ useEffect(()=>{if(!local)return;let active=true;const poll=async()=>{try{const r=await fetch(CONTROL+'/state');if(!r.ok)throw Error('Simulator unavailable');const s=await r.json();if(active){setState(s);setError('');}}catch{if(active)setError('Cannot reach the laptop simulator on port 4401.');}};void poll();const timer=setInterval(poll,1000);return()=>{active=false;clearInterval(timer);};},[local]);
+ async function command(path:string,body={}){setBusy(true);setNotice('');try{const r=await fetch(CONTROL+path,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const d=await r.json();if(!r.ok)throw Error(d.error);setNotice(path==='/harvest'?`Harvest reported: ${d.harvestedDryKg} kg dry biomass.`:`Applied ${path.slice(1)} to the running simulator.`);}catch(e){setNotice(e instanceof Error?e.message:'Command failed');}finally{setBusy(false);}}
+ const pond=state?.ponds.find(p=>p.label===label);
+ if(!local)return <main className="wrap"><h1>Laptop simulation controls</h1><p>Open <a href="http://localhost:3000/demo-rig">localhost:3000/demo-rig</a> on the laptop running the simulator.</p></main>;
+ return <main className="wrap space-y-5 py-6"><p className="eyebrow">Laptop → signed readings → live website</p><h1 className="text-3xl font-bold">Live farm simulation</h1><p>Simulated sensor data from your laptop is being stored by the website. These are model outputs, not physical sensor measurements.</p>
+ {error&&<p role="alert">{error}</p>}
+ <div className="panel market-form"><label>Control pond<select value={label} onChange={e=>setLabel(e.target.value)}>{state?.ponds.map(p=><option key={p.id}>{p.label}</option>)}</select></label><h2 className="text-2xl">{label} · Day {state?.simDay??'…'} · {String((state?.simHour??0)%24).padStart(2,'0')}:00</h2><p>{state?.paused?'Paused':'Running'} · {state?.speed??1} simulated hour(s) per second. Speed and pause apply to all running ponds; faults and harvest apply to the selected pond.</p>
+ {pond&&<a className="button" href={`${WEBSITE}/console/pond/${pond.id}`} target="_blank" rel="noreferrer">Open {label} live website ↗</a>}
+ <fieldset disabled={busy} className="flex flex-wrap gap-3"><button className="button secondary" onClick={()=>void command(state?.paused?'/resume':'/pause')}>{state?.paused?'Resume':'Pause'}</button><button className="button secondary" onClick={()=>void command('/speed',{x:1})}>1 hour / second</button><button className="button secondary" onClick={()=>void command('/harvest',{pond:label})}>Harvest 45%</button><button className="button secondary" onClick={()=>void command('/fault',{pond:label,kind:'mixer',hours:24,magnitude:1})}>Stop mixer for 24 hours</button><button className="button secondary" onClick={()=>void command('/fault',{pond:label,kind:'crash',hours:24,magnitude:0.7})}>Culture crash for 24 hours</button><button className="button secondary" onClick={()=>void command('/fault',{pond:label,kind:'overstate',hours:24,magnitude:1.3})}>Overstate capture by 30%</button></fieldset><p role="status">{notice}</p></div>
+ <div className="grid gap-3 sm:grid-cols-3">{Object.entries(pond?.latest??{}).map(([k,v])=><article className="panel" key={k}><p>{{ph:'pH',dissolvedOxygenMgL:'Dissolved oxygen · mg/L',opticalDensity:'Optical density',temperatureC:'Temperature · °C',co2UptakeKg:'CO₂ uptake · kg'}[k]??k}</p><strong className="text-3xl tabular-nums">{v}</strong></article>)}</div>
+ <section className="panel"><h2>Active scenarios</h2>{pond?.faults.filter(f=>f.startedAtSimHour+f.durationHours>(state?.simHour??0)).map((f,i)=><p key={i}>{f.kind} · ends at hour {f.startedAtSimHour+f.durationHours}</p>)}<p>Check the pond website for evidence checks, advisories, harvests and approval to list. Weather forecasts describe actual forecast dates, separately from this historical replay.</p></section>
+ </main>;
+}
