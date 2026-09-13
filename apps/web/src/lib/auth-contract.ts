@@ -14,7 +14,7 @@ export const ACCESS: Record<Role, string[]> = {
   admin: ['/hardware','/farm','/console','/verify','/sim'],
 };
 export function canAccess(role: Role | null, path: string): boolean { return !!role && (ACCESS[role] ?? []).some(p=>path===p || path.startsWith(p+'/')); }
-export function isPublicPath(path: string): boolean { return path==='/' || path==='/enter' || path==='/sim' || path==='/hardware' || path==='/console/market' || path==='/verify' || path.startsWith('/verify/'); }
+export function isPublicPath(path: string): boolean { return path==='/' || path==='/enter' || path==='/sim' || path==='/hardware' || path.startsWith('/circuit/') || path==='/console/market' || path==='/verify' || path.startsWith('/verify/'); }
 export function isSession(value: unknown): value is Session { const a=(value as Session | null)?.account; return !!a && typeof a.id==='string' && typeof a.username==='string' && Object.hasOwn(ROLE_META,a.role); }
 export function sessionHome(session: Session): string { const path=session.landingPath;return path?.startsWith('/') && !path.startsWith('//') && canAccess(session.account.role,path) ? path : ROLE_META[session.account.role].home; }
 export function siteAllowed(session: Session, id: string): boolean { return session.account.role==='admin' || (session.scope?.allSites === true) || (session.scope?.siteIds ?? [session.account.siteId]).includes(id); }

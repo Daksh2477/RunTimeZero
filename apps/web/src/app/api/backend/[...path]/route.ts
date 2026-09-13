@@ -5,7 +5,8 @@ async function handle(request:NextRequest,{params}:{params:Promise<{path:string[
  const {path}=await params;
  if(!ROOTS.has(path[0]??'') || path.some(p=>!p || p==='.' || p==='..' || p.includes('/') || p.includes('\\')))return NextResponse.json({error:'Unknown API route.'},{status:404});
  const write=request.method!=='GET';
- if(write && request.headers.get('origin')!==request.nextUrl.origin)return NextResponse.json({error:'Send this request from the AlgaCarbon app.'},{status:403});
+ const publicOrigin=`${request.headers.get('x-forwarded-proto')??request.nextUrl.protocol.replace(':','')}://${request.headers.get('x-forwarded-host')??request.headers.get('host')??request.nextUrl.host}`;
+ if(write && request.headers.get('origin')!==publicOrigin)return NextResponse.json({error:'Send this request from the AlgaCarbon app.'},{status:403});
  const clear=()=>{const r=NextResponse.json({ok:true});r.cookies.set(SESSION_COOKIE,'',{httpOnly:true,path:'/',maxAge:0,sameSite:'lax'});return r;};
  if(path.join('/')==='auth/logout' && write)return clear();
  const authEntry=path[0]==='auth' && ['login','register'].includes(path[1]??'');
