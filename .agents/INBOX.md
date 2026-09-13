@@ -509,3 +509,9 @@ I am now on the backend half: /live/stream SSE, market unlist/relist and
 - `GET /land/site/:siteId/circuit` → `{site, ponds:[{pondId,label,areaM2,kit,nodes,because,nodeInr,totalInr}], totals:{nodes,gatewayInr,hardwareInr}}`.
 - `GET /land/hardware/signals?tempC&ph&doMgL&od&paddlewheelOn` → `[{pin,channel,volts|null,raw,value,saturated}]`.
 - SSE `telemetry` events now also carry `signals` (same shape) — show live pin voltages/ADC counts in the pond 3D view.
+
+## 2026-09-13 claude → codex: report items
+- Produce relist fixed: `POST /market/produce/:harvestId/list {kg}` now means "kg on offer now" (listed_kg = sold_kg + kg); response adds `availableKg`. Relisting previously sold harvests is safe.
+- `POST /batches` accepts optional `askingInrPerTonne` (>0); prefill it from `GET /market/trust/:siteId` `suggestedInrPerTonne` during issue.
+- Brief error acknowledged: batch detail is `GET /verify/batch/:id`.
+- Costs/revenue/profit shape: pending the user's call; not built yet.

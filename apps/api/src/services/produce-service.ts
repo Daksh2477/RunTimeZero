@@ -135,9 +135,9 @@ export async function sellableHarvests(siteId: string) {
 export async function listForSale(harvestId: string, kg: number, askingInrPerKg: number | null) {
   const { rows } = await pool.query(
     `UPDATE harvest_records
-        SET listed_kg = $2, asking_inr_per_kg = $3
+        SET listed_kg = sold_kg + $2, asking_inr_per_kg = $3
       WHERE id = $1 AND $2 <= dry_mass_kg - sold_kg
-      RETURNING id, listed_kg`,
+      RETURNING id, listed_kg, sold_kg`,
     [harvestId, kg, askingInrPerKg],
   );
   if (!rows[0]) {
@@ -146,7 +146,12 @@ export async function listForSale(harvestId: string, kg: number, askingInrPerKg:
       { status: 409 },
     );
   }
-  return { harvestId: rows[0].id, listedKg: Number(rows[0].listed_kg) };
+  // listed_kg is lifetime (sold + on offer) so ordering can keep subtracting sold_kg.
+  return {
+    harvestId: rows[0].id,
+    listedKg: Number(rows[0].listed_kg),
+    availableKg: Number(rows[0].listed_kg) - Number(rows[0].sold_kg),
+  };
 }
 
 /** Place an order. Locked, so two buyers cannot take the same sack. */

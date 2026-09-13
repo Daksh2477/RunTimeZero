@@ -31,6 +31,7 @@ export interface CreateBatchArgs {
   periodEnd: string;
   disposition: Disposition;
   dispositionEvidenceRef?: string | null;
+  askingInrPerTonne?: number | null;
 }
 
 export interface BatchPreview {
@@ -168,8 +169,8 @@ export async function createBatch(args: CreateBatchArgs): Promise<CreatedBatch> 
        (site_id, period_start, period_end, claimed_co2_kg, independent_co2_kg,
         ceiling_co2_kg, creditable_co2_kg, disposition, disposition_evidence_ref,
         mrv_report_cid, evidence_token_id, minted_tonnes, tx_hash,
-        divergence_check_ids)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+        divergence_check_ids, asking_inr_per_tonne)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
      RETURNING id`,
     [
       args.siteId, args.periodStart, args.periodEnd,
@@ -181,6 +182,7 @@ export async function createBatch(args: CreateBatchArgs): Promise<CreatedBatch> 
       reportHash, anchor.tokenId,
       report.totals.creditableCo2Kg / 1000, anchor.txHash,
       report.checks.map((c) => c.id),
+      args.askingInrPerTonne ?? null,
     ],
   );
 

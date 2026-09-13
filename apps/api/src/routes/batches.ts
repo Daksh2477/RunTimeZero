@@ -41,6 +41,10 @@ function parseArgs(body: unknown): CreateBatchArgs {
   if (Date.parse(periodEnd as string) <= Date.parse(periodStart as string)) {
     fail('periodEnd must be after periodStart');
   }
+  const asking = b.askingInrPerTonne == null ? null : Number(b.askingInrPerTonne);
+  if (asking !== null && !(Number.isFinite(asking) && asking > 0)) {
+    fail('askingInrPerTonne must be a positive number');
+  }
 
   return {
     siteId: siteId as string,
@@ -49,6 +53,7 @@ function parseArgs(body: unknown): CreateBatchArgs {
     disposition: disposition as Disposition,
     dispositionEvidenceRef:
       typeof b.dispositionEvidenceRef === 'string' ? b.dispositionEvidenceRef : null,
+    askingInrPerTonne: asking,
   };
 }
 
