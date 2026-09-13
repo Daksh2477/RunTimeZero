@@ -137,10 +137,11 @@ npm run db:reset-readings    # clear old telemetry; checks, batches and trades s
 npm run db:market            # demo accounts + trades (password demo1234)
 ```
 
-**Start live data** (laptop or VPS, keep it running while recording):
+**Start live data** on the VPS (device keys live in its database, so a laptop
+sim would be refused as forged). Keep it running while recording:
 
 ```bash
-npm run sim -- --speed 200   # every pond's node publishes signed readings
+SIM_API_URL=http://localhost:4300 npm run sim -- --speed 200
 ```
 
 It backfills recent days fast, then runs in real time. A pond added in the
