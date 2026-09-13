@@ -23,7 +23,7 @@ function describe(par: number): { label: string; note: string } {
   return { label: 'Harsh sun', note: 'Bright enough to inhibit growth' };
 }
 
-export function SkyStrip({ point, airTempC }: { point: DayPoint | undefined; airTempC: number }) {
+export function SkyStrip({ point, airTempC, time }: { point: DayPoint | undefined; airTempC: number; time?: string }) {
   if (!point) return null;
 
   const sun = point.solarElevationDeg;
@@ -49,6 +49,10 @@ export function SkyStrip({ point, airTempC }: { point: DayPoint | undefined; air
       </div>
 
       <dl className="sky-facts">
+        {time && <div>
+          <dt>Time</dt>
+          <dd>{time}</dd>
+        </div>}
         <div>
           <dt>Sun</dt>
           <dd>{night ? 'Below horizon' : `${Math.round(sun)}° up`}</dd>

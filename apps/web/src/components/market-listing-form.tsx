@@ -5,13 +5,13 @@ import { useRole } from '@/lib/session';
 import { siteAllowed } from '@/lib/auth-contract';
 import { apiData, useApiData } from '@/lib/use-api-data';
 import { ResourceState } from './detail-sheet';
-import { rupees } from './market-insights';
+import { CARD, rupees } from './market-insights';
 interface Harvest {harvestId:string;pondLabel:string;harvestedAt:string;dryMassKg:number;listedKg:number|null;soldKg:number;worthInr:number;gradeLabel:string;compositionSource:string|null}
 interface Preview {siteName:string;checkCount:number;reportHash:string;blockers:string[];report:{totals:{claimedCo2Kg:number;creditableCo2Kg:number};checks:{id:string;pondLabel:string;creditableCo2Kg:number}[]}}
 export function MarketListingForm({onChanged}:{onChanged:()=>void}) {
  const {session}=useRole();const sites=useApiData<{id:string;name:string}[]>('/fleet');const [site,setSite]=useState(session?.account.siteId??'');
  const [kind,setKind]=useState<'credit'|'produce'>('produce');
- return <section className="panel market-form"><h2>Create a listing</h2><p>Choose your farm, review its records, then confirm what to list.</p><ResourceState {...sites}/><label>Farm<select value={site} onChange={e=>setSite(e.target.value)}><option value="">Choose a farm</option>{sites.data?.filter(s=>session&&siteAllowed(session,s.id)).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label>Listing type<select value={kind} onChange={e=>setKind(e.target.value as typeof kind)}><option value="produce">Harvested algae</option><option value="credit">Issue a carbon batch</option></select></label>{site&&(kind==='produce'?<HarvestListing key={site} siteId={site} onChanged={onChanged}/>:<BatchListing key={site} siteId={site} onChanged={onChanged}/>)}</section>;
+ return <section className={`${CARD} market-form`}><h2 className="font-display text-lg font-semibold">Create a listing</h2><p>Choose your farm, review its records, then confirm what to list.</p><ResourceState {...sites}/><label>Farm<select value={site} onChange={e=>setSite(e.target.value)}><option value="">Choose a farm</option>{sites.data?.filter(s=>session&&siteAllowed(session,s.id)).map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label><label>Listing type<select value={kind} onChange={e=>setKind(e.target.value as typeof kind)}><option value="produce">Harvested algae</option><option value="credit">Issue a carbon batch</option></select></label>{site&&(kind==='produce'?<HarvestListing key={site} siteId={site} onChanged={onChanged}/>:<BatchListing key={site} siteId={site} onChanged={onChanged}/>)}</section>;
 }
 function HarvestListing({siteId,onChanged}:{siteId:string;onChanged:()=>void}) {
  const [revision,setRevision]=useState(0);const r=useApiData<Harvest[]>(`/market/produce/site/${siteId}`,revision);

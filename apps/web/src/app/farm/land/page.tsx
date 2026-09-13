@@ -239,7 +239,7 @@ export default function LandPage() {
 
           <dl className="land-preview">
             <div><dt>Area</dt><dd>{area.toLocaleString('en-IN')} m²</dd></div>
-            <div><dt>Sensor sizing</dt><dd><Link href={`/hardware?site=${siteId}`}>Open hardware plan →</Link></dd></div>
+            <div><dt>Sensors and circuit</dt><dd><Link href={`/hardware?site=${siteId}`}>See the sensor circuit →</Link></dd></div>
           </dl>
 
           <p className="helper">

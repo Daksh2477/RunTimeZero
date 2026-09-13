@@ -9,16 +9,21 @@ interface Props {
   sensors: Sensor[]; onMoveSensor: (id: string, x: number, y: number) => void;
   day: number; airTemperature: number; selectedSensor: string;
   onSelectSensor: (id: string) => void;
+  /** Overrides the day's reading, e.g. an hour within it. */
+  current?: Pick<DayPoint,'ph'|'temperatureC'|'dissolvedOxygenMgL'|'opticalDensity'>;
+  /** 0 by day to 1 at night. */
+  darkness?: number;
 }
 
 // The scene uses a stated 3:1 rectangular footprint, not surveyed site geometry.
 // One shared transform keeps the dimensions, scale bar and probe positions aligned.
 const pond = { x: 155, y: 228, width: 660, height: 220 };
-export function PondView({ daily, areaM2, depthM, mixing, sensors, onMoveSensor, day, airTemperature, selectedSensor, onSelectSensor, pinValues }: Props) {
+const TRANSITION_MS = 150;
+export function PondView({ daily, areaM2, depthM, mixing, sensors, onMoveSensor, day, airTemperature, selectedSensor, onSelectSensor, pinValues, current, darkness = 0 }: Props) {
   const id = useId().replaceAll(':', '');
   const svg = useRef<SVGSVGElement>(null);
   const dragging = useRef<string | null>(null);
-  const point = daily[Math.min(day, daily.length - 1)];
+  const point = current ?? daily[Math.min(day, daily.length - 1)];
   const length = Math.sqrt(areaM2 * 3);
   const width = length / 3;
   const scale = [1, 2, 5, 10, 20, 50, 100].find(n => n >= length / 8) ?? 100;
@@ -70,11 +75,12 @@ export function PondView({ daily, areaM2, depthM, mixing, sensors, onMoveSensor,
       <g transform="translate(80 535)"><path d={`M0 -5V5H${scalePixels}V-5`} fill="none" stroke="#425c4a" strokeWidth="3" /><text x={scalePixels/2} y="-13" textAnchor="middle" className="scene-small">{scale} m</text></g>
       <g transform="translate(944 490)"><path d="M0 25V-20M-8 -8L0 -22L8 -8" fill="none" stroke="#486554" strokeWidth="3" /><text y="-32" textAnchor="middle" className="scene-small">N</text></g>
     </svg>
+    <div aria-hidden="true" style={{ position: 'absolute', inset: 0, background: '#0b1a33', opacity: darkness * .45, pointerEvents: 'none', transition: `opacity ${TRANSITION_MS}ms linear` }} />
     {sensors.map(sensor => <button type="button" key={sensor.id} className="scene-probe" aria-pressed={selectedSensor === sensor.id} aria-label={`${sensor.label} sensor. Select to inspect; arrow keys move the marker.`}
       style={{ left: `${(pond.x + sensor.x * pond.width - 80) / 840 * 100}%`, top: `${(pond.y + sensor.y * pond.height - 90) / 470 * 100}%` }}
       onClick={() => onSelectSensor(sensor.id)} onPointerDown={e => { onSelectSensor(sensor.id); dragging.current = sensor.id; e.currentTarget.setPointerCapture(e.pointerId); }}
       onKeyDown={e => { const delta: Record<string,number[]> = { ArrowLeft: [-.025,0], ArrowRight: [.025,0], ArrowUp: [0,-.08], ArrowDown: [0,.08] }; if(delta[e.key]) { e.preventDefault(); move(sensor,delta[e.key]![0]!,delta[e.key]![1]!); } }}>
-      <span className="probe-dot" /><span className="probe-name">{sensor.label} {readings[sensor.id]}{pinValues?.[sensor.id] && <><br/>{pinValues[sensor.id]}</>}</span>
+      <span className="probe-dot" /><span className="probe-name">{sensor.id === 'node' ? <>{sensor.label}<br/>pH {readings.ph} · O₂ {readings.do}<br/>{readings.temp} · OD {readings.od}</> : <>{sensor.label} {readings[sensor.id]}</>}{pinValues?.[sensor.id] && <><br/>{pinValues[sensor.id]}</>}</span>
     </button>)}
     </div>
     <div className="scene-caption"><span>Overhead plan · auto-fit scale</span><span>Illustrative 3:1 footprint; equipment not to scale</span></div>

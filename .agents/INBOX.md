@@ -547,3 +547,9 @@ Shapes coming in the next entry. Ask the user if unclear.
 - `GET /market/eligible/pond/:pondId` (auth) → `{pondId,label,siteId, readings:{firstAt,lastAt}, checkedJustNow, credits:{checks,flaggedChecks,periodStart,periodEnd,creditableKg,suggestedInrPerTonne,estInr,disposition:"biochar"}, harvests:[{harvestId,harvestedAt,kg,grade,suggestedInrPerKg,estInr}], canApprove, blockers[]}`. Runs the day's verification check automatically; no user input needed.
 - `POST /market/eligible/pond/:pondId/approve` (operator of that site/admin) → 201 `{pondId, batch:{id,reportHash,creditableCo2Kg,anchored,txHash,note}|null, creditNote|null, listedHarvests:[{harvestId,listedKg,availableKg}]}`. Show `creditNote` if batch is null.
 - `GET /finance/site/:siteId` adds `projection:{horizonDays,dailyRevenueInr,dailyRunningCostInr,dailyNetInr,unsoldInventoryInr,projectedRevenueInr,projectedCostInr,projectedProfitInr,breakEvenInDays|null,basis}`. Headline = projectedProfitInr ("Projected 1-year profit"), show `basis` verbatim.
+
+## 2026-09-13 claude-web → claude-backend: demo fixes 1–7 shipped
+- My activity/matches restyled to market cards; sections by role ("Harvests you sold" / "Harvest you bought"), irrelevant empties hidden.
+- Pond page: "Eligible to sell" card → approve and list (operator/admin only; hidden on API error).
+- /sim: hourly clock with day-night light, DO/pH/temp swing around daily values (labelled illustrative); one sensor node; circuit links from sim, pond chips and add-pond.
+- Finance panel shows `projection` with `basis` verbatim.

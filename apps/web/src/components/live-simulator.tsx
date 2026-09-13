@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { DEFAULT_CONFIG, runTwin, type RunConfig, type RunResult } from '@/lib/twin';
+import Link from 'next/link';
+import { DEFAULT_CONFIG, runTwin, type DayPoint, type RunConfig, type RunResult } from '@/lib/twin';
 import { ExpansionPanel } from '@/components/expansion-panel';
 import { PondView } from '@/components/pond-view';
 import { SkyStrip } from '@/components/sky-strip';
@@ -16,12 +17,31 @@ const scenarios = [
   { id: 'cool', label: 'Cool spell', temperature: 18, swing: 6, mixing: true },
   { id: 'outage', label: 'Mixer outage', temperature: 28, swing: 8, mixing: false },
 ];
-const initialSensors = [
-  { id: 'ph', x: .29, y: .24, label: 'pH' },
-  { id: 'do', x: .46, y: .76, label: 'O₂' },
-  { id: 'od', x: .73, y: .24, label: 'Density' },
-  { id: 'temp', x: .8, y: .76, label: 'Temp' },
-];
+// One node carries all four probes, matching the hardware on /hardware.
+const initialSensors = [{ id: 'node', x: .72, y: .24, label: 'Sensor node' }];
+const TICK_MS = 75;
+
+/**
+ * The model reports one value per day. Within the day we shape light from the
+ * sunrise equation's day length, and swing oxygen, pH and water temperature on
+ * the photosynthesis cycle: up through the afternoon, down overnight on
+ * respiration. The shape is illustrative; the daily figures are the model's.
+ */
+function atHour(point: DayPoint, hour: number, swingC: number, mixing: boolean): DayPoint {
+  const rise = 12 - point.daylightHours / 2;
+  const t = (hour - rise) / point.daylightHours;
+  const light = t > 0 && t < 1 ? Math.sin(Math.PI * t) : 0;
+  const cycle = Math.sin(2 * Math.PI * (hour - 9) / 24);
+  const dense = Math.min(1, point.opticalDensity / .8);
+  return {
+    ...point,
+    solarElevationDeg: light > 0 ? point.solarElevationDeg * light : -12,
+    parUmol: point.parUmol * light,
+    dissolvedOxygenMgL: Math.max(0, point.dissolvedOxygenMgL * (1 + cycle * (.2 + .35 * dense) * (mixing ? 1 : 1.4))),
+    ph: point.ph + cycle * (.1 + .35 * dense),
+    temperatureC: point.temperatureC + cycle * swingC * .25,
+  };
+}
 
 export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   const [cfg, setCfg] = useState<RunConfig>({ ...DEFAULT_CONFIG, ...initial });
@@ -31,7 +51,9 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
    * one, twice. Whatever went wrong is now shown to the user and logged. */
   const [failure, setFailure] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
-  const [playDay, setPlayDay] = useState(0);
+  const [clock, setClock] = useState(12);
+  const playDay = Math.floor(clock / 24), hour = clock % 24;
+  const setPlayDay = useCallback((day: number) => setClock(day * 24 + 12), []);
   const [playing, setPlaying] = useState(true);
   const [sensors, setSensors] = useState(initialSensors);
   const [selectedSensor, setSelectedSensor] = useState('ph');
@@ -65,17 +87,21 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
 
   useEffect(() => {
     if (!playing || !result?.daily.length || status !== 'ready') return;
-    const timer = setInterval(() => setPlayDay(day => (day + 1) % result.daily.length), 900);
+    const timer = setInterval(() => setClock(c => (c + 1) % (result.daily.length * 24)), TICK_MS);
     return () => clearInterval(timer);
   }, [playing, result, status]);
   useEffect(() => { if (result && playDay >= result.daily.length) setPlayDay(0); }, [result, playDay]);
 
   const set = (key: keyof RunConfig) => (e: React.ChangeEvent<HTMLInputElement>) => setCfg(c => ({ ...c, [key]: Number(e.target.value) }));
-  const point = result?.daily[Math.min(playDay, result.daily.length - 1)];
+  const dayPoint = result?.daily[Math.min(playDay, result.daily.length - 1)];
+  const point = dayPoint && atHour(dayPoint, hour, cfg.diurnalSwingC, cfg.mixerRunning);
+  const airNow = cfg.meanAirTempC + Math.sin(2 * Math.PI * (hour - 9) / 24) * cfg.diurnalSwingC / 2;
+  const darkness = point ? Math.max(0, Math.min(1, -point.solarElevationDeg / 12)) : 0;
+  const time = `${String(hour).padStart(2, '0')}:00`;
   const selectedScenario = scenarios.find(s => s.temperature === cfg.meanAirTempC && s.swing === cfg.diurnalSwingC && s.mixing === cfg.mixerRunning);
   const measurements = [
-    { id: 'ph', name: 'Acidity', value: point?.ph.toFixed(2) ?? '—', unit: 'pH', description: 'The model’s pond-wide acidity reading for the selected day.' },
-    { id: 'do', name: 'Oxygen', value: point?.dissolvedOxygenMgL.toFixed(1) ?? '—', unit: 'mg/L', description: 'Dissolved oxygen in the simulated water on this day.' },
+    { id: 'ph', name: 'Acidity', value: point?.ph.toFixed(2) ?? '—', unit: 'pH', description: 'Pond-wide acidity. It rises in the afternoon as algae draw down CO₂ and falls overnight.' },
+    { id: 'do', name: 'Oxygen', value: point?.dissolvedOxygenMgL.toFixed(1) ?? '—', unit: 'mg/L', description: 'Dissolved oxygen peaks mid-afternoon from photosynthesis and is lowest before dawn, when a stopped mixer is most dangerous.' },
     { id: 'temp', name: 'Water temperature', value: point?.temperatureC.toFixed(1) ?? '—', unit: '°C', description: 'Water temperature follows the air conditions and the pond model.' },
     { id: 'od', name: 'Algae density', value: point?.opticalDensity.toFixed(2) ?? '—', unit: 'OD', description: 'Optical density describes how much light the culture blocks. Darker water represents a denser culture.' },
   ];
@@ -90,11 +116,11 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
         {/* Sky sits directly above the water so the two read as one picture,
             and so day length — the biggest seasonal driver of yield — is
             visible rather than buried in the conditions panel. */}
-        <SkyStrip point={point} airTempC={cfg.meanAirTempC} />
+        <SkyStrip point={point} airTempC={airNow} time={time} />
         <div className="stage-header"><div><h2>{pondLabel ?? 'Your virtual pond'}</h2><p>{siteName ? `${siteName} · ` : ''}{selectedScenario?.label ?? 'Custom conditions'} · model simulation</p></div><span className={`mixing-indicator ${cfg.mixerRunning ? '' : 'is-stopped'}`}>{cfg.mixerRunning ? 'Water mixing' : 'Mixer stopped'}</span></div>
         <div className="scene-dimensions"><span><strong>{Math.sqrt(cfg.areaM2 * 3).toFixed(1)} m</strong> length</span><span><strong>{Math.sqrt(cfg.areaM2 / 3).toFixed(1)} m</strong> width</span><span><strong>{Math.round(cfg.depthM * 100)} cm</strong> depth</span></div>
-        <PondView daily={result?.daily ?? []} areaM2={cfg.areaM2} depthM={cfg.depthM} mixing={cfg.mixerRunning} sensors={sensors} onMoveSensor={moveSensor} day={playDay} airTemperature={cfg.meanAirTempC} selectedSensor={selectedSensor} onSelectSensor={setSelectedSensor} />
-        <div className="simulation-playback"><div className="playback-top"><button className="button" disabled={!result || status !== 'ready'} onClick={() => setPlaying(p => !p)} aria-pressed={playing}>{playing ? 'Pause' : 'Play days'} <span aria-hidden="true">{playing ? 'Ⅱ' : '▷'}</span></button><strong>Day {point?.day ?? 1} <span>of {cfg.days}</span></strong><button className="button secondary" onClick={() => setCfg(c => ({ ...c, mixerRunning: !c.mixerRunning }))}>{cfg.mixerRunning ? 'Stop mixer' : 'Start mixer'}</button></div><input type="range" aria-label="Simulation day" aria-valuetext={`Day ${point?.day ?? 1} of ${cfg.days}`} min={0} max={Math.max(0, (result?.daily.length ?? 1) - 1)} value={Math.min(playDay, Math.max(0, (result?.daily.length ?? 1) - 1))} disabled={!result} onChange={e => { setPlaying(false); setPlayDay(Number(e.target.value)); }} /><div className="timeline-labels"><span>Day 1</span><span>Scrub to see readings for any day</span><span>Day {cfg.days}</span></div></div>
+        <PondView daily={result?.daily ?? []} areaM2={cfg.areaM2} depthM={cfg.depthM} mixing={cfg.mixerRunning} sensors={sensors} onMoveSensor={moveSensor} day={playDay} current={point} darkness={darkness} airTemperature={cfg.meanAirTempC} selectedSensor="node" onSelectSensor={() => undefined} />
+        <div className="simulation-playback"><div className="playback-top"><button className="button" disabled={!result || status !== 'ready'} onClick={() => setPlaying(p => !p)} aria-pressed={playing}>{playing ? 'Pause' : 'Play days'} <span aria-hidden="true">{playing ? 'Ⅱ' : '▷'}</span></button><strong>Day {point?.day ?? 1} <span>of {cfg.days} · {time}</span></strong><button className="button secondary" onClick={() => setCfg(c => ({ ...c, mixerRunning: !c.mixerRunning }))}>{cfg.mixerRunning ? 'Stop mixer' : 'Start mixer'}</button></div><input type="range" aria-label="Simulation day" aria-valuetext={`Day ${point?.day ?? 1} of ${cfg.days}`} min={0} max={Math.max(0, (result?.daily.length ?? 1) - 1)} value={Math.min(playDay, Math.max(0, (result?.daily.length ?? 1) - 1))} disabled={!result} onChange={e => { setPlaying(false); setPlayDay(Number(e.target.value)); }} /><div className="timeline-labels"><span>Day 1</span><span>Scrub to see readings for any day</span><span>Day {cfg.days}</span></div></div>
         <div className="simulation-totals" aria-busy={status === 'loading'}><div className="totals-heading"><h3>Through day {point?.day ?? 1}</h3><span role="status">{status === 'loading' ? 'Updating estimate…' : status === 'failed' ? 'Calculation unavailable' : 'Model estimate'}</span></div>{status === 'failed' ? <div role="alert"><p>The model could not finish. Your settings are still here.</p>{failure && <p className="sim-failure-detail">{failure}</p>}<button className="button secondary" onClick={() => setRetry(n => n+1)}>Try again</button></div> : <div className="sim-figures"><div><strong>{totals ? kg(totals.harvest) : '—'}</strong><span>algae harvested</span></div><div><strong>{totals ? kg(totals.co2) : '—'}</strong><span>CO₂ absorbed</span></div><div><strong>{totals ? kg(totals.peak) : '—'}</strong><span>peak algae biomass</span></div></div>}{result && <Trace daily={result.daily} day={playDay} />}</div>
       </section>
       <SimulatorControls scenario={<>    <div className="scenario-toolbar"><div><div className="scenario-options" role="group" aria-label="Environmental scenarios">{scenarios.map(s => <button key={s.id} aria-pressed={selectedScenario?.id === s.id} onClick={() => { setCfg(c => ({ ...c, meanAirTempC: s.temperature, diurnalSwingC: s.swing, mixerRunning: s.mixing, crashOnDay: null })); setPlayDay(0); setPlaying(true); }}>{s.label}</button>)}</div></div><button className="button secondary reset-simulation" onClick={reset}>Reset simulation</button></div>
@@ -111,7 +137,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
             <Slider id="nitrogen" label="Nitrogen in the water" value={cfg.influentNitrogenMgL} min={2} max={80} step={1} display={`${cfg.influentNitrogenMgL} mg/L`} onChange={set('influentNitrogenMgL')} />
             <details className="advanced-setup"><summary>Simulate a culture crash</summary><Slider id="crash" label="Crash starts" value={cfg.crashOnDay ?? 0} min={0} max={cfg.days - 1} step={1} display={cfg.crashOnDay ? `Day ${cfg.crashOnDay}` : 'No crash'} onChange={e=>setCfg(c=>({...c,crashOnDay:Number(e.target.value)||null}))} /></details>
           </div>}
-        </section>} sensors={<section className="sensor-panel" aria-busy={status === 'loading'}><div className="sensor-readings">{measurements.map(m => <button key={m.id} className="sensor-reading" aria-pressed={selectedSensor === m.id} onClick={() => setSelectedSensor(m.id)}><span>{m.name}</span><strong>{m.value}<small>{m.unit}</small></strong></button>)}</div><div className="sensor-explanation"><strong>{selected.name} sensor</strong><p>{selected.description}</p></div><p className="sensor-note">Select a sensor on the plan or a reading here. Marker positions are illustrative; readings describe the whole pond.</p></section>} details={<><SkyStrip point={point} airTempC={cfg.meanAirTempC} /><p>Illustrative 3:1 footprint. Sensor positions are movable; readings describe the entire pond.</p>{result && <details className="workspace-expansion"><summary>Planning a bigger farm? Explore expansion costs <span aria-hidden="true">↗</span></summary><ExpansionPanel currentAreaM2={cfg.areaM2} yieldKgPerM2PerYear={(result.totalHarvestKg/cfg.areaM2)*(365/cfg.days)} /></details>}</>} />
+        </section>} sensors={<section className="sensor-panel" aria-busy={status === 'loading'}><div className="sensor-readings">{measurements.map(m => <button key={m.id} className="sensor-reading" aria-pressed={selectedSensor === m.id} onClick={() => setSelectedSensor(m.id)}><span>{m.name}</span><strong>{m.value}<small>{m.unit}</small></strong></button>)}</div><div className="sensor-explanation"><strong>{selected.name} probe</strong><p>{selected.description}</p></div><p className="sensor-note">One sensor node carries all four probes; drag it on the plan. Readings describe the whole pond at {time}; the hourly swing is illustrated around the model’s daily values. <Link href="/hardware">See the node’s circuit →</Link></p></section>} details={<><SkyStrip point={point} airTempC={airNow} time={time} /><p>Illustrative 3:1 footprint. One movable sensor node; readings describe the entire pond. <Link href="/hardware">See its circuit →</Link></p>{result && <details className="workspace-expansion"><summary>Planning a bigger farm? Explore expansion costs <span aria-hidden="true">↗</span></summary><ExpansionPanel currentAreaM2={cfg.areaM2} yieldKgPerM2PerYear={(result.totalHarvestKg/cfg.areaM2)*(365/cfg.days)} /></details>}</>} />
     </div>
   </div>;
 }
