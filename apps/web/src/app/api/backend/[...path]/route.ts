@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { API_ORIGIN, SESSION_COOKIE, serverApiFetch } from '@/lib/server-api';
-const ROOTS=new Set(['auth','fleet','land','ponds','batches','market','verify','summary','simulate','weather','research','invest','produce','harvests','health','live']);
+const ROOTS=new Set(['auth','fleet','land','ponds','batches','market','verify','summary','simulate','weather','research','invest','produce','harvests','health','live','finance']);
 async function handle(request:NextRequest,{params}:{params:Promise<{path:string[]}>}){
  const {path}=await params;
  if(!ROOTS.has(path[0]??'') || path.some(p=>!p || p==='.' || p==='..' || p.includes('/') || p.includes('\\')))return NextResponse.json({error:'Unknown API route.'},{status:404});

@@ -5,6 +5,7 @@ import { serverApiFetch } from '@/lib/server-api';
 import { SiteConnections } from '@/components/site-connections';
 import { EmptyState } from '@/components/ui';
 import { RefreshControls } from '@/components/refresh-controls';
+import { FinancePanel } from '@/components/finance-panel';
 import { money, mass } from '@/lib/display';
 export const dynamic = 'force-dynamic';
 interface Economics { breakdown: { category: string; totalInr: number; energyKwh: number | null }[]; totalCostInr: number; creditedCo2Kg: number; costPerTonneCo2Inr: number | null; }
@@ -15,6 +16,7 @@ export default async function SitePage({ params }: { params: Promise<{ id: strin
   try { const r = await serverApiFetch(`/fleet/site/${encodeURIComponent(id)}/economics`, { cache: 'no-store', signal: AbortSignal.timeout(8000) }); if (r.ok) e = await r.json(); } catch { /* Render a recoverable connection state below. */ }
   return <main className="wrap"><Link className="back" href="/console">← Back to my ponds</Link><div className="page-heading"><div><p className="eyebrow">FARM COSTS</p><h1>Know where the money goes.</h1><p>A simple breakdown of the costs recorded for this farm.</p></div><RefreshControls /></div>
     <LiveDashboard siteId={id}/>
+    <FinancePanel siteId={id}/>
     <RelatedLinks siteId={id}/><Breadcrumbs items={[{href:"/farm",label:"My ponds"},{href:`/console/site/${id}`,label:"Farm"}]}/>
     {!e ? <EmptyState title="We couldn’t load these costs"><p>The connection may be unavailable. Refresh to try again.</p></EmptyState> : !e.breakdown.length ? <EmptyState title="No expenses recorded yet"><p>Once farm expenses are added, you’ll see the total and a breakdown here. Missing expenses do not mean the farm costs nothing to run.</p><Link className="button secondary" href="/sim">Explore sample running costs →</Link></EmptyState> : <>
       <div className="summary-grid"><div className="summary-card"><span>Total recorded costs</span><strong className="num" style={{ fontSize: 'clamp(1.5rem, 3vw, 2.2rem)' }}>{money(e.totalCostInr)}</strong><small>All expense records currently available</small></div><div className="summary-card"><span>Harvesting and drying</span><strong className="num" style={{ fontSize: 'clamp(1.5rem, 3vw, 2.2rem)' }}>{money(e.breakdown.filter((b) => ['harvesting', 'drying'].includes(b.category)).reduce((n, b) => n + b.totalInr, 0))}</strong><small>Collecting algae and removing water</small></div><div className="summary-card"><span>Recorded electricity use</span><strong className="num" style={{ fontSize: 'clamp(1.5rem, 3vw, 2.2rem)' }}>{e.breakdown.some((b) => b.energyKwh !== null) ? `${e.breakdown.reduce((n, b) => n + (b.energyKwh ?? 0), 0).toLocaleString('en-IN')} kWh` : 'Not recorded'}</strong><small>kWh is the unit used on an electricity bill</small></div></div>

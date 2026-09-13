@@ -24,6 +24,7 @@ import {
 } from '@/lib/market-api';
 import { RetirePanel } from '@/components/retire-panel';
 import { OpportunityCard } from '@/components/opportunity-card';
+import { FinancePanel } from '@/components/finance-panel';
 
 const kg = (v: number) => `${Math.round(v).toLocaleString('en-IN')} kg`;
 
@@ -40,6 +41,8 @@ export default function InvestorConsole() {
     setFarms(opportunities.status==='fulfilled'?opportunities.value:[]);
   };
   useEffect(()=>{void load();}, []);
+  // Match links arrive as #listing-<id>, but the cards render after the fetch, so the browser's own jump has already missed.
+  useEffect(()=>{if(farms?.length&&location.hash.startsWith('#listing-'))document.getElementById(location.hash.slice(1))?.scrollIntoView({block:'center'});},[farms]);
 
   const totalAvailable = (listings ?? []).reduce((s, l) => s + l.availableKg, 0);
   const totalRetired = (listings ?? []).reduce((s, l) => s + l.retiredKg, 0);
@@ -104,6 +107,8 @@ export default function InvestorConsole() {
           onRetire={retireCredits}
         />
       </div>
+
+      <FinancePanel />
 
       <section className="mt-6">
         <h2 className="font-display text-sm font-semibold">Farms raising capital</h2>

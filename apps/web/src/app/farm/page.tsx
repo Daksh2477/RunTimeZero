@@ -3,6 +3,7 @@ import { LiveDashboard } from '@/components/live-dashboard';
 import { getFleet, type FleetPond, type FleetSite } from '@/lib/api';
 import { RefreshControls } from '@/components/refresh-controls';
 import { FarmPonds } from '@/components/farm-ponds';
+import { FinancePanel } from '@/components/finance-panel';
 import { pondState, TONE_RANK } from '@/lib/pond-state';
 
 export const dynamic = 'force-dynamic';
@@ -70,6 +71,7 @@ export default async function FarmPage() {
 
       <LiveDashboard/>
       <FarmPonds sites={sites} />
+      <FinancePanel />
 
       <section className="farm-foot">
         <p className="helper">
