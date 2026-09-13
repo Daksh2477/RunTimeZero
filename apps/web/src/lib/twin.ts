@@ -80,6 +80,7 @@ export interface RunConfig {
 }
 
 export interface RunResult {
+  hourly: (DayPoint & { hour: number })[];
   daily: DayPoint[];
   totalCo2Kg: number;
   totalHarvestKg: number;
@@ -195,6 +196,7 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
   if (!cfg.mixerRunning) pond.inject_pump_failure(0, cfg.days * 24);
 
   const daily: DayPoint[] = [];
+  const hourly: (DayPoint & {hour:number})[] = [];
   let totalCo2 = 0;
   let totalHarvest = 0;
   let peakBiomass = 0;
@@ -209,6 +211,7 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
     for (let h = 0; h < 24; h += 1) {
       last = pond.step();
       dayCo2 += last.reported_co2_kg;
+      hourly.push({day:d+1,hour:h,co2Kg:last.reported_co2_kg,biomassKg:pond.standing_biomass_kg(),opticalDensity:last.optical_density,temperatureC:last.temperature_c,ph:last.ph,dissolvedOxygenMgL:last.dissolved_oxygen_mg_l,harvested:false,harvestKg:0,solarElevationDeg:last.solar_elevation_deg,parUmol:last.par_umol,daylightHours:last.daylight_hours,lipidFrac:last.lipid_frac,proteinFrac:last.protein_frac});
       if (last.solar_elevation_deg > peakSun) peakSun = last.solar_elevation_deg;
       if (last.par_umol > peakPar) peakPar = last.par_umol;
     }
@@ -225,6 +228,8 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
       harvested = true;
     }
 
+    const finalHour=hourly[hourly.length-1]!;
+    finalHour.harvested=harvested;finalHour.harvestKg=harvestKg;
     daily.push({
       day: d + 1,
       co2Kg: dayCo2,
@@ -253,6 +258,7 @@ export async function runTwin(cfg: RunConfig): Promise<RunResult> {
   );
 
   return {
+    hourly,
     daily,
     totalCo2Kg: totalCo2,
     totalHarvestKg: totalHarvest,

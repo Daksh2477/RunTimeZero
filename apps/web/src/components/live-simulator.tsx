@@ -22,28 +22,6 @@ const initialSensors = [{ id: 'node', x: .72, y: .24, label: 'Sensor node' }];
 /** Simulated hours per real second. 75 ms per hour made a day pass in under 2 s. */
 const SPEEDS = [1, 3, 6, 12, 24];
 
-/**
- * The model reports one value per day. Within the day we shape light from the
- * sunrise equation's day length, and swing oxygen, pH and water temperature on
- * the photosynthesis cycle: up through the afternoon, down overnight on
- * respiration. The shape is illustrative; the daily figures are the model's.
- */
-function atHour(point: DayPoint, hour: number, swingC: number, mixing: boolean): DayPoint {
-  const rise = 12 - point.daylightHours / 2;
-  const t = (hour - rise) / point.daylightHours;
-  const light = t > 0 && t < 1 ? Math.sin(Math.PI * t) : 0;
-  const cycle = Math.sin(2 * Math.PI * (hour - 9) / 24);
-  const dense = Math.min(1, point.opticalDensity / .8);
-  return {
-    ...point,
-    solarElevationDeg: light > 0 ? point.solarElevationDeg * light : -12,
-    parUmol: point.parUmol * light,
-    dissolvedOxygenMgL: Math.max(0, point.dissolvedOxygenMgL * (1 + cycle * (.2 + .35 * dense) * (mixing ? 1 : 1.4))),
-    ph: point.ph + cycle * (.1 + .35 * dense),
-    temperatureC: point.temperatureC + cycle * swingC * .25,
-  };
-}
-
 export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
   const [cfg, setCfg] = useState<RunConfig>({ ...DEFAULT_CONFIG, ...initial });
   const [result, setResult] = useState<RunResult | null>(null);
@@ -96,7 +74,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
 
   const set = (key: keyof RunConfig) => (e: React.ChangeEvent<HTMLInputElement>) => setCfg(c => ({ ...c, [key]: Number(e.target.value) }));
   const dayPoint = result?.daily[Math.min(playDay, result.daily.length - 1)];
-  const point = dayPoint && atHour(dayPoint, hour, cfg.diurnalSwingC, cfg.mixerRunning);
+  const point = result?.hourly[Math.min(clock, result.hourly.length-1)] ?? dayPoint;
   const airNow = cfg.meanAirTempC + Math.sin(2 * Math.PI * (hour - 9) / 24) * cfg.diurnalSwingC / 2;
   const darkness = point ? Math.max(0, Math.min(1, -point.solarElevationDeg / 12)) : 0;
   const time = `${String(hour).padStart(2, '0')}:00`;
@@ -107,7 +85,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
     { id: 'temp', name: 'Water temperature', raw: point?.temperatureC, range: [20, 38], use: 'Above 38 °C growth stops; below 20 °C it slows.', value: point?.temperatureC.toFixed(1) ?? '—', unit: '°C', description: 'Water temperature follows the air conditions and the pond model.' },
     { id: 'od', name: 'Algae density', raw: point?.opticalDensity, range: [0.3, 1.2], use: 'How much algae is in the water: decides when to harvest and how much CO₂ was captured.', value: point?.opticalDensity.toFixed(2) ?? '—', unit: 'OD', description: 'Optical density describes how much light the culture blocks. Darker water represents a denser culture.' },
   ];
-  const elapsed = result?.daily.slice(0, playDay + 1);
+  const elapsed = result?.hourly.slice(0, clock + 1);
   const totals = elapsed && { co2: elapsed.reduce((n,d) => n+d.co2Kg,0), harvest: elapsed.reduce((n,d) => n+d.harvestKg,0), peak: Math.max(...elapsed.map(d=>d.biomassKg)) };
   const selected = measurements.find(m => m.id === selectedSensor)!;
   const reset = () => { setCfg({ ...DEFAULT_CONFIG, ...initial }); setPlayDay(0); setPlaying(false); setSensors(initialSensors); setSelectedSensor('ph'); };
@@ -139,7 +117,7 @@ export function LiveSimulator({ initial, pondLabel, siteName }: Props) {
             <Slider id="nitrogen" label="Nitrogen in the water" value={cfg.influentNitrogenMgL} min={2} max={80} step={1} display={`${cfg.influentNitrogenMgL} mg/L`} onChange={set('influentNitrogenMgL')} />
             <details className="advanced-setup"><summary>Simulate a culture crash</summary><Slider id="crash" label="Crash starts" value={cfg.crashOnDay ?? 0} min={0} max={cfg.days - 1} step={1} display={cfg.crashOnDay ? `Day ${cfg.crashOnDay}` : 'No crash'} onChange={e=>setCfg(c=>({...c,crashOnDay:Number(e.target.value)||null}))} /></details>
           </div>}
-        </section>} sensors={<section className="sensor-panel" aria-busy={status === 'loading'}><div className="sensor-readings">{measurements.map(m => <button key={m.id} className="sensor-reading" aria-pressed={selectedSensor === m.id} onClick={() => setSelectedSensor(m.id)}><span>{m.name}</span><strong>{m.value}<small>{m.unit}</small></strong></button>)}</div><div className="sensor-explanation"><strong>{selected.name} probe</strong><p>{selected.description}</p></div><p className="sensor-note">One sensor node carries all four probes; drag it on the plan. Readings describe the whole pond at {time}; the hourly swing is illustrated around the model’s daily values. <Link href="/hardware">See the node’s circuit →</Link></p></section>} details={<><SkyStrip point={point} airTempC={airNow} time={time} /><p>Illustrative 3:1 footprint. One movable sensor node; readings describe the entire pond. <Link href="/hardware">See its circuit →</Link></p>{result && <details className="workspace-expansion"><summary>Planning a bigger farm? Explore expansion costs <span aria-hidden="true">↗</span></summary><ExpansionPanel currentAreaM2={cfg.areaM2} yieldKgPerM2PerYear={(result.totalHarvestKg/cfg.areaM2)*(365/cfg.days)} /></details>}</>} />
+        </section>} sensors={<section className="sensor-panel" aria-busy={status === 'loading'}><div className="sensor-readings">{measurements.map(m => <button key={m.id} className="sensor-reading" aria-pressed={selectedSensor === m.id} onClick={() => setSelectedSensor(m.id)}><span>{m.name}</span><strong>{m.value}<small>{m.unit}</small></strong></button>)}</div><div className="sensor-explanation"><strong>{selected.name} probe</strong><p>{selected.description}</p></div><p className="sensor-note">One sensor node carries all four probes; drag it on the plan. Readings describe the whole pond at {time}; each hourly reading comes directly from the physics model. <Link href="/hardware">See the node’s circuit →</Link></p></section>} details={<><SkyStrip point={point} airTempC={airNow} time={time} /><p>Illustrative 3:1 footprint. One movable sensor node; readings describe the entire pond. <Link href="/hardware">See its circuit →</Link></p>{result && <details className="workspace-expansion"><summary>Planning a bigger farm? Explore expansion costs <span aria-hidden="true">↗</span></summary><ExpansionPanel currentAreaM2={cfg.areaM2} yieldKgPerM2PerYear={(result.totalHarvestKg/cfg.areaM2)*(365/cfg.days)} /></details>}</>} />
     </div>
   </div>;
 }
